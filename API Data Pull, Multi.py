@@ -151,15 +151,14 @@ def get_data_for_site(site, site_data, api_data, hw_sites_mapping, start, base_u
                 #    json.dump(register_values, tfile, indent=2)
 
             elif hardware_response.status_code in [401, 400, 403, 402, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420]: # Unauthorized or Forbidden
-                print(f"Failed to retrieve hardware data for {hardware_id}. Status Code: {hardware_response.status_code}\nRestarting Data Pull Script")
-                os.startfile(r"G:\Shared drives\O&M\NCC Automations\Notification System\Restart Data Pull.py")
-                time.sleep(10)
-                exit(1) 
+                print(f"Failed to retrieve hardware data for {hardware_id}. Status Code: {hardware_response.status_code}")
+                sys.exit() #This should close each thread and allow the script to continue on. 
+                messagebox.showerror(title="Impossible", message= "This message box should never activate if sys.exit() works")
             else:
                 print(f"Failed to retrieve hardware data for {hardware_id} at {site} in {category}. Status code: {hardware_response.status_code}")
  
     end = time.perf_counter()
-    print("Pulled Data:", site, "Time Taken:", round(end-current, 2))
+    print(f"Pulled Data: {site}\nTime Taken: {round(end-current, 2)}")
 
 if __name__ == "__main__":
     def my_main():
