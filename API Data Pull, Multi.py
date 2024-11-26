@@ -150,7 +150,7 @@ def get_data_for_site(site, site_data, api_data, hw_sites_mapping, start, base_u
                 #with open(troubleshooting_file, 'a') as tfile:
                 #    json.dump(register_values, tfile, indent=2)
 
-            elif hardware_response.status_code in [401, 400, 403, 402, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 418, 419, 420]: # Unauthorized or Forbidden
+            elif 400 <= hardware_response.status_code < 500: # Unauthorized or Forbidden
                 print(f"Failed to retrieve hardware data for {hardware_id}. Status Code: {hardware_response.status_code}")
                 sys.exit() #This should close each thread and allow the script to continue on. 
                 messagebox.showerror(title="Impossible", message= "This message box should never activate if sys.exit() works")
