@@ -1610,12 +1610,7 @@ def get_data_for_site(site, site_data, api_data, hw_sites_mapping, start, base_u
         for hardware_id, hdname in hardware_data.items():
             get_hardware_url = f"{base_url}/Hardware/{hardware_id}"
             hardware_response = make_api_request(get_hardware_url, access_token)
-            #I Don't think this will work but whatever. I'll leave it in. I don't see how I can get another access token
-            if 500 > hardware_response.status_code >= 400:
-                response = get_access_token()
-                access_token = response.json().get('access_token')
-                hardware_response = make_api_request(get_hardware_url, access_token)
-                print(f"THEORY ACTIVATED:\nHOPEFULLY NOW WE CAN PULL DATA FROM THIS DEVICE {hardware_id}")
+
             if hardware_response.status_code == 200:
                 register_values = {}
                 hardware_data_response = hardware_response.json()
@@ -1688,7 +1683,6 @@ def get_data_for_site(site, site_data, api_data, hw_sites_mapping, start, base_u
 
             elif 400 <= hardware_response.status_code < 500: # Unauthorized or Forbidden
                 print(f"Failed to retrieve hardware data for {hardware_id}. Status Code: {hardware_response.status_code}")
-                sys.exit(0)
             else:
                 print(f"Failed to retrieve hardware data for {hardware_id} at {site} in {category}. Status code: {hardware_response.status_code}")
  
