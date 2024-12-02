@@ -1871,8 +1871,8 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
         count = check_fail_loop(auth_file)
         if count > 20:
             #Failed too many times
-            messagebox.showerror(title= "Failed Authentication", message= f"Exiting Loop of Failed Authentication, Failed Attempts: {count}")
             reset_count(auth_file)
+            os._exit(0)
             break
         #winsound.Beep(250, 500)
         if count > 4 and count < 10:

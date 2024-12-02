@@ -19,7 +19,7 @@ import json
 import os
 
 master_List_Sites = [('Bishopville II', 36, 'bishopvilleII'), ('Bluebird', 24, 'bluebird'), ('Bulloch 1A', 24, 'bulloch1a'), ('Bulloch 1B', 24, 'bulloch1b'), ('Cardinal', 59, 'cardinal'),
-                     ('Cherry', 4, 'cherry'), ('Conetoe', 4, 'conetoe'), ('Duplin', 21, 'duplin'), ('Freight Line', 18, 'freightline'), ('Gray Fox', 40, 'grayfox'),
+                     ('Cherry', 4, 'cherry'), ('Conetoe', 4, 'conetoe'), ('Cougar', 30, 'cougar'), ('Duplin', 21, 'duplin'), ('Freight Line', 18, 'freightline'), ('Gray Fox', 40, 'grayfox'),
                       ('Harding', 24, 'harding'), ('Harrison', 43, 'harrison'), ('Hayes', 26, 'hayes'), ('Hickory', 2, 'hickory'), ('Hickson', 16, 'hickson'), ('Holly Swamp', 16, 'hollyswamp'),
                        ('Jefferson', 64, 'jefferson'), ('Marshall', 16, 'marshall'), ('McLean', 40, 'mcLean'), ('Ogburn', 16, 'ogburn'), ('PG', 18, 'pg'), ('Richmond', 24, 'richmond'),
                         ('Shorthorn', 72, 'shorthorn'), ('Sunflower', 80, 'sunflower'), ('Tedder', 16, 'tedder'), ('Thunderhead', 16, 'thunderhead'), ('Upson', 24, 'upson'), 
@@ -133,6 +133,11 @@ def update_breaker_status():
     #ic(breaker_data)
     compare_time = datetime.now() - timedelta(hours=4)   
     for site, inv_num, var in master_List_Sites:
+        try:
+            poa = poa_data[f'{site} POA Data'][0]
+        except TypeError:
+            poa = 999
+        print(site, poa)
         if site == "Violet":
             #Meter voltage Status
             if meter_data['Violet Meter Data'][0][6] > compare_time:
@@ -177,7 +182,11 @@ def update_breaker_status():
                             device = "Meter kW"
                         globals()[f'{var}MeterOnOff'].select()
                         globals()[f'{var}MeterOnOff'].config(bg='Red')
-                        email_notification(site, status, device)
+                        if device == "Meter kW" and status == "currently within parameters, but may have been lost briefly":
+                            if poa > 50:
+                                email_notification(site, status, device)
+                        else:
+                            email_notification(site, status, device)
                 else:
                     globals()[f'{var}MeterOnOff'].deselect()
                     globals()[f'{var}MeterOnOff'].config(bg='Green')
@@ -245,7 +254,11 @@ def update_breaker_status():
                             device = "Meter kW"
                         globals()[f'{var}MeterOnOff'].select()
                         globals()[f'{var}MeterOnOff'].config(bg='Red')
-                        email_notification(site, status, device)
+                        if device == "Meter kW" and status == "currently within parameters, but may have been lost briefly":
+                            if poa > 50:
+                                email_notification(site, status, device)
+                        else:
+                            email_notification(site, status, device)
                 else:
                     globals()[f'{var}MeterOnOff'].deselect()
                     globals()[f'{var}MeterOnOff'].config(bg='Green')
@@ -293,6 +306,13 @@ def db_to_dict():
     print("Starting")
     connect_db()
 
+    # Calculate the time 15 minutes ago from the current time
+    current_time = datetime.now()
+    time_1_hr_ago = current_time - timedelta(hours=1, minutes=30)
+
+    # Format the datetime for SQL query
+    formatted_time = time_1_hr_ago.strftime('%m/%d/%Y %H:%M:%S')
+
     for tb in c.tables(tableType='TABLE'):
         tables.append(tb)
     #ic(tables)
@@ -312,7 +332,10 @@ def db_to_dict():
             c.execute(f"SELECT TOP 60 [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], [lastUpload], kW FROM [{table_name}] ORDER BY [Date & Time] DESC")
             meter_rows = c.fetchall()
             meter_data[table_name] = meter_rows
-        
+        elif "POA" in table_name and table_name not in excluded_tables:
+            c.execute(f"SELECT TOP 1 [W/M²] FROM [{table_name}] WHERE lastUpload >= ? ORDER BY [Date & Time] DESC", formatted_time)
+            poadatap = c.fetchone()
+            poa_data[table_name] = poadatap
 
     #ic(breaker_data)
     curtime = datetime.now()

@@ -1286,7 +1286,7 @@ def load_cb_state():
         print(f"File {STATE_FILE} does not exist.")
 def check_button_notes():
     gui_update_timer.pause()
-    messagebox.showinfo(parent=alertW, title="Checkbutton Info", message= "The First column of CheckButtons in the Site Data Window turns off all notifications associated with that Site. The Checkbuttons for each associated device; POA and INV's, turns off notifications for that specific device by selecting the CB next to the device status.")
+    messagebox.showinfo(parent=alertW, title="Checkbutton Info", message= "The First column of CheckButtons in the Site Data Window turns off all notifications associated with that Site.\nThe colored INV CheckButtons are to be selected when a WO is open for that device and will turn off notifications of outages with INV\nThe INV CB to the right of the number is for underperfromance tracking, if a WO for underperformance exists, then check it so we don't have to dig for issues in Emaint.\nThe POA CB will change the value to 9999 so that no inv outages are filtered by the POA")
     gui_update_timer.resume()
 
 def open_file():
