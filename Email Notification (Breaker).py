@@ -86,7 +86,7 @@ def email_notification(SiteName, status, device):
     one = 'brandon.arrowood@narenco.com'
     two = 'jayme.orrock@narenco.com'
     three = 'newman.segars@narenco.com'
-    admin = ['newman.segars@narenco.com', 'brandon.arrowood@narenco.com', 'jayme.orrock@narenco.com']
+    admin = ['newman.segars@narenco.com', 'brandon.arrowood@narenco.com', 'jayme.orrock@narenco.com', 'joseph.lang@narenco.com']
     smtp_server = 'smtp.gmail.com'
     smtp_port = 587
     with open(r"G:\Shared drives\O&M\NCC Automations\Credentials\app credentials.json", 'r') as credsfile:
@@ -96,8 +96,8 @@ def email_notification(SiteName, status, device):
     msg = MIMEMultipart()
     msg['From'] = sender_email
     
-    #msg['To'] = ' , '.join(admin)
-    msg['To'] = test
+    msg['To'] = ' , '.join(admin)
+    #msg['To'] = test
 
     msg['Subject'] = f"{SiteName}, Outage"
 

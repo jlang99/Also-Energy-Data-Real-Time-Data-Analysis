@@ -1141,14 +1141,15 @@ def time_window():
 
     global timecurrent
     #SELECT 15 = 30 Mins
-    c.execute("SELECT TOP 16 [Date & Time] FROM [Whitetail Meter Data] ORDER BY [Date & Time] DESC")
+    c.execute("SELECT TOP 16 [Date & Time] FROM [Ogburn Meter Data] ORDER BY [Date & Time] DESC")
     data_timestamps = c.fetchall()
     firsttime = data_timestamps[0][0]
     secondtime = data_timestamps[1][0]
     thirdtime = data_timestamps[2][0]
     fourthtime = data_timestamps[3][0]
-    tenthtime = data_timestamps[5][0]
-    lasttime = data_timestamps[15][0]
+    fifthtime = data_timestamps[4][0]
+    tenthtime = data_timestamps[9][0]
+    lasttime = data_timestamps[14][0]
 
     hm_firsttime = firsttime.strftime('%H:%M')
     hm_secondtime = secondtime.strftime('%H:%M')
@@ -1164,7 +1165,7 @@ def time_window():
     time10v.config(text=hm_tenthtime, font=("Calibri", 20))
     timeLv.config(text=hm_lasttime, font=("Calibri", 20))
 
-    pulls5TD = firsttime - tenthtime
+    pulls5TD = firsttime - fifthtime
     pulls5TDmins = round(pulls5TD.total_seconds() / 60, 2)
     pulls15TD = firsttime - lasttime
     pulls15TDmins = round(pulls15TD.total_seconds() / 60, 2)
