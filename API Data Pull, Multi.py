@@ -1770,6 +1770,12 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
                                 else:
                                     meterkw = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['KW']).group()) if re.search(r'\d+', api_data_dict[f'{hardwareid}']['KW']) else 0
 
+                                if "kW" in api_data_dict[f'{hardwareid}']['KW']:
+                                    meterkw = meterkw*1000
+                                elif "MW" in api_data_dict[f'{hardwareid}']['KW']:
+                                    meterkw = meterkw*100000
+                                
+
                                 hdtimestamp_Meter = api_data_dict[f'{hardwareid}']['pytimestamp']
                                 aetimestamp_Meter = api_data_dict[f'{hardwareid}']['aetimestamp']
                                 cursor.execute(f""" INSERT INTO [{site} Meter Data] ([Date & Time], [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], HardwareId, lastUpload, kW) VALUES (?,?,?,?,?,?,?,?,?,?)"""
@@ -1810,21 +1816,35 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
                             #Inverters
                             try:
                                 if api_data_dict[f'{hardwareid}']['KW'].startswith('-'):
-                                    invkw = 0
+                                    invkW = 0
                                 else:
                                     invkW = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['KW']).group())
-                                if site == 'Cougar':
-                                    invkW = (invkW/1000)
+                                invcomms = True
+                            
                             except KeyError:
                                 print(f"No Comms with {site}{duplin_exception} Inv {inv_num} kW")
+                                invcomms = False
                             except AttributeError:
                                 print(f"{site}{duplin_exception} Inv {inv_num} kW not reporting to AE")
                                 invkW = 0
+                                invcomms = True
+
+                            if invcomms:
+                                if "kW" in api_data_dict[f'{hardwareid}']['KW']:
+                                    invkW = invkW*1000
+                                elif "MW" in api_data_dict[f'{hardwareid}']['KW']:
+                                    invkW = invkW*100000
                             try:
                                 hdtimestamp_inv = api_data_dict[f'{hardwareid}']['pytimestamp']
+                                
+                            except:
+                                print("I Never thought this would happen, INV timestamp error")
+
+                            try:
                                 aetimestamp_inv = api_data_dict[f'{hardwareid}']['aetimestamp']
                             except:
-                                print("I Never thought this would happen, Inv timestamp error")
+                                print("AE INV Timestamp Error")
+
                             try:
                                 invDCV = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['DC V']).group())
                             except KeyError:

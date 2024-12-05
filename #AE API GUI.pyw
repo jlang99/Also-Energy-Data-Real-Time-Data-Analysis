@@ -448,6 +448,13 @@ def update_data():
         else:
             time_date_compare = (timecurrent - timedelta(hours=2))
 
+        one_day_ago = (timecurrent - timedelta(days=1))
+        allinv_kW = []
+
+        if name != "CDIA":
+            metercomms = max(comm_data[f'{name} Meter Data'])[0]
+
+
 
         #POA data Update
         if globals()[f'{var_name}POAcbval'].get() == 1:
@@ -468,105 +475,10 @@ def update_data():
         else:
             globals()[f'{var_name}POAcb'].config(bg='yellow', text=poa)
 
-        if name != "CDIA":
-            #Meter Update
-            master_cb_skips_INV_check = True if globals()[f'{var_name}metercbval'].get() == 0 else False
-            #print(name, master_cb_skips_INV_check)
-            metercomms = max(comm_data[f'{name} Meter Data'])[0]
-            meter_Ltime = metercomms.strftime('%m/%d/%y | %H:%M')
-            if metercomms > time_date_compare:
-                meterdata = meter_data[f'{name} Meter Data']
-                meterdataVA= None
-                meterdataVB= None
-                meterdataVC= None 
-                meterdataKW= None 
-                meterdataAA= None 
-                meterdataAB= None 
-                meterdataAC= None
 
-                # Iterate over fetched rows to find the maximum value for each column
-                for row in meterdata:
-                    # Update maximum values for each column
-                    meterdataVA = max(meterdataVA, row[2]) if meterdataVA is not None else row[2]
-                    meterdataVB = max(meterdataVB, row[3]) if meterdataVB is not None else row[3]
-                    meterdataVC = max(meterdataVC, row[4]) if meterdataVC is not None else row[4]
+        master_cb_skips_INV_check = True if globals()[f'{var_name}metercbval'].get() == 0 else False
+        #print(name, master_cb_skips_INV_check)
 
-                if meterdataVA != 0 and meterdataVB != 0 and meterdataVC !=0:
-                    _percent_difference_AB = abs(meterdataVA - meterdataVB) / max(meterdataVA, meterdataVB) * 100
-                    _percent_difference_AC = abs(meterdataVA - meterdataVC) / max(meterdataVA, meterdataVC) * 100
-                    _percent_difference_BC = abs(meterdataVB - meterdataVC) / max(meterdataVB, meterdataVC) * 100
-                else:
-                    _percent_difference_AB = 0
-                    _percent_difference_AC = 0
-                    _percent_difference_BC = 0
-
-                meterVconfig = globals()[f'{var_name}meterVLabel'].cget("text")
-
-                if meterVconfig == "❌❌":
-                    meterVstat = 0    
-                else:
-                    meterVstat = 1
-
-                meterdataavgAA = np.mean([row[5] for row in meterdata if row[5] is not None])
-                meterdataavgAB = np.mean([row[6] for row in meterdata if row[6] is not None])
-                meterdataavgAC = np.mean([row[7] for row in meterdata if row[7] is not None])
-                meterdataAA = all(row[5] < 1 for row in meterdata if row[5] is not None)
-                meterdataAB = all(row[6] < 1 for row in meterdata if row[6] is not None)
-                meterdataAC = all(row[7] < 1 for row in meterdata if row[7] is not None)
-                meterdataKW = np.mean([row[10] for row in meterdata if row[10] is not None])
-
-                #print(f'{name} |  A: {meterdataAA}, B: {meterdataAB}, C: {meterdataAC}')
-                #Accounting for Sites reporting Votlage differently
-                if name == "Hickory":
-                    val = 5
-                else:
-                    val = 5000
-
-                if (meterdataVA or meterdataVB or meterdataVC) < val and meterVstat == 1:
-                    meterVstatus= '❌❌'
-                    meterVstatuscolor= 'red'
-                    online = meter_last_online(name)
-                    messagebox.showerror(parent=alertW, title= f"{name} Meter", message= f"Loss of Utility Voltage or Lost Comms with Meter. {online}")
-                elif _percent_difference_AB <= 5 and _percent_difference_AC <= 5 and _percent_difference_BC <= 5 and meterdataVA or meterdataVB or meterdataVC > 5000:
-                    meterVstatus= '✓✓✓'
-                    meterVstatuscolor= 'green'
-                    if meterVstat == 0:
-                        messagebox.showinfo(parent=alertW, title=f"{name} Meter", message= "Utility Voltage Restored!!! Close the Breaker")
-                else:
-                    meterVstatus= '❌❌'
-                    meterVstatuscolor= 'red'
-
-                if (meterdataKW < 2 or meterdataAA or meterdataAB or meterdataAC) and begin:
-                    if name != 'Van Buren': # This if statement and elif pair juke around the VanBuren being down a phase. 
-                        meterkWstatus= '❌❌'
-                        meterkWstatuscolor= 'red'
-                        meterlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
-                        if meterlbl != 'red' and master_cb_skips_INV_check:
-                            online = meter_last_online(name)
-                            messagebox.showerror(parent= alertW, title=f"{name}, Power Loss", message=f"Site: {name}\nMeter Production: {round(meterdataKW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}")
-                
-                    elif meterdataAC or meterdataAB or meterdataKW < 2:
-                        meterkWstatus= '❌❌'
-                        meterkWstatuscolor= 'red'
-                        meterlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
-                        if meterlbl != 'red' and master_cb_skips_INV_check:
-                            online = meter_last_online(name)
-                            messagebox.showerror(parent= alertW, title=f"{name}, Meter Power Loss", message=f"Site: {name}\nMeter Production: {round(meterdataKW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}")
-                
-                    
-
-                else:
-                    meterkWstatus= '✓✓✓'
-                    meterkWstatuscolor= 'green'
-                globals()[f'{var_name}meterVLabel'].config(text= meterVstatus, bg= meterVstatuscolor)
-                globals()[f'{var_name}meterkWLabel'].config(text= meterkWstatus, bg= meterkWstatuscolor)
-
-            else:
-                meterlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
-                if meterlbl != 'pink' and master_cb_skips_INV_check:
-                    messagebox.showerror(parent= alertW, title=f"{name}, Meter Comms Loss", message=f"Meter Comms lost {meter_Ltime} with the Meter at {name}! Please Investigate!")
-                globals()[f'{var_name}meterkWLabel'].config(bg='pink')
-                globals()[f'{var_name}meterVLabel'].config(bg='pink')
 
         #Breaker Update
         sites_WObreakers = ['Bluebird', 'Bulloch 1A', 'Bulloch 1B', 'Conetoe', 'CDIA', 'Cougar', 'Duplin', 'Freight Line', 'Holly Swamp', 'PG', 'Richmond', 'Upson', 'Van Buren', 'Wayne 1', 'Wayne 2', 'Wayne 3', 'Wellons']
@@ -633,14 +545,17 @@ def update_data():
                     globals()[f'{var_name}statusLabel'].config(bg='pink')
                     if bklbl != 'pink' and master_cb_skips_INV_check:
                         messagebox.showerror(parent= alertW, title=f"{name}, Breaker Comms Loss", message=f"Breaker Comms lost {bk_Ltime} with the Breaker at {name}! Please Investigate!")
+        #INVERTER CHECKS
         if name == "Duplin":
             for r in range(1, 4):
                 data = inv_data[f'{name} Central INV {r} Data']
+                invavgkW = np.mean([row[3] for row in data[:meter_pulls]])
+                
                 current_config = globals()[f'{var_name}inv{r}cb'].cget("bg")
                 cbval = globals()[f'{var_name}inv{r}cbval'].get()
-                total_dcv = sum(row[4] for row in data)
-                avg_dcv = total_dcv / len(data)
+                avg_dcv = np.mean([row[4] for row in data])
                 inv_comm = max(comm_data[f'{name} Central INV {r} Data'])[0]
+                allinv_kW.append(invavgkW if inv_comm > time_date_compare else 0)
                 inv_Ltime = inv_comm.strftime('%m/%d/%y | %H:%M')
                 if inv_comm > time_date_compare:
                     if all(point[3] < 1 for point in data):
@@ -666,11 +581,14 @@ def update_data():
             stringinv = 4
             for r in range(1, 19):
                 data = inv_data[f'{name} String INV {r} Data']
+                invavgkW = np.mean([row[3] for row in data[:meter_pulls]])
+                                
                 current_config = globals()[f'{var_name}inv{stringinv}cb'].cget("bg")
                 cbval = globals()[f'{var_name}inv{r}cbval'].get()
-                total_dcv = sum(row[4] for row in data)
-                avg_dcv = total_dcv / len(data)
+                
+                avg_dcv = np.mean([row[4] for row in data])
                 inv_comm = max(comm_data[f'{name} String INV {r} Data'])[0]
+                allinv_kW.append(invavgkW if inv_comm > time_date_compare else 0)
                 inv_Ltime = inv_comm.strftime('%m/%d/%y | %H:%M')
                 if inv_comm > time_date_compare:
                     if all(point[3] < 1 for point in data):
@@ -700,9 +618,10 @@ def update_data():
                 data = inv_data[f'{name} INV 1 Data']
                 current_config = globals()[f'{var_name}meterkWLabel'].cget("bg")
                 cbval = globals()[f'{var_name}metercbval'].get()
-                total_dcv = sum(row[4] for row in data)
-                avg_dcv = total_dcv / len(data)
+                
+                avg_dcv = np.mean([row[4] for row in data])
                 inv_comm = max(comm_data[f'{name} INV 1 Data'])[0]
+                
                 inv_Ltime = inv_comm.strftime('%m/%d/%y | %H:%M')
                 if inv_comm > time_date_compare:
                     if all(point[3] <= 1 for point in data):
@@ -747,11 +666,16 @@ def update_data():
         else:
             for r in range(1, inverters + 1):
                 data = inv_data[f'{name} INV {r} Data']
+                invavgkW = np.mean([row[3] for row in data[:meter_pulls]])
+                
+                
                 current_config = globals()[f'{var_name}inv{r}cb'].cget("bg")
                 cbval = globals()[f'{var_name}inv{r}cbval'].get()
-                total_dcv = sum(row[4] for row in data)
-                avg_dcv = total_dcv / len(data)
+                
+                avg_dcv = np.mean([row[4] for row in data])
                 inv_comm = max(comm_data[f'{name} INV {r} Data'])[0]
+
+                allinv_kW.append(invavgkW if inv_comm > time_date_compare else 0)
                 inv_Ltime = inv_comm.strftime('%m/%d/%y | %H:%M')
                 if inv_comm > time_date_compare:
                     if all(point[3] < 1 for point in data):
@@ -792,6 +716,141 @@ def update_data():
                                 messagebox.showerror(parent= alertW, title=f"{name}, Inverter Comms Loss", message=f"INV Comms lost {inv_Ltime} with Inverter {r} at {name}! Please Investigate!")
                         else:
                             messagebox.showerror(parent= alertW, title=f"{name}, Inverter Comms Loss", message=f"INV Comms lost {inv_Ltime} with Inverter {r} at {name}! Please Investigate!")
+        #Meter Check
+        if name != "CDIA":
+            meter_Ltime = metercomms.strftime('%m/%d/%y | %H:%M')
+            if metercomms > time_date_compare:
+                meterdata = meter_data[f'{name} Meter Data']
+                meterdataVA= None
+                meterdataVB= None
+                meterdataVC= None 
+                meterdataKW= None 
+                meterdataAA= None 
+                meterdataAB= None 
+                meterdataAC= None
+
+                # Iterate over fetched rows to find the maximum value for each column
+                for row in meterdata:
+                    # Update maximum values for each column
+                    meterdataVA = max(meterdataVA, row[2]) if meterdataVA is not None else row[2]
+                    meterdataVB = max(meterdataVB, row[3]) if meterdataVB is not None else row[3]
+                    meterdataVC = max(meterdataVC, row[4]) if meterdataVC is not None else row[4]
+                meterdataavgVA = np.mean([row[2] for row in meterdata if row[2] is not None])
+                meterdataavgVB = np.mean([row[3] for row in meterdata if row[3] is not None])
+                meterdataavgVC = np.mean([row[4] for row in meterdata if row[4] is not None])
+
+                if meterdataavgVA != 0 and meterdataavgVB != 0 and meterdataavgVC !=0:
+                    percent_difference_AB = ((max(meterdataavgVA, meterdataavgVB) - min(meterdataavgVA, meterdataavgVB)) / np.mean([meterdataavgVA, meterdataavgVB]))  * 100
+                    percent_difference_AC = ((max(meterdataavgVA, meterdataavgVC) - min(meterdataavgVA, meterdataavgVC)) / np.mean([meterdataavgVA, meterdataavgVC]))  * 100
+                    percent_difference_BC = ((max(meterdataavgVC, meterdataavgVB) - min(meterdataavgVC, meterdataavgVB)) / np.mean([meterdataavgVC, meterdataavgVB]))  * 100
+                    #print(f'{name} | AB: {percent_difference_AB} AC: {percent_difference_AC} BC: {percent_difference_BC}')
+                else:
+                    percent_difference_AB = 0
+                    percent_difference_AC = 0
+                    percent_difference_BC = 0
+
+                meterVconfig = globals()[f'{var_name}meterVLabel'].cget("text")
+
+                meterdataavgAA = np.mean([row[5] for row in meterdata if row[5] is not None])
+                meterdataavgAB = np.mean([row[6] for row in meterdata if row[6] is not None])
+                meterdataavgAC = np.mean([row[7] for row in meterdata if row[7] is not None])
+                meterdataAA = all(row[5] < 1 for row in meterdata if row[5] is not None)
+                meterdataAB = all(row[6] < 1 for row in meterdata if row[6] is not None)
+                meterdataAC = all(row[7] < 1 for row in meterdata if row[7] is not None)
+                meterdataKW = np.mean([row[10] for row in meterdata if row[10] is not None])
+                meterdatakWM = max(row[10] for row in meterdata if row [10] is not None)
+            
+                
+                #print(f'{name} |  A: {meterdataAA}, B: {meterdataAB}, C: {meterdataAC}')
+                #Accounting for Sites reporting Votlage differently
+                if name == "Hickory":
+                    val = 5
+                else:
+                    val = 5000
+
+                if name == "Wellons":
+                    dif = 9
+                else:
+                    dif = 5
+
+                if meterdataVA < val and meterdataVB < val and meterdataVC < val:
+                    meterVstatus= '❌❌'
+                    meterVstatuscolor= 'red'
+                    if meterVconfig != '❌❌':
+                        online = meter_last_online(name)
+                        messagebox.showerror(parent=alertW, title= f"{name} Meter", message= f"Loss of Utility Voltage or Lost Comms with Meter. {online}")
+                elif meterdataVA < val:
+                    meterVstatus= 'X✓✓'
+                    meterVstatuscolor= 'orange'
+                    if meterVconfig != 'X✓✓':
+                        messagebox.showerror(parent=alertW, title= f"{name} Meter", message= f"Loss of Utility Phase A Voltage or Lost Comms with Meter.")
+                elif meterdataVB < val:
+                    meterVstatus= '✓X✓'
+                    meterVstatuscolor= 'orange'
+                    if meterVconfig != '✓X✓':
+                        messagebox.showerror(parent=alertW, title= f"{name} Meter", message= f"Loss of Utility Phase B Voltage or Lost Comms with Meter.")
+                elif meterdataVC < val:
+                    meterVstatus= '✓✓X'
+                    meterVstatuscolor= 'orange'
+                    if meterVconfig != '✓✓X':
+                        messagebox.showerror(parent=alertW, title= f"{name} Meter", message= f"Loss of Utility Phase C Voltage or Lost Comms with Meter.")
+                elif percent_difference_AB >= dif or percent_difference_AC >= dif or percent_difference_BC >= dif:
+                    meterVstatus= '???'
+                    meterVstatuscolor= 'orange'
+                    if meterVconfig != '???':
+                        messagebox.showerror(parent=alertW, title= f"{name} Meter", message= f"Voltage Imbalance greater than {dif}%")
+                else:
+                    meterVstatus= '✓✓✓'
+                    meterVstatuscolor= 'green'
+                    if meterVconfig not in  ['✓✓✓', 'V']:
+                        messagebox.showinfo(parent=alertW, title=f"{name} Meter", message= "Utility Voltage Restored!!! Close the Breaker")
+
+                globals()[f'{var_name}meterVLabel'].config(text= meterVstatus, bg= meterVstatuscolor)
+
+                total_invkW = sum(allinv_kW)
+                if (meterdataKW < 2 or meterdataAA or meterdataAB or meterdataAC) and begin:
+                    if name != 'Van Buren': # This if statement and elif pair juke around the VanBuren being down a phase. 
+                        meterkWstatus= '❌❌'
+                        meterkWstatuscolor= 'red'
+                        meterlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
+                        if meterlbl != 'red' and master_cb_skips_INV_check:
+                            online = meter_last_online(name)
+                            messagebox.showerror(parent= alertW, title=f"{name}, Power Loss", message=f"Site: {name}\nMeter Production: {round(meterdataKW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}")
+                
+                    elif meterdataAC or meterdataAB or meterdataKW < 2: #This is a continuation of the above 'Juke' The Elif below is yet another continuation as Vanburen gets trapped by the very first if statement
+                        meterkWstatus= '❌❌'
+                        meterkWstatuscolor= 'red'
+                        meterlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
+                        if meterlbl != 'red' and master_cb_skips_INV_check:
+                            online = meter_last_online(name)
+                            messagebox.showerror(parent= alertW, title=f"{name}, Meter Power Loss", message=f"Site: {name}\nMeter Production: {round(meterdataKW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}")
+                    elif meterdatakWM < total_invkW * .8 and name != "CDIA" and h_tm_now >= 8: #Less than 80% of total INV's
+                        if globals()[f'{var_name}meterkWLabel'].cget('text') != '???':
+                            messagebox.showwarning(parent= alertW, title=name, message=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue')
+                        meterkWstatus= '???'
+                        meterkWstatuscolor= 'orange'
+                elif meterdatakWM < total_invkW * .8 and name != "CDIA" and h_tm_now >= 8: #Less than 80% of total INV's
+                    if globals()[f'{var_name}meterkWLabel'].cget('text') != '???':
+                        messagebox.showwarning(parent= alertW, title=name, message=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue')
+                    meterkWstatus= '???'
+                    meterkWstatuscolor= 'orange'
+                else:
+                    meterkWstatus= '✓✓✓'
+                    meterkWstatuscolor= 'green'
+
+                #print(f'{name}:  {meterdatakWM} | {total_invkW*.80} ~ 80% | {total_invkW}')
+                #print(allinv_kW)
+                globals()[f'{var_name}meterkWLabel'].config(text= meterkWstatus, bg= meterkWstatuscolor)
+
+            else:
+                meterlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
+                if meterlbl != 'pink' and master_cb_skips_INV_check:
+                    messagebox.showerror(parent= alertW, title=f"{name}, Meter Comms Loss", message=f"Meter Comms lost {meter_Ltime} with the Meter at {name}! Please Investigate!")
+                globals()[f'{var_name}meterkWLabel'].config(bg='pink')
+                globals()[f'{var_name}meterVLabel'].config(bg='pink')
+
+
+
 
     dbconnection.close()
 
