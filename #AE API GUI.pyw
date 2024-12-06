@@ -560,12 +560,12 @@ def update_data():
                 if inv_comm > time_date_compare:
                     if all(point[3] < 1 for point in data):
                         if avg_dcv > 100:
-                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 75)) and cbval == 0 and master_cb_skips_INV_check:
+                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
                                 online_last = duplinC_last_online(name, r)
                                 messagebox.showwarning(title=f"{name}", parent= alertW, message= f"Central Inverter {r} Offline, Good DC Voltage | {online_last}")
                             globals()[f'{var_name}inv{r}cb'].config(bg='orange')
                         else:
-                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 75)) and cbval == 0 and master_cb_skips_INV_check:
+                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
                                 online_last = duplinC_last_online(name, r)
                                 messagebox.showwarning(title=f"{name}", parent= alertW, message= f"Central Inverter {r} Offline | {online_last}")
                             globals()[f'{var_name}inv{r}cb'].config(bg='red')
@@ -593,13 +593,13 @@ def update_data():
                 if inv_comm > time_date_compare:
                     if all(point[3] < 1 for point in data):
                         if avg_dcv > 100:
-                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 75)) and cbval == 0 and master_cb_skips_INV_check:
+                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
                                 online_last = duplinS_last_online(name, r)
                                 messagebox.showwarning(title=f"{name}", parent= alertW, message= f"String Inverter {r} Offline, Good DC Voltage | {online_last}")
                             globals()[f'{var_name}inv{stringinv}cb'].config(bg='orange')
                             stringinv += 1  
                         else:
-                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 75)) and cbval == 0 and master_cb_skips_INV_check:
+                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
                                 online_last = duplinS_last_online(name, r)
                                 messagebox.showwarning(title=f"{name}", parent= alertW, message= f"String Inverter {r} Offline | {online_last}")
                             globals()[f'{var_name}inv{stringinv}cb'].config(bg='red')
@@ -626,7 +626,7 @@ def update_data():
                 if inv_comm > time_date_compare:
                     if all(point[3] <= 1 for point in data):
                         if avg_dcv > 100:
-                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 75)) and cbval == 0 and master_cb_skips_INV_check:
+                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
                                 var_key = f'{var_name}statusLabel'
                                 if var_key in globals():
                                     if globals()[var_key].cget("bg") == 'green':
@@ -638,7 +638,7 @@ def update_data():
 
                             globals()[f'{var_name}meterkWLabel'].config(text="X✓", bg='orange')
                         else:
-                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 75)) and cbval == 0 and master_cb_skips_INV_check:
+                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
                                 var_key = f'{var_name}statusLabel'
                                 if var_key in globals():
                                     if globals()[var_key].cget("bg") == 'green':
@@ -680,7 +680,7 @@ def update_data():
                 if inv_comm > time_date_compare:
                     if all(point[3] < 1 for point in data):
                         if avg_dcv > 100:
-                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 75)) and cbval == 0 and master_cb_skips_INV_check:
+                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
                                 var_key = f'{var_name}statusLabel'
                                 if var_key in globals():
                                     if globals()[var_key].cget("bg") == 'green':
@@ -692,7 +692,7 @@ def update_data():
 
                             globals()[f'{var_name}inv{r}cb'].config(bg='orange')
                         else:
-                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 75)) and cbval == 0 and master_cb_skips_INV_check:
+                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
                                 var_key = f'{var_name}statusLabel'
                                 if var_key in globals():
                                     if globals()[var_key].cget("bg") == 'green':
@@ -813,7 +813,7 @@ def update_data():
                         meterkWstatus= '❌❌'
                         meterkWstatuscolor= 'red'
                         meterlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
-                        if meterlbl != 'red' and master_cb_skips_INV_check:
+                        if meterlbl != 'red' and master_cb_skips_INV_check and poa > 10:
                             online = meter_last_online(name)
                             messagebox.showerror(parent= alertW, title=f"{name}, Power Loss", message=f"Site: {name}\nMeter Production: {round(meterdataKW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}")
                 
@@ -821,16 +821,19 @@ def update_data():
                         meterkWstatus= '❌❌'
                         meterkWstatuscolor= 'red'
                         meterlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
-                        if meterlbl != 'red' and master_cb_skips_INV_check:
+                        if meterlbl != 'red' and master_cb_skips_INV_check and poa > 10:
                             online = meter_last_online(name)
                             messagebox.showerror(parent= alertW, title=f"{name}, Meter Power Loss", message=f"Site: {name}\nMeter Production: {round(meterdataKW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}")
-                    elif meterdatakWM < total_invkW * .8 and name != "CDIA" and h_tm_now >= 8: #Less than 80% of total INV's
-                        if globals()[f'{var_name}meterkWLabel'].cget('text') != '???':
+                    elif meterdatakWM < total_invkW * .83 and name != "CDIA": #Less than 83% of total INV's
+                        if globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and poa >= 150:
                             messagebox.showwarning(parent= alertW, title=name, message=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue')
                         meterkWstatus= '???'
                         meterkWstatuscolor= 'orange'
-                elif meterdatakWM < total_invkW * .8 and name != "CDIA" and h_tm_now >= 8: #Less than 80% of total INV's
-                    if globals()[f'{var_name}meterkWLabel'].cget('text') != '???':
+
+                elif meterdatakWM < total_invkW * .83 and name != "CDIA": #Less than 83% of total INV's
+                    print(f'{name}:  {meterdatakWM} | {total_invkW*.83} ~ 83% | {total_invkW}')
+                    print(allinv_kW)
+                    if globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and poa >= 150:
                         messagebox.showwarning(parent= alertW, title=name, message=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue')
                     meterkWstatus= '???'
                     meterkWstatuscolor= 'orange'
@@ -838,8 +841,6 @@ def update_data():
                     meterkWstatus= '✓✓✓'
                     meterkWstatuscolor= 'green'
 
-                #print(f'{name}:  {meterdatakWM} | {total_invkW*.80} ~ 80% | {total_invkW}')
-                #print(allinv_kW)
                 globals()[f'{var_name}meterkWLabel'].config(text= meterkWstatus, bg= meterkWstatuscolor)
 
             else:
@@ -1196,6 +1197,21 @@ def checkin():
     update_data()
 
 
+def last_update():
+    times = []
+    for site, inv, var, place in master_List_Sites:
+        c.execute(f"SELECT TOP 1 [Date & Time] FROM [{site} Meter Data] ORDER BY [Date & Time] DESC")
+        last_time = c.fetchone()
+        times.append(last_time[0])
+    most_recent = max(times)
+    return most_recent
+
+
+
+
+
+
+
 def time_window():
 
     global timecurrent
@@ -1234,8 +1250,8 @@ def time_window():
     timecurrent = datetime.now()
     db_update_time = 10
     timecompare = timecurrent - timedelta(minutes=db_update_time)
-
-    if firsttime < timecompare:
+    recent_update = last_update()
+    if recent_update < timecompare:
         os.startfile(r"G:\Shared drives\O&M\NCC Automations\Notification System\API Data Pull, Multi.py")
         messagebox.showerror(parent=timeW, title="Notification System/GUI", message= f"The Database has not been updated in {str(db_update_time)} Minutes and usually updates every 2\nLaunching Data Pull Script in response.")
 
