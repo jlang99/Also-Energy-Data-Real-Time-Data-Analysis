@@ -19,14 +19,14 @@ import json
 import os
 
 master_List_Sites = [('Bishopville II', 36, 'bishopvilleII'), ('Bluebird', 24, 'bluebird'), ('Bulloch 1A', 24, 'bulloch1a'), ('Bulloch 1B', 24, 'bulloch1b'), ('Cardinal', 59, 'cardinal'),
-                     ('Cherry', 4, 'cherry'), ('Conetoe', 4, 'conetoe'), ('Cougar', 30, 'cougar'), ('Duplin', 21, 'duplin'), ('Freight Line', 18, 'freightline'), ('Gray Fox', 40, 'grayfox'),
+                     ('Cherry', 4, 'cherry'), ('Conetoe', 4, 'conetoe'), ('Cougar', 30, 'cougar'), ('Duplin', 21, 'duplin'), ('Elk', 43, 'elk'), ('Freight Line', 18, 'freightline'), ('Gray Fox', 40, 'grayfox'),
                       ('Harding', 24, 'harding'), ('Harrison', 43, 'harrison'), ('Hayes', 26, 'hayes'), ('Hickory', 2, 'hickory'), ('Hickson', 16, 'hickson'), ('Holly Swamp', 16, 'hollyswamp'),
                        ('Jefferson', 64, 'jefferson'), ('Marshall', 16, 'marshall'), ('McLean', 40, 'mcLean'), ('Ogburn', 16, 'ogburn'), ('PG', 18, 'pg'), ('Richmond', 24, 'richmond'),
                         ('Shorthorn', 72, 'shorthorn'), ('Sunflower', 80, 'sunflower'), ('Tedder', 16, 'tedder'), ('Thunderhead', 16, 'thunderhead'), ('Upson', 24, 'upson'), 
                         ('Van Buren', 17, 'vanburen'), ('Violet', 2, 'violet'), ('Warbler', 32, 'warbler'), ('Washington', 40, 'washington'), ('Wayne 1', 4, 'wayne1'),
                         ('Wayne 2', 4, 'wayne2'), ('Wayne 3', 4, 'wayne3'), ('Wellons', 6, 'wellons'), ('Whitehall', 16, 'whitehall'), ('Whitetail', 80, 'whitetail')]
 
-has_breaker = ['Bishopville II', 'Cardinal', 'Cherry', 'Gray Fox', 'Harding', 'Harrison', 'Hayes', 'Hickory', 'Hickson', 'Jefferson', 'Marshall', 'McLean', 'Ogburn', 
+has_breaker = ['Bishopville II', 'Cardinal', 'Cherry', 'Elk', 'Gray Fox', 'Harding', 'Harrison', 'Hayes', 'Hickory', 'Hickson', 'Jefferson', 'Marshall', 'McLean', 'Ogburn', 
                'Shorthorn', 'Sunflower', 'Tedder', 'Thunderhead', 'Warbler', 'Washington', 'Whitehall', 'Whitetail']
 
 
@@ -183,7 +183,7 @@ def update_breaker_status():
                         globals()[f'{var}MeterOnOff'].select()
                         globals()[f'{var}MeterOnOff'].config(bg='Red')
                         if device == "Meter kW" and status == "currently within parameters, but may have been lost briefly":
-                            if poa > 50:
+                            if poa > 100:
                                 email_notification(site, status, device)
                         else:
                             email_notification(site, status, device)
@@ -255,7 +255,7 @@ def update_breaker_status():
                         globals()[f'{var}MeterOnOff'].select()
                         globals()[f'{var}MeterOnOff'].config(bg='Red')
                         if device == "Meter kW" and status == "currently within parameters, but may have been lost briefly":
-                            if poa > 50:
+                            if poa > 100:
                                 email_notification(site, status, device)
                         else:
                             email_notification(site, status, device)

@@ -18,7 +18,7 @@ import os
 import json
 
 breaker_pulls = 6
-meter_pulls = 6
+meter_pulls = 10
 
 
 start = ty.perf_counter()
@@ -824,22 +824,26 @@ def update_data():
                         if meterlbl != 'red' and master_cb_skips_INV_check and poa > 10:
                             online = meter_last_online(name)
                             messagebox.showerror(parent= alertW, title=f"{name}, Meter Power Loss", message=f"Site: {name}\nMeter Production: {round(meterdataKW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}")
-                    elif meterdatakWM < total_invkW * .83 and name != "CDIA": #Less than 83% of total INV's
-                        if globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and poa >= 150:
+                    elif meterdatakWM < total_invkW * .85 and name != "CDIA": #Less than 8X% of total INV's
+                        if globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and poa >= 250:
                             messagebox.showwarning(parent= alertW, title=name, message=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue')
                         meterkWstatus= '???'
                         meterkWstatuscolor= 'orange'
 
-                elif meterdatakWM < total_invkW * .83 and name != "CDIA": #Less than 83% of total INV's
-                    print(f'{name}:  {meterdatakWM} | {total_invkW*.83} ~ 83% | {total_invkW}')
-                    print(allinv_kW)
-                    if globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and poa >= 150:
+                elif meterdatakWM < total_invkW * .85 and name != "CDIA": #Less than 8X% of total INV's
+                    #print(f'{name}:  {meterdatakWM} | {total_invkW*.85} ~ 85% | {total_invkW}')
+                    #print(allinv_kW)
+                    if globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and poa >= 250:
                         messagebox.showwarning(parent= alertW, title=name, message=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue')
                     meterkWstatus= '???'
                     meterkWstatuscolor= 'orange'
                 else:
                     meterkWstatus= '✓✓✓'
                     meterkWstatuscolor= 'green'
+
+                if name == "Bluebird":
+                    print(f'{name}:  {meterdatakWM} | {total_invkW*.85} ~ 85% | {total_invkW}')
+                    print(allinv_kW)
 
                 globals()[f'{var_name}meterkWLabel'].config(text= meterkWstatus, bg= meterkWstatuscolor)
 
@@ -1200,9 +1204,10 @@ def checkin():
 def last_update():
     times = []
     for site, inv, var, place in master_List_Sites:
-        c.execute(f"SELECT TOP 1 [Date & Time] FROM [{site} Meter Data] ORDER BY [Date & Time] DESC")
-        last_time = c.fetchone()
-        times.append(last_time[0])
+        if site != "CDIA":
+            c.execute(f"SELECT TOP 1 [Date & Time] FROM [{site} Meter Data] ORDER BY [Date & Time] DESC")
+            last_time = c.fetchone()
+            times.append(last_time[0])
     most_recent = max(times)
     return most_recent
 
