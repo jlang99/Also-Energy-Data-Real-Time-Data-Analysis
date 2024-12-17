@@ -18,6 +18,11 @@ from email.mime.text import MIMEText
 import json
 import os
 
+#Number of Data points to check
+breaker_pulls = 10
+meter_pulls = 15
+voltage_check = 5 
+
 master_List_Sites = [('Bishopville II', 36, 'bishopvilleII'), ('Bluebird', 24, 'bluebird'), ('Bulloch 1A', 24, 'bulloch1a'), ('Bulloch 1B', 24, 'bulloch1b'), ('Cardinal', 59, 'cardinal'),
                      ('Cherry', 4, 'cherry'), ('Conetoe', 4, 'conetoe'), ('Cougar', 30, 'cougar'), ('Duplin', 21, 'duplin'), ('Elk', 43, 'elk'), ('Freight Line', 18, 'freightline'), ('Gray Fox', 40, 'grayfox'),
                       ('Harding', 24, 'harding'), ('Harrison', 43, 'harrison'), ('Hayes', 26, 'hayes'), ('Hickory', 2, 'hickory'), ('Hickson', 16, 'hickson'), ('Holly Swamp', 16, 'hollyswamp'),
@@ -131,23 +136,19 @@ def connect_db():
 
 def update_breaker_status():    
     #ic(breaker_data)
-    compare_time = datetime.now() - timedelta(hours=4)   
+    curtime = datetime.now()
+    compare_time = curtime - timedelta(hours=4)   
+    h_time = curtime.hour
     for site, inv_num, var in master_List_Sites:
-        try:
-            poa = poa_data[f'{site} POA Data'][0]
-        except TypeError:
-            poa = 999
-        print(site, poa)
-        if site == "Violet":
-            #Meter voltage Status
-            if meter_data['Violet Meter Data'][0][6] > compare_time:
-                if all(meter_data['Violet Meter Data'][i][j] > 5 for i in range(5) for j in range(3)):
-                    status = "currently within parameters, but may have been lost briefly"
-                else:
-                    status = "Lost"
+        try: #Defining POA for meter KW notification
+            poa = max(poa_data[f'{site} POA Data'])[0]
+        except Exception:
+            if 8 < h_time < 15:
+                poa = 999
             else:
-                status = "Unknown, Lost Comms with Meter"
-
+                poa = 1
+        
+        if site == "Violet":
             #Meter Check
             data = np.array(meter_data[f'{site} Meter Data'])
             lastUpload_col = data[:, 6]
@@ -156,7 +157,7 @@ def update_breaker_status():
                 if any(np.all(amps_columns[:, j] == 0) for j in range(amps_columns.shape[1])):
                     if globals()[f'{var}MeterOnOffval'].get() == False:
                         if meter_data[f'{site} Meter Data'][0][6] > compare_time:
-                            if all(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(10) for j in range(3)):
+                            if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
                                 status = "currently within parameters, but may have been lost briefly"
                                 device = "Meter"
                             else:
@@ -171,7 +172,7 @@ def update_breaker_status():
                 elif np.mean([row[7] for row in data if row[7] is not None]) < 2:
                     if globals()[f'{var}MeterOnOffval'].get() == False:
                         if meter_data[f'{site} Meter Data'][0][6] > compare_time:
-                            if all(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(10) for j in range(3)):
+                            if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
                                 status = "currently within parameters, but may have been lost briefly"
                                 device = "Meter kW"
                             else:
@@ -199,7 +200,7 @@ def update_breaker_status():
                     email_notification(site, status, device)
 
             #Breaker Check
-            if all(not breaker_data['Violet Breaker Data 1'][i][0] for i in range(10)):
+            if all(not breaker_data['Violet Breaker Data 1'][i][0] for i in range(breaker_pulls)):
                 if violetBreakerOnOffval.get() == False:
                     device = "Breaker"
                     email_notification("Violet 1", status, device)
@@ -209,7 +210,7 @@ def update_breaker_status():
                 violetBreakerOnOff.deselect()
                 globals()[f'{var}BreakerOnOff'].config(bg='Green')
             #Breaker 2 Check
-            if all(not breaker_data['Violet Breaker Data 2'][i][0] for i in range(10)):
+            if all(not breaker_data['Violet Breaker Data 2'][i][0] for i in range(breaker_pulls)):
                 if violet2BreakerOnOffval.get() == False:
                     device = "Breaker"
                     email_notification("Violet 2", status, device)
@@ -228,7 +229,7 @@ def update_breaker_status():
                 if any(np.all(amps_columns[:, j] == 0) for j in range(amps_columns.shape[1])):
                     if globals()[f'{var}MeterOnOffval'].get() == False:
                         if meter_data[f'{site} Meter Data'][0][6] > compare_time:
-                            if all(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(10) for j in range(3)):
+                            if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
                                 status = "currently within parameters, but may have been lost briefly"
                                 device = "Meter Amps"
                             else:
@@ -243,7 +244,7 @@ def update_breaker_status():
                 elif np.mean([row[7] for row in data if row[7] is not None]) < 2:
                     if globals()[f'{var}MeterOnOffval'].get() == False:
                         if meter_data[f'{site} Meter Data'][0][6] > compare_time:
-                            if all(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(10) for j in range(3)):
+                            if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
                                 status = "currently within parameters, but may have been lost briefly"
                                 device = "Meter kW"
                             else:
@@ -271,11 +272,11 @@ def update_breaker_status():
                     email_notification(site, status, device)
 
         if site in has_breaker: #Breaker Check
-            if all(not breaker_data[f'{site} Breaker Data'][i][0] for i in range(10)):
+            if all(not breaker_data[f'{site} Breaker Data'][i][0] for i in range(breaker_pulls)):
                 if globals()[f'{var}BreakerOnOffval'].get() == False:
                     if meter_data[f'{site} Meter Data'][0][6] > compare_time:
                         print(meter_data[f'{site} Meter Data'][i][3] for i in range(5))
-                        if all(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(5) for j in range(3)):
+                        if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
                             status = "currently within parameters, but may have been lost briefly"
                             device = "Breaker"
                         else:
@@ -321,11 +322,11 @@ def db_to_dict():
     for table in tables:
         table_name = table.table_name
         if "Breaker" in table_name and table_name not in excluded_tables:
-            c.execute(f"SELECT TOP 10 [Status] FROM [{table_name}] ORDER BY [Date & Time] DESC")
+            c.execute(f"SELECT TOP {breaker_pulls} [Status] FROM [{table_name}] ORDER BY [Date & Time] DESC")
             breaker_rows = c.fetchall()
             breaker_data[table_name] = breaker_rows
         elif "Meter" in table_name and table_name not in excluded_tables and 'Wellons' not in table_name:
-            c.execute(f"SELECT TOP 15 [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], [lastUpload], kW FROM [{table_name}] ORDER BY [Date & Time] DESC")
+            c.execute(f"SELECT TOP {meter_pulls} [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], [lastUpload], kW FROM [{table_name}] ORDER BY [Date & Time] DESC")
             meter_rows = c.fetchall()
             meter_data[table_name] = meter_rows
         elif "Meter" in table_name and 'Wellons' in table_name and table_name not in excluded_tables:
@@ -333,16 +334,15 @@ def db_to_dict():
             meter_rows = c.fetchall()
             meter_data[table_name] = meter_rows
         elif "POA" in table_name and table_name not in excluded_tables:
-            c.execute(f"SELECT TOP 1 [W/M²] FROM [{table_name}] WHERE lastUpload >= ? ORDER BY [Date & Time] DESC", formatted_time)
-            poadatap = c.fetchone()
+            c.execute(f"SELECT TOP 3 [W/M²] FROM [{table_name}] WHERE lastUpload >= ? ORDER BY [Date & Time] DESC", formatted_time)
+            poadatap = c.fetchall()
             poa_data[table_name] = poadatap
 
     #ic(breaker_data)
-    curtime = datetime.now()
     comptime = meter_data['Freight Line Meter Data'][0][6]
     comptime2 = meter_data['Harding Meter Data'][0][6]
     db_update_time = 15
-    timecompare = curtime - timedelta(minutes=db_update_time)
+    timecompare = current_time - timedelta(minutes=db_update_time)
     print(f"Times: {timecompare} | {comptime} | {comptime2}")
     if timecompare > comptime:
         if timecompare > comptime2:
