@@ -18,8 +18,8 @@ import os
 import json
 
 breaker_pulls = 6
-meter_pulls = 10
-
+meter_pulls = 8
+mvi_percent = .777
 
 start = ty.perf_counter()
 myappid = 'AE.API.Data.GUI'
@@ -549,13 +549,13 @@ def update_data():
         if name == "Duplin":
             for r in range(1, 4):
                 data = inv_data[f'{name} Central INV {r} Data']
-                invavgkW = np.mean([row[3] for row in data[:meter_pulls]])
+                invmaxkW = max([row[3] for row in data[:meter_pulls]])
                 
                 current_config = globals()[f'{var_name}inv{r}cb'].cget("bg")
                 cbval = globals()[f'{var_name}inv{r}cbval'].get()
                 avg_dcv = np.mean([row[4] for row in data])
                 inv_comm = max(comm_data[f'{name} Central INV {r} Data'])[0]
-                allinv_kW.append(invavgkW if inv_comm > time_date_compare else 0)
+                allinv_kW.append(invmaxkW if inv_comm > time_date_compare else 0)
                 inv_Ltime = inv_comm.strftime('%m/%d/%y | %H:%M')
                 if inv_comm > time_date_compare:
                     if all(point[3] < 1 for point in data):
@@ -581,14 +581,14 @@ def update_data():
             stringinv = 4
             for r in range(1, 19):
                 data = inv_data[f'{name} String INV {r} Data']
-                invavgkW = np.mean([row[3] for row in data[:meter_pulls]])
+                invmaxkW = max([row[3] for row in data[:meter_pulls]])
                                 
                 current_config = globals()[f'{var_name}inv{stringinv}cb'].cget("bg")
                 cbval = globals()[f'{var_name}inv{r}cbval'].get()
                 
                 avg_dcv = np.mean([row[4] for row in data])
                 inv_comm = max(comm_data[f'{name} String INV {r} Data'])[0]
-                allinv_kW.append(invavgkW if inv_comm > time_date_compare else 0)
+                allinv_kW.append(invmaxkW if inv_comm > time_date_compare else 0)
                 inv_Ltime = inv_comm.strftime('%m/%d/%y | %H:%M')
                 if inv_comm > time_date_compare:
                     if all(point[3] < 1 for point in data):
@@ -666,7 +666,7 @@ def update_data():
         else:
             for r in range(1, inverters + 1):
                 data = inv_data[f'{name} INV {r} Data']
-                invavgkW = np.mean([row[3] for row in data[:meter_pulls]])
+                invmaxkW = max([row[3] for row in data[:meter_pulls]])
                 
                 
                 current_config = globals()[f'{var_name}inv{r}cb'].cget("bg")
@@ -675,7 +675,7 @@ def update_data():
                 avg_dcv = np.mean([row[4] for row in data])
                 inv_comm = max(comm_data[f'{name} INV {r} Data'])[0]
 
-                allinv_kW.append(invavgkW if inv_comm > time_date_compare else 0)
+                allinv_kW.append(invmaxkW if inv_comm > time_date_compare else 0)
                 inv_Ltime = inv_comm.strftime('%m/%d/%y | %H:%M')
                 if inv_comm > time_date_compare:
                     if all(point[3] < 1 for point in data):
@@ -824,27 +824,32 @@ def update_data():
                         if meterlbl != 'red' and master_cb_skips_INV_check and poa > 10:
                             online = meter_last_online(name)
                             messagebox.showerror(parent= alertW, title=f"{name}, Meter Power Loss", message=f"Site: {name}\nMeter Production: {round(meterdataKW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}")
-                    elif meterdatakWM < total_invkW * .85 and name != "CDIA": #Less than 8X% of total INV's
-                        if globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and poa >= 250:
+                    elif meterdatakWM < total_invkW * mvi_percent and name != "CDIA": #Less than XX% of total INV's
+                        print(f'{name}:  {meterdatakWM} | {total_invkW*mvi_percent} ~ {mvi_percent*100}% | {total_invkW}')
+                        print(allinv_kW)
+                        if poa != 9999:
+                            if globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and poa >= 100:
+                                messagebox.showwarning(parent= alertW, title=name, message=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue')
+                        elif globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and 9 <= h_tm_now < 15:
                             messagebox.showwarning(parent= alertW, title=name, message=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue')
                         meterkWstatus= '???'
                         meterkWstatuscolor= 'orange'
 
-                elif meterdatakWM < total_invkW * .85 and name != "CDIA": #Less than 8X% of total INV's
-                    #print(f'{name}:  {meterdatakWM} | {total_invkW*.85} ~ 85% | {total_invkW}')
-                    #print(allinv_kW)
-                    if globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and poa >= 250:
+                elif meterdatakWM < total_invkW * mvi_percent and name != "CDIA": #Less than XX% of total INV's
+                    print(f'{name}:  {meterdatakWM} | {total_invkW*mvi_percent} ~ {mvi_percent*100}% | {total_invkW}')
+                    print(allinv_kW)
+                    if poa != 9999:
+                        if globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and poa >= 100: #Might should change this so that we check the INV groups poa values for each data entry. 
+                            messagebox.showwarning(parent= alertW, title=name, message=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue')
+                    elif globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and 9 <= h_tm_now < 15:
                         messagebox.showwarning(parent= alertW, title=name, message=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue')
                     meterkWstatus= '???'
                     meterkWstatuscolor= 'orange'
+                        
                 else:
                     meterkWstatus= '✓✓✓'
                     meterkWstatuscolor= 'green'
-
-                if name == "Bluebird":
-                    print(f'{name}:  {meterdatakWM} | {total_invkW*.85} ~ 85% | {total_invkW}')
-                    print(allinv_kW)
-
+                #Below we update the GUI with the above defined text and color
                 globals()[f'{var_name}meterkWLabel'].config(text= meterkWstatus, bg= meterkWstatuscolor)
 
             else:
@@ -853,8 +858,7 @@ def update_data():
                     messagebox.showerror(parent= alertW, title=f"{name}, Meter Comms Loss", message=f"Meter Comms lost {meter_Ltime} with the Meter at {name}! Please Investigate!")
                 globals()[f'{var_name}meterkWLabel'].config(bg='pink')
                 globals()[f'{var_name}meterVLabel'].config(bg='pink')
-
-
+        
 
 
     dbconnection.close()
@@ -1284,7 +1288,7 @@ def db_to_dict():
     for table in tables:
         table_name = table.table_name
         if table_name not in excluded_tables:
-            c.execute(f"SELECT TOP 3 lastUpload FROM [{table_name}] ORDER BY [Date & Time] DESC")
+            c.execute(f"SELECT TOP 10 lastUpload FROM [{table_name}] ORDER BY [Date & Time] DESC")
             comm_value = c.fetchall()
             comm_data[table_name] = comm_value
 
