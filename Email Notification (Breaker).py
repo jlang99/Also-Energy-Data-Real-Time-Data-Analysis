@@ -85,7 +85,7 @@ class PausableTimer:
 
 
 
-def email_notification(SiteName, status, device):
+def email_notification(SiteName, status, device, poa):
     sender_email = 'omops@narenco.com'
     test = 'joseph.lang@narenco.com'
     one = 'brandon.arrowood@narenco.com'
@@ -106,10 +106,14 @@ def email_notification(SiteName, status, device):
 
     msg['Subject'] = f"{SiteName}, Outage"
 
+    if poa == 9999 or poa == -1:
+        poa = "No Comms"
+
     html_body_breaker = f"""<div style="color:black;">
                             <p>Hello Admins,</p>
                             
                             <p>{SiteName} is OFFLINE according to the {device}! Utility Voltage {status}. This Message is Auto-Generated.
+                            <br>POA: {poa}<br>
                             <br>Please Investigate the Outage!<br></p>
                             
                             <p>Thank you,
@@ -144,9 +148,9 @@ def update_breaker_status():
             poa = max(poa_data[f'{site} POA Data'])[0]
         except Exception:
             if 8 < h_time < 15:
-                poa = 999
+                poa = 9999
             else:
-                poa = 1
+                poa = -1
         
         if site == "Violet":
             #Meter Check
@@ -168,7 +172,7 @@ def update_breaker_status():
                             device = "Meter"
                         globals()[f'{var}MeterOnOff'].select()
                         globals()[f'{var}MeterOnOff'].config(bg='Red')
-                        email_notification(site, status, device)
+                        email_notification(site, status, device, poa)
                 elif np.mean([row[7] for row in data if row[7] is not None]) < 2:
                     if globals()[f'{var}MeterOnOffval'].get() == False:
                         if meter_data[f'{site} Meter Data'][0][6] > compare_time:
@@ -185,9 +189,9 @@ def update_breaker_status():
                         globals()[f'{var}MeterOnOff'].config(bg='Red')
                         if device == "Meter kW" and status == "currently within parameters, but may have been lost briefly":
                             if poa > 100:
-                                email_notification(site, status, device)
+                                email_notification(site, status, device, poa)
                         else:
-                            email_notification(site, status, device)
+                            email_notification(site, status, device, poa)
                 else:
                     globals()[f'{var}MeterOnOff'].deselect()
                     globals()[f'{var}MeterOnOff'].config(bg='Green')
@@ -197,13 +201,13 @@ def update_breaker_status():
                 if globals()[f'{var}MeterOnOffval'].get() == False:
                     status = "Unknown, Comms consistently reporting last good data Upload as 4+ hrs ago."
                     device = "Meter"
-                    email_notification(site, status, device)
+                    email_notification(site, status, device, poa)
 
             #Breaker Check
             if all(not breaker_data['Violet Breaker Data 1'][i][0] for i in range(breaker_pulls)):
                 if violetBreakerOnOffval.get() == False:
                     device = "Breaker"
-                    email_notification("Violet 1", status, device)
+                    email_notification("Violet 1", status, device, poa)
                     violetBreakerOnOff.select()
                     globals()[f'{var}BreakerOnOff'].config(bg='Red')
             else:
@@ -213,7 +217,7 @@ def update_breaker_status():
             if all(not breaker_data['Violet Breaker Data 2'][i][0] for i in range(breaker_pulls)):
                 if violet2BreakerOnOffval.get() == False:
                     device = "Breaker"
-                    email_notification("Violet 2", status, device)
+                    email_notification("Violet 2", status, device, poa)
                     violet2BreakerOnOff.select()
                     globals()[f'{var}2BreakerOnOff'].config(bg='Red')
 
@@ -240,7 +244,7 @@ def update_breaker_status():
                             device = "Meter Amps"
                         globals()[f'{var}MeterOnOff'].select()
                         globals()[f'{var}MeterOnOff'].config(bg='Red')
-                        email_notification(site, status, device)
+                        email_notification(site, status, device, poa)
                 elif np.mean([row[7] for row in data if row[7] is not None]) < 2:
                     if globals()[f'{var}MeterOnOffval'].get() == False:
                         if meter_data[f'{site} Meter Data'][0][6] > compare_time:
@@ -257,9 +261,9 @@ def update_breaker_status():
                         globals()[f'{var}MeterOnOff'].config(bg='Red')
                         if device == "Meter kW" and status == "currently within parameters, but may have been lost briefly":
                             if poa > 100:
-                                email_notification(site, status, device)
+                                email_notification(site, status, device, poa)
                         else:
-                            email_notification(site, status, device)
+                            email_notification(site, status, device, poa)
                 else:
                     globals()[f'{var}MeterOnOff'].deselect()
                     globals()[f'{var}MeterOnOff'].config(bg='Green')
@@ -269,7 +273,7 @@ def update_breaker_status():
                 if globals()[f'{var}MeterOnOffval'].get() == False:
                     status = "Unknown, Comms consistently reporting last good data Upload as 4+ hrs ago."
                     device = "Meter"
-                    email_notification(site, status, device)
+                    email_notification(site, status, device, poa)
 
         if site in has_breaker: #Breaker Check
             if all(not breaker_data[f'{site} Breaker Data'][i][0] for i in range(breaker_pulls)):
@@ -285,7 +289,7 @@ def update_breaker_status():
                     else:
                         status = "Unknown, Lost Comms with Meter"
                         device = "Breaker"
-                    email_notification(site, status, device)
+                    email_notification(site, status, device, poa)
                     globals()[f'{var}BreakerOnOff'].select()
                     globals()[f'{var}BreakerOnOff'].config(bg='Red')
 
