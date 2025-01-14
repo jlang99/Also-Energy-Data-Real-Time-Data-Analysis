@@ -85,7 +85,7 @@ class PausableTimer:
 
 
 
-def email_notification(SiteName, status, device, poa):
+def email_notification(SiteName, status, device, poa, amps):
     sender_email = 'omops@narenco.com'
     test = 'joseph.lang@narenco.com'
     one = 'brandon.arrowood@narenco.com'
@@ -108,16 +108,18 @@ def email_notification(SiteName, status, device, poa):
 
     if poa == 9999 or poa == -1:
         poa = "No Comms"
-
+    if amps:
+        amp_data_str = '\n'.join(str(data) for data in amps)
     html_body_breaker = f"""<div style="color:black;">
                             <p>Hello Admins,</p>
                             
                             <p>{SiteName} is OFFLINE according to the {device}! Utility Voltage {status}. This Message is Auto-Generated.
-                            <br>POA: {poa}<br>
-                            <br>Please Investigate the Outage!<br></p>
-                            
+                            <br>POA: {poa} W/M²
+                            <br>Please Investigate the Outage on Also Energy remotely!</p>
+                            <p>Amp Data [A], [B], [C]: {amp_data_str}</p>
+
                             <p>Thank you,
-                            <br>NCC AE API<br></p>
+                            <br>NCC AE API</p>
                             </div>"""
 
     # Create a MIMEText object with HTML content
@@ -151,7 +153,7 @@ def update_breaker_status():
                 poa = 9999
             else:
                 poa = -1
-        
+        metercomms = max(meter_data[f'{site} Meter Data'][i][6] for i in range(meter_pulls))
         if site == "Violet":
             #Meter Check
             data = np.array(meter_data[f'{site} Meter Data'])
@@ -159,23 +161,24 @@ def update_breaker_status():
             amps_columns = data[:, 3:6]  # Extract Amps Columns
             if all(tim > compare_time for tim in lastUpload_col):
                 if any(np.all(amps_columns[:, j] == 0) for j in range(amps_columns.shape[1])):
+                    amp_data = [amps_columns[:,j] for j in range(amps_columns.shape[1])]
                     if globals()[f'{var}MeterOnOffval'].get() == False:
-                        if meter_data[f'{site} Meter Data'][0][6] > compare_time:
+                        if metercomms > compare_time:
                             if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
                                 status = "currently within parameters, but may have been lost briefly"
-                                device = "Meter"
+                                device = "Meter Amps"
                             else:
                                 status = "Lost"
-                                device = "Meter"
+                                device = "Meter Amps"
                         else:
                             status = "Unknown, Lost Comms with Meter"
                             device = "Meter"
                         globals()[f'{var}MeterOnOff'].select()
                         globals()[f'{var}MeterOnOff'].config(bg='Red')
-                        email_notification(site, status, device, poa)
+                        email_notification(site, status, device, poa, amp_data)
                 elif np.mean([row[7] for row in data if row[7] is not None]) < 2:
                     if globals()[f'{var}MeterOnOffval'].get() == False:
-                        if meter_data[f'{site} Meter Data'][0][6] > compare_time:
+                        if metercomms > compare_time:
                             if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
                                 status = "currently within parameters, but may have been lost briefly"
                                 device = "Meter kW"
@@ -189,9 +192,9 @@ def update_breaker_status():
                         globals()[f'{var}MeterOnOff'].config(bg='Red')
                         if device == "Meter kW" and status == "currently within parameters, but may have been lost briefly":
                             if poa > 100:
-                                email_notification(site, status, device, poa)
+                                email_notification(site, status, device, poa, None)
                         else:
-                            email_notification(site, status, device, poa)
+                            email_notification(site, status, device, poa, None)
                 else:
                     globals()[f'{var}MeterOnOff'].deselect()
                     globals()[f'{var}MeterOnOff'].config(bg='Green')
@@ -201,13 +204,13 @@ def update_breaker_status():
                 if globals()[f'{var}MeterOnOffval'].get() == False:
                     status = "Unknown, Comms consistently reporting last good data Upload as 4+ hrs ago."
                     device = "Meter"
-                    email_notification(site, status, device, poa)
+                    email_notification(site, status, device, poa, None)
 
             #Breaker Check
             if all(not breaker_data['Violet Breaker Data 1'][i][0] for i in range(breaker_pulls)):
                 if violetBreakerOnOffval.get() == False:
                     device = "Breaker"
-                    email_notification("Violet 1", status, device, poa)
+                    email_notification("Violet 1", status, device, poa, None)
                     violetBreakerOnOff.select()
                     globals()[f'{var}BreakerOnOff'].config(bg='Red')
             else:
@@ -217,7 +220,7 @@ def update_breaker_status():
             if all(not breaker_data['Violet Breaker Data 2'][i][0] for i in range(breaker_pulls)):
                 if violet2BreakerOnOffval.get() == False:
                     device = "Breaker"
-                    email_notification("Violet 2", status, device, poa)
+                    email_notification("Violet 2", status, device, poa, None)
                     violet2BreakerOnOff.select()
                     globals()[f'{var}2BreakerOnOff'].config(bg='Red')
 
@@ -231,8 +234,9 @@ def update_breaker_status():
             amps_columns = data[:, 3:6]  # Extract Amps Columns
             if all(tim > compare_time for tim in lastUpload_col):
                 if any(np.all(amps_columns[:, j] == 0) for j in range(amps_columns.shape[1])):
+                    amp_data = [amps_columns[:,j] for j in range(amps_columns.shape[1])]
                     if globals()[f'{var}MeterOnOffval'].get() == False:
-                        if meter_data[f'{site} Meter Data'][0][6] > compare_time:
+                        if metercomms > compare_time:
                             if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
                                 status = "currently within parameters, but may have been lost briefly"
                                 device = "Meter Amps"
@@ -244,10 +248,10 @@ def update_breaker_status():
                             device = "Meter Amps"
                         globals()[f'{var}MeterOnOff'].select()
                         globals()[f'{var}MeterOnOff'].config(bg='Red')
-                        email_notification(site, status, device, poa)
+                        email_notification(site, status, device, poa, amp_data)
                 elif np.mean([row[7] for row in data if row[7] is not None]) < 2:
                     if globals()[f'{var}MeterOnOffval'].get() == False:
-                        if meter_data[f'{site} Meter Data'][0][6] > compare_time:
+                        if metercomms > compare_time:
                             if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
                                 status = "currently within parameters, but may have been lost briefly"
                                 device = "Meter kW"
@@ -261,9 +265,9 @@ def update_breaker_status():
                         globals()[f'{var}MeterOnOff'].config(bg='Red')
                         if device == "Meter kW" and status == "currently within parameters, but may have been lost briefly":
                             if poa > 100:
-                                email_notification(site, status, device, poa)
+                                email_notification(site, status, device, poa, None)
                         else:
-                            email_notification(site, status, device, poa)
+                            email_notification(site, status, device, poa, None)
                 else:
                     globals()[f'{var}MeterOnOff'].deselect()
                     globals()[f'{var}MeterOnOff'].config(bg='Green')
@@ -273,12 +277,12 @@ def update_breaker_status():
                 if globals()[f'{var}MeterOnOffval'].get() == False:
                     status = "Unknown, Comms consistently reporting last good data Upload as 4+ hrs ago."
                     device = "Meter"
-                    email_notification(site, status, device, poa)
+                    email_notification(site, status, device, poa, None)
 
         if site in has_breaker: #Breaker Check
             if all(not breaker_data[f'{site} Breaker Data'][i][0] for i in range(breaker_pulls)):
                 if globals()[f'{var}BreakerOnOffval'].get() == False:
-                    if meter_data[f'{site} Meter Data'][0][6] > compare_time:
+                    if metercomms > compare_time:
                         print(meter_data[f'{site} Meter Data'][i][3] for i in range(5))
                         if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
                             status = "currently within parameters, but may have been lost briefly"
@@ -289,7 +293,7 @@ def update_breaker_status():
                     else:
                         status = "Unknown, Lost Comms with Meter"
                         device = "Breaker"
-                    email_notification(site, status, device, poa)
+                    email_notification(site, status, device, poa, None)
                     globals()[f'{var}BreakerOnOff'].select()
                     globals()[f'{var}BreakerOnOff'].config(bg='Red')
 
