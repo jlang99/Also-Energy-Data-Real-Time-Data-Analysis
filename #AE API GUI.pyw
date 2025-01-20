@@ -19,7 +19,7 @@ import json
 
 breaker_pulls = 6
 meter_pulls = 8
-mvi_percent = .777
+mvi_percent = .70
 
 start = ty.perf_counter()
 myappid = 'AE.API.Data.GUI'
@@ -828,7 +828,7 @@ def update_data():
                         print(f'{name}:  {meterdatakWM} | {total_invkW*mvi_percent} ~ {mvi_percent*100}% | {total_invkW}')
                         print(allinv_kW)
                         if poa != 9999:
-                            if globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and poa >= 100:
+                            if globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and poa >= 250:
                                 messagebox.showwarning(parent= alertW, title=name, message=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue')
                         elif globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and 9 <= h_tm_now < 15:
                             messagebox.showwarning(parent= alertW, title=name, message=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue')
@@ -836,10 +836,10 @@ def update_data():
                         meterkWstatuscolor= 'orange'
 
                 elif meterdatakWM < total_invkW * mvi_percent and name != "CDIA": #Less than XX% of total INV's
-                    print(f'{name}:  {meterdatakWM} | {total_invkW*mvi_percent} ~ {mvi_percent*100}% | {total_invkW}')
-                    print(allinv_kW)
+                    #print(f'{name}:  {meterdatakWM} | {total_invkW*mvi_percent} ~ {mvi_percent*100}% | {total_invkW}')
+                    #print(allinv_kW)
                     if poa != 9999:
-                        if globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and poa >= 100: #Might should change this so that we check the INV groups poa values for each data entry. 
+                        if globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and poa >= 250: #Might should change this so that we check the INV groups poa values for each data entry. 
                             messagebox.showwarning(parent= alertW, title=name, message=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue')
                     elif globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and 9 <= h_tm_now < 15:
                         messagebox.showwarning(parent= alertW, title=name, message=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue')
@@ -1263,6 +1263,7 @@ def time_window():
     if recent_update < timecompare:
         os.startfile(r"G:\Shared drives\O&M\NCC Automations\Notification System\API Data Pull, Multi.py")
         messagebox.showerror(parent=timeW, title="Notification System/GUI", message= f"The Database has not been updated in {str(db_update_time)} Minutes and usually updates every 2\nLaunching Data Pull Script in response.")
+        ty.sleep(180)
 
     tupdate = timecurrent.strftime('%H:%M')
 

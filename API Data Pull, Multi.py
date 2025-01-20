@@ -1687,7 +1687,7 @@ def get_data_for_site(site, site_data, api_data, hw_sites_mapping, start, base_u
                 print(f"Failed to retrieve hardware data for {hardware_id} at {site} in {category}. Status code: {hardware_response.status_code}")
  
     end = time.perf_counter()
-    print(f"Pulled Data: {site}\nTime Taken: {round(end-current, 2)}")
+    print(f"Pulled Data: {site:<15}| Time Taken: {round(end-current, 2)}")
 
 if __name__ == '__main__': #This is absolutely necessary due to running the async pool.
     def my_main():
@@ -1773,7 +1773,7 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
                                 if "kW" in api_data_dict[f'{hardwareid}']['KW']:
                                     meterkw = meterkw*1000
                                 elif "MW" in api_data_dict[f'{hardwareid}']['KW']:
-                                    meterkw = meterkw*100000
+                                    meterkw = meterkw*1000000
                                 
 
                                 hdtimestamp_Meter = api_data_dict[f'{hardwareid}']['pytimestamp']
@@ -1833,7 +1833,7 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
                                 if "kW" in api_data_dict[f'{hardwareid}']['KW']:
                                     invkW = invkW*1000
                                 elif "MW" in api_data_dict[f'{hardwareid}']['KW']:
-                                    invkW = invkW*100000
+                                    invkW = invkW*1000000
                             try:
                                 hdtimestamp_inv = api_data_dict[f'{hardwareid}']['pytimestamp']
                                 

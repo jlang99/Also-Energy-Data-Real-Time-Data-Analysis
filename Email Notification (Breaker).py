@@ -110,17 +110,28 @@ def email_notification(SiteName, status, device, poa, amps):
         poa = "No Comms"
     if amps:
         amp_data_str = '\n'.join(str(data) for data in amps)
-    html_body_breaker = f"""<div style="color:black;">
-                            <p>Hello Admins,</p>
-                            
-                            <p>{SiteName} is OFFLINE according to the {device}! Utility Voltage {status}. This Message is Auto-Generated.
-                            <br>POA: {poa} W/M²
-                            <br>Please Investigate the Outage on Also Energy remotely!</p>
-                            <p>Amp Data [A], [B], [C]: {amp_data_str}</p>
+        html_body_breaker = f"""<div style="color:black;">
+                                <p>Hello Admins,</p>
+                                
+                                <p>{SiteName} is OFFLINE according to the {device}! Utility Voltage {status}. This Message is Auto-Generated.
+                                <br>POA: {poa} W/M²
+                                <br>Please Investigate the Outage on Also Energy remotely!</p>
+                                <p>Amp Data [A], [B], [C]: {amp_data_str}</p>
 
-                            <p>Thank you,
-                            <br>NCC AE API</p>
-                            </div>"""
+                                <p>Thank you,
+                                <br>NCC AE API</p>
+                                </div>"""
+    else:
+        html_body_breaker = f"""<div style="color:black;">
+                        <p>Hello Admins,</p>
+                        
+                        <p>{SiteName} is OFFLINE according to the {device}! Utility Voltage {status}. This Message is Auto-Generated.
+                        <br>POA: {poa} W/M²
+                        <br>Please Investigate the Outage on Also Energy remotely!</p>
+                        
+                        <p>Thank you,
+                        <br>NCC AE API</p>
+                        </div>"""
 
     # Create a MIMEText object with HTML content
     text = MIMEText(html_body_breaker, 'html')
