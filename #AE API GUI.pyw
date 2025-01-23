@@ -116,8 +116,10 @@ meterVLabel = Label(root, bg="yellow", text= "Utility V")
 meterVLabel.grid(row= 0, column=2)
 meterkWLabel = Label(root, bg="yellow", text="Meter kW")
 meterkWLabel.grid(row=0, column=4)
+meterratioLabel = Label(root, bg="yellow", text= "% of Max")
+meterratioLabel.grid(row=0, column= 5)
 POALabel = Label(root, bg="yellow", text= "POA")
-POALabel.grid(row=0, column= 5, columnspan=2)
+POALabel.grid(row=0, column= 6)
 
 
 #Inv Windows
@@ -154,13 +156,13 @@ except Exception as e:
 #Inverter Windows created
 
 
-master_List_Sites = [('Bishopville II', 36, 'bishopvilleII', inv), ('Bluebird', 24, 'bluebird', narenco), ('Bulloch 1A', 24, 'bulloch1a', solrvr), ('Bulloch 1B', 24, 'bulloch1b', solrvr), ('Cardinal', 59, 'cardinal', narenco), ('CDIA', 1, 'cdia', narenco),
-                     ('Cherry', 4, 'cherry', narenco), ('Cougar', 30, 'cougar', narenco), ('Conetoe', 4, 'conetoe', soltage), ('Duplin', 21, 'duplin', soltage), ('Elk', 43, 'elk', solrvr), ('Freight Line', 18, 'freightline', ncemc), ('Gray Fox', 40, 'grayfox', solrvr),
-                      ('Harding', 24, 'harding', solrvr), ('Harrison', 43, 'harrison', narenco), ('Hayes', 26, 'hayes', narenco), ('Hickory', 2, 'hickory', narenco), ('Hickson', 16, 'hickson', inv), ('Holly Swamp', 16, 'hollyswamp', ncemc),
-                       ('Jefferson', 64, 'jefferson', inv), ('Marshall', 16, 'marshall', inv), ('McLean', 40, 'mcLean', solrvr), ('Ogburn', 16, 'ogburn', inv), ('PG', 18, 'pg', ncemc), ('Richmond', 24, 'richmond', solrvr),
-                        ('Shorthorn', 72, 'shorthorn', solrvr), ('Sunflower', 80, 'sunflower', solrvr), ('Tedder', 16, 'tedder', inv), ('Thunderhead', 16, 'thunderhead', inv), ('Upson', 24, 'upson', solrvr), 
-                        ('Van Buren', 17, 'vanburen', inv), ('Warbler', 32, 'warbler', solrvr), ('Washington', 40, 'washington', solrvr), ('Wayne 1', 4, 'wayne1', soltage), ('Wayne 2', 4, 'wayne2', soltage), 
-                        ('Wayne 3', 4, 'wayne3', soltage), ('Wellons', 6, 'wellons', narenco), ('Whitehall', 16, 'whitehall', solrvr), ('Whitetail', 80, 'whitetail', solrvr), ('Violet', 2, 'violet', narenco)]
+master_List_Sites = [('Bishopville II', 36, 9900000, 'bishopvilleII', inv), ('Bluebird', 24, 3000000, 'bluebird', narenco), ('Bulloch 1A', 24, 3000000, 'bulloch1a', solrvr), ('Bulloch 1B', 24, 3000000, 'bulloch1b', solrvr), ('Cardinal', 59, 7080000, 'cardinal', narenco), ('CDIA', 1, 192000, 'cdia', narenco),
+                     ('Cherry', 4, 10000000, 'cherry', narenco), ('Cougar', 30, 2670000, 'cougar', narenco), ('Conetoe', 4, 5000000, 'conetoe', soltage), ('Duplin', 21, 5040000, 'duplin', soltage), ('Elk', 43, 5380000, 'elk', solrvr), ('Freight Line', 18, 2250000, 'freightline', ncemc), ('Gray Fox', 40, 5000000, 'grayfox', solrvr),
+                      ('Harding', 24, 3000000, 'harding', solrvr), ('Harrison', 43, 5380000, 'harrison', narenco), ('Hayes', 26, 3240000, 'hayes', narenco), ('Hickory', 2, 5000000, 'hickory', narenco), ('Hickson', 16, 2000000, 'hickson', inv), ('Holly Swamp', 16, 2000000, 'hollyswamp', ncemc),
+                       ('Jefferson', 64, 8000000, 'jefferson', inv), ('Marshall', 16, 2000000, 'marshall', inv), ('McLean', 40, 5000000, 'mcLean', solrvr), ('Ogburn', 16, 2000000, 'ogburn', inv), ('PG', 18, 2210000, 'pg', ncemc), ('Richmond', 24, 3000000, 'richmond', solrvr),
+                        ('Shorthorn', 72, 9000000, 'shorthorn', solrvr), ('Sunflower', 80, 10000000, 'sunflower', solrvr), ('Tedder', 16, 2000000, 'tedder', inv), ('Thunderhead', 16, 2000000, 'thunderhead', inv), ('Upson', 24, 3000000, 'upson', solrvr), 
+                        ('Van Buren', 17, 2000000, 'vanburen', inv), ('Warbler', 32, 4000000, 'warbler', solrvr), ('Washington', 40, 5000000, 'washington', solrvr), ('Wayne 1', 4, 5000000, 'wayne1', soltage), ('Wayne 2', 4, 5000000, 'wayne2', soltage), 
+                        ('Wayne 3', 4, 5000000, 'wayne3', soltage), ('Wellons', 6, 5000000, 'wellons', narenco), ('Whitehall', 16, 2000000, 'whitehall', solrvr), ('Whitetail', 80, 10000000, 'whitetail', solrvr), ('Violet', 2, 5000000, 'violet', narenco)]
 
 has_breaker = ['Bishopville II', 'Cardinal', 'Cherry', 'Elk', 'Gray Fox', 'Harding', 'Harrison', 'Hayes', 'Hickory', 'Hickson', 'Jefferson', 'Marshall', 'McLean', 'Ogburn', 
                'Shorthorn', 'Sunflower', 'Tedder', 'Thunderhead', 'Warbler', 'Washington', 'Whitehall', 'Whitetail', 'Violet']
@@ -170,7 +172,7 @@ all_CBs = []
 
 #Start looping through the dictionary at the top to create what is Below. 
 #This one shall create the Sites Breaker/Meter/POA window
-for ro, (name, invnum, varname, custid) in enumerate(master_List_Sites, start=1):
+for ro, (name, invnum, metermax, varname, custid) in enumerate(master_List_Sites, start=1):
     #Site Info
     globals()[f'{varname}Label'] = Label(root, bg="yellow", text=f'{name}', fg= 'black')
     globals()[f'{varname}Label'].grid(row=ro, column= 0, sticky=W)
@@ -197,10 +199,13 @@ for ro, (name, invnum, varname, custid) in enumerate(master_List_Sites, start=1)
     globals()[f'{varname}meterkWLabel'] = Label(root, bg="yellow", text='kW', fg= 'black')
     globals()[f'{varname}meterkWLabel'].grid(row=ro, column= 4)
 
+    globals()[f'{varname}meterRatioLabel'] = Label(root, bg="yellow", text='Ratio', fg= 'black')
+    globals()[f'{varname}meterRatioLabel'].grid(row=ro, column= 5)
+
     globals()[f'{varname}POAcbval'] = IntVar()
     all_CBs.append(globals()[f'{varname}POAcbval'])
     globals()[f'{varname}POAcb'] = Checkbutton(root, bg="yellow", text='X', variable=globals()[f'{varname}POAcbval'], fg= 'black')
-    globals()[f'{varname}POAcb'].grid(row=ro, column= 5)
+    globals()[f'{varname}POAcb'].grid(row=ro, column= 6)
     #End
     #INVERTER INFO
     if name != 'CDIA':
@@ -425,7 +430,7 @@ def update_data():
     status_all = {}
     #Retireve Current INV status's and store in lists
     for site_info in master_List_Sites:
-        name, inverters, var_name, custid = site_info
+        name, inverters, metermax, var_name, custid = site_info
         l = []
         if name != "CDIA":
             for i in range(1, inverters + 1):
@@ -442,7 +447,7 @@ def update_data():
     h_tm_now = int(str_tm_now)
 
     for site_info in master_List_Sites:
-        name, inverters, var_name, custid = site_info
+        name, inverters, metermax, var_name, custid = site_info
         if name == "Violet":
             time_date_compare = (timecurrent - timedelta(hours=4))
         else:
@@ -619,6 +624,23 @@ def update_data():
                 current_config = globals()[f'{var_name}meterkWLabel'].cget("bg")
                 cbval = globals()[f'{var_name}metercbval'].get()
                 
+                #Meter Ratio Check for CDIA
+                avg_kW = np.mean([row[3] for row in data])
+                meterRatio = avg_kW/metermax
+                if meterRatio > .90:
+                    ratio_color = '#ADD8E6'  # Light Blue
+                elif .90 > meterRatio > .80:
+                    ratio_color = '#87CEEB'  # Sky Blue
+                elif .80 > meterRatio > .70:
+                    ratio_color = '#1E90FF'  # Dodger Blue
+                elif .70 > meterRatio > .60:
+                    ratio_color = '#4682B4'  # Steel Blue
+                elif .60 > meterRatio > .50:
+                    ratio_color = '#4169E1'  # Royal Blue
+                else: 
+                    ratio_color = 'red'
+                globals()[f'{var_name}meterRatioLabel'].config(text= f"{round(meterRatio*100, 2)}%", bg= ratio_color)
+
                 avg_dcv = np.mean([row[4] for row in data])
                 inv_comm = max(comm_data[f'{name} INV 1 Data'])[0]
                 
@@ -655,6 +677,8 @@ def update_data():
                 else:
                     invlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
                     globals()[f'{var_name}meterkWLabel'].config(bg='pink')
+                    globals()[f'{var_name}meterRatioLabel'].config(bg='pink')
+
                     if invlbl != 'pink' and cbval == 0 and master_cb_skips_INV_check:
                         var_key = f'{var_name}statusLabel'
                         if var_key in globals():
@@ -758,8 +782,11 @@ def update_data():
                 meterdataAB = all(row[6] < 1 for row in meterdata if row[6] is not None)
                 meterdataAC = all(row[7] < 1 for row in meterdata if row[7] is not None)
                 meterdataKW = np.mean([row[10] for row in meterdata if row[10] is not None])
-                meterdatakWM = max(row[10] for row in meterdata if row [10] is not None)
-            
+                if name == "Wellons":
+                    meterdatakWM = max(row[10] for row in meterdata if row[10] is not None and row[10] < 760000000) if max(row[10] for row in meterdata if row[10] is not None and row[10] < 760000000) else 0
+                else:
+                    meterdatakWM = max(row[10] for row in meterdata if row [10] is not None)
+
                 
                 #print(f'{name} |  A: {meterdataAA}, B: {meterdataAB}, C: {meterdataAC}')
                 #Accounting for Sites reporting Votlage differently
@@ -808,6 +835,25 @@ def update_data():
                 globals()[f'{var_name}meterVLabel'].config(text= meterVstatus, bg= meterVstatuscolor)
 
                 total_invkW = sum(allinv_kW)
+                #Here is where I would check for meterRatio and set the text of the meterRatiolabel
+                meterRatio = meterdatakWM/metermax
+                if meterRatio > .90:
+                    ratio_color = '#ADD8E6'  # Light Blue
+                elif .90 > meterRatio > .80:
+                    ratio_color = '#87CEEB'  # Sky Blue
+                elif .80 > meterRatio > .70:
+                    ratio_color = '#1E90FF'  # Dodger Blue
+                elif .70 > meterRatio > .60:
+                    ratio_color = '#4682B4'  # Steel Blue
+                elif .60 > meterRatio > .50:
+                    ratio_color = '#4169E1'  # Royal Blue
+                else: 
+                    ratio_color = 'red'
+                print(f"{name:<15} | {round(meterRatio*100, 2):<5} | {meterdatakWM:<10} | {metermax}")
+
+                globals()[f'{var_name}meterRatioLabel'].config(text= f"{round(meterRatio*100, 2)}%", bg= ratio_color)
+
+
                 if (meterdataKW < 2 or meterdataAA or meterdataAB or meterdataAC) and begin:
                     if name != 'Van Buren': # This if statement and elif pair juke around the VanBuren being down a phase. 
                         meterkWstatus= '❌❌'
@@ -858,6 +904,8 @@ def update_data():
                     messagebox.showerror(parent= alertW, title=f"{name}, Meter Comms Loss", message=f"Meter Comms lost {meter_Ltime} with the Meter at {name}! Please Investigate!")
                 globals()[f'{var_name}meterkWLabel'].config(bg='pink')
                 globals()[f'{var_name}meterVLabel'].config(bg='pink')
+                globals()[f'{var_name}meterRatioLabel'].config(bg='pink')
+
         
 
 
@@ -883,7 +931,7 @@ def update_data():
     #Retireve Current INV status's and store in lists
 
     for site_info in master_List_Sites:
-        name, inverters, var_name, custid = site_info
+        name, inverters, metermax, var_name, custid = site_info
         l = []
         if name != "CDIA":
             for i in range(1, inverters + 1):
@@ -894,7 +942,7 @@ def update_data():
             poststatus_all[f'{var_name}'] = l
     #ic(poststatus_all['vanburen'])
     for index, site_info in enumerate(master_List_Sites):
-        name, inverters, var_name, custid = site_info
+        name, inverters, metermax, var_name, custid = site_info
         if name != "CDIA":
             master_cb_skips_INV_checks = True if globals()[f'{var_name}metercbval'].get() == 0 else False
             if poststatus_all[f'{var_name}']:
@@ -933,7 +981,7 @@ def update_data():
     
     #Comapres all lists of sites inverters to see what remains online
     for site_info in master_List_Sites:
-        name, inverters, var_name, custid = site_info
+        name, inverters, metermax, var_name, custid = site_info
         if int(globals()[f'{var_name}POAcb'].cget("text")) > 100:
             if name != "CDIA":
                 compare_lists(name, status_all[f'{var_name}'], poststatus_all[f'{var_name}'])
@@ -987,7 +1035,7 @@ def underperformance_data():
                 underperformance_data[table_name] = invkw_rows
 
         
-        for site, inv, var, custid in master_List_Sites:
+        for site, inv, metermax, var, custid in master_List_Sites:
             if site != "Duplin":
                 for i in range(1, inv + 1):
                     globals()[f'{var}inv{i}daykw'] = underperformance_data[f'{site} INV {i} Data']
@@ -1207,7 +1255,7 @@ def checkin():
 
 def last_update():
     times = []
-    for site, inv, var, place in master_List_Sites:
+    for site, inv, metermax, var, place in master_List_Sites:
         if site != "CDIA":
             c.execute(f"SELECT TOP 1 [Date & Time] FROM [{site} Meter Data] ORDER BY [Date & Time] DESC")
             last_time = c.fetchone()
