@@ -32,7 +32,7 @@ try:
 except Exception as e:
     print(f"Error loading icon: {e}")
 root.wm_attributes("-topmost", True)
-root.configure(bg="yellow") 
+root.configure(bg="#ADD8E6") 
 
 checkIns= Toplevel(root)
 try:
@@ -108,17 +108,17 @@ except Exception as e:
 
 
 #Top Labels Main Window
-siteLabel = Label(root, bg="yellow", text= "Sites")
+siteLabel = Label(root, bg="#ADD8E6", text= "Sites")
 siteLabel.grid(row=0, column= 0, sticky=W)
-breakerstatusLabel= Label(root, bg="yellow", text= "Breaker Status")
+breakerstatusLabel= Label(root, bg="#ADD8E6", text= "Breaker Status")
 breakerstatusLabel.grid(row=0, column=1)
-meterVLabel = Label(root, bg="yellow", text= "Utility V")
+meterVLabel = Label(root, bg="#ADD8E6", text= "Utility V")
 meterVLabel.grid(row= 0, column=2)
-meterkWLabel = Label(root, bg="yellow", text="Meter kW")
+meterkWLabel = Label(root, bg="#ADD8E6", text="Meter kW")
 meterkWLabel.grid(row=0, column=4)
-meterratioLabel = Label(root, bg="yellow", text= "% of Max")
+meterratioLabel = Label(root, bg="#ADD8E6", text= "% of Max")
 meterratioLabel.grid(row=0, column= 5)
-POALabel = Label(root, bg="yellow", text= "POA")
+POALabel = Label(root, bg="#ADD8E6", text= "POA")
 POALabel.grid(row=0, column= 6)
 
 
@@ -174,37 +174,37 @@ all_CBs = []
 #This one shall create the Sites Breaker/Meter/POA window
 for ro, (name, invnum, metermax, varname, custid) in enumerate(master_List_Sites, start=1):
     #Site Info
-    globals()[f'{varname}Label'] = Label(root, bg="yellow", text=f'{name}', fg= 'black')
+    globals()[f'{varname}Label'] = Label(root, bg="#ADD8E6", text=f'{name}', fg= 'black')
     globals()[f'{varname}Label'].grid(row=ro, column= 0, sticky=W)
     if name in has_breaker:
         if name == 'Violet':
             vio_excep = 1
         else:
             vio_excep = ''
-        globals()[f'{varname}{vio_excep}statusLabel'] = Label(root, bg="yellow", text='❌', fg= 'black')
+        globals()[f'{varname}{vio_excep}statusLabel'] = Label(root, bg="#ADD8E6", text='❌', fg= 'black')
         globals()[f'{varname}{vio_excep}statusLabel'].grid(row=ro, column= 1)
         if name == 'Violet':
-            violet2statusLabel = Label(root, bg="yellow", text='❌', fg= 'black')
+            violet2statusLabel = Label(root, bg="#ADD8E6", text='❌', fg= 'black')
             violet2statusLabel.grid(row=ro+1, column= 1)
 
     if name != 'CDIA':
-        globals()[f'{varname}meterVLabel'] = Label(root, bg="yellow", text='V', fg= 'black')
+        globals()[f'{varname}meterVLabel'] = Label(root, bg="#ADD8E6", text='V', fg= 'black')
         globals()[f'{varname}meterVLabel'].grid(row=ro, column= 2)
 
     globals()[f'{varname}metercbval'] = IntVar()
     all_CBs.append(globals()[f'{varname}metercbval'])
-    globals()[f'{varname}metercb'] = Checkbutton(root, bg="yellow", variable=globals()[f'{varname}metercbval'], fg= 'black')
+    globals()[f'{varname}metercb'] = Checkbutton(root, bg="#ADD8E6", variable=globals()[f'{varname}metercbval'], fg= 'black')
     globals()[f'{varname}metercb'].grid(row=ro, column= 3)
 
-    globals()[f'{varname}meterkWLabel'] = Label(root, bg="yellow", text='kW', fg= 'black')
+    globals()[f'{varname}meterkWLabel'] = Label(root, bg="#ADD8E6", text='kW', fg= 'black')
     globals()[f'{varname}meterkWLabel'].grid(row=ro, column= 4)
 
-    globals()[f'{varname}meterRatioLabel'] = Label(root, bg="yellow", text='Ratio', fg= 'black')
+    globals()[f'{varname}meterRatioLabel'] = Label(root, bg="#ADD8E6", text='Ratio', fg= 'black')
     globals()[f'{varname}meterRatioLabel'].grid(row=ro, column= 5)
 
     globals()[f'{varname}POAcbval'] = IntVar()
     all_CBs.append(globals()[f'{varname}POAcbval'])
-    globals()[f'{varname}POAcb'] = Checkbutton(root, bg="yellow", text='X', variable=globals()[f'{varname}POAcbval'], fg= 'black')
+    globals()[f'{varname}POAcb'] = Checkbutton(root, bg="#ADD8E6", text='X', variable=globals()[f'{varname}POAcbval'], fg= 'black')
     globals()[f'{varname}POAcb'].grid(row=ro, column= 6)
     #End
     #INVERTER INFO
@@ -471,6 +471,19 @@ def update_data():
         #POA Comms check
         poa_data = max(comm_data[f'{name} POA Data'])[0]
         strtime_poa = poa_data.strftime('%m/%d/%y | %H:%M')
+        if 800 < poa < 2000:
+            poa_color = '#ADD8E6'  # Light Blue
+        elif 800 > poa > 650:
+            poa_color = '#87CEEB'  # Sky Blue
+        elif 650 > poa > 500:
+            poa_color = '#1E90FF'  # Dodger Blue
+        elif 500 > poa > 350:
+            poa_color = '#4682B4'  # Steel Blue
+        elif 350 > poa > 200:
+            poa_color = '#4169E1'  # Royal Blue
+        else: 
+            poa_color = 'gray'
+        
 
         if poa_data < time_date_compare:
             poalbl = globals()[f'{var_name}POAcb'].cget('bg')
@@ -478,7 +491,7 @@ def update_data():
                 messagebox.showwarning(parent= alertW, title=f"{name}, POA Comms Error", message=f"{name} lost comms with POA sensor at {strtime_poa}")
             globals()[f'{var_name}POAcb'].config(bg='pink', text=poa)
         else:
-            globals()[f'{var_name}POAcb'].config(bg='yellow', text=poa)
+            globals()[f'{var_name}POAcb'].config(bg=poa_color, text=poa)
 
 
         master_cb_skips_INV_check = True if globals()[f'{var_name}metercbval'].get() == 0 else False
@@ -638,8 +651,8 @@ def update_data():
                 elif .60 > meterRatio > .50:
                     ratio_color = '#4169E1'  # Royal Blue
                 else: 
-                    ratio_color = 'red'
-                globals()[f'{var_name}meterRatioLabel'].config(text= f"{round(meterRatio*100, 2)}%", bg= ratio_color)
+                    ratio_color = 'gray'
+                globals()[f'{var_name}meterRatioLabel'].config(text= f"{round(meterRatio*100, 1)}%", bg= ratio_color)
 
                 avg_dcv = np.mean([row[4] for row in data])
                 inv_comm = max(comm_data[f'{name} INV 1 Data'])[0]
@@ -848,10 +861,10 @@ def update_data():
                 elif .60 > meterRatio > .50:
                     ratio_color = '#4169E1'  # Royal Blue
                 else: 
-                    ratio_color = 'red'
-                print(f"{name:<15} | {round(meterRatio*100, 2):<5} | {meterdatakWM:<10} | {metermax}")
+                    ratio_color = 'gray'
+                print(f"{name:<15} | {round(meterRatio*100, 1):<5} | {meterdatakWM:<9} | {metermax}")
 
-                globals()[f'{var_name}meterRatioLabel'].config(text= f"{round(meterRatio*100, 2)}%", bg= ratio_color)
+                globals()[f'{var_name}meterRatioLabel'].config(text= f"{round(meterRatio*100, 1)}%", bg= ratio_color)
 
 
                 if (meterdataKW < 2 or meterdataAA or meterdataAB or meterdataAC) and begin:
@@ -1236,9 +1249,9 @@ def checkin():
                 value = value.strftime('%m/%d/%y')
             # Apply different formatting for specific columns
             if row_index in range(1, 100, 2):
-                bg_color = 'orange'
+                bg_color = '#90EE90'  # Pale Light Green
             else:
-                bg_color = 'yellow'
+                bg_color = '#ADD8E6'  # Light Blue of Main Site Data Window
             if col_index == 2:
                 wsize = 24
             elif col_index == 1:
