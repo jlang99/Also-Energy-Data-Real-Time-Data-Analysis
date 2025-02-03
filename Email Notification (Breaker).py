@@ -24,14 +24,14 @@ meter_pulls = 15
 voltage_check = 5 
 
 master_List_Sites = [('Bishopville II', 36, 'bishopvilleII'), ('Bluebird', 24, 'bluebird'), ('Bulloch 1A', 24, 'bulloch1a'), ('Bulloch 1B', 24, 'bulloch1b'), ('Cardinal', 59, 'cardinal'),
-                     ('Cherry', 4, 'cherry'), ('Conetoe', 4, 'conetoe'), ('Cougar', 30, 'cougar'), ('Duplin', 21, 'duplin'), ('Elk', 43, 'elk'), ('Freight Line', 18, 'freightline'), ('Gray Fox', 40, 'grayfox'),
+                     ('Cherry Blossom', 4, 'cherryblossom'), ('Conetoe', 4, 'conetoe'), ('Cougar', 30, 'cougar'), ('Duplin', 21, 'duplin'), ('Elk', 43, 'elk'), ('Freightliner', 18, 'freightliner'), ('Gray Fox', 40, 'grayfox'),
                       ('Harding', 24, 'harding'), ('Harrison', 43, 'harrison'), ('Hayes', 26, 'hayes'), ('Hickory', 2, 'hickory'), ('Hickson', 16, 'hickson'), ('Holly Swamp', 16, 'hollyswamp'),
                        ('Jefferson', 64, 'jefferson'), ('Marshall', 16, 'marshall'), ('McLean', 40, 'mcLean'), ('Ogburn', 16, 'ogburn'), ('PG', 18, 'pg'), ('Richmond', 24, 'richmond'),
                         ('Shorthorn', 72, 'shorthorn'), ('Sunflower', 80, 'sunflower'), ('Tedder', 16, 'tedder'), ('Thunderhead', 16, 'thunderhead'), ('Upson', 24, 'upson'), 
                         ('Van Buren', 17, 'vanburen'), ('Violet', 2, 'violet'), ('Warbler', 32, 'warbler'), ('Washington', 40, 'washington'), ('Wayne 1', 4, 'wayne1'),
                         ('Wayne 2', 4, 'wayne2'), ('Wayne 3', 4, 'wayne3'), ('Wellons', 6, 'wellons'), ('Whitehall', 16, 'whitehall'), ('Whitetail', 80, 'whitetail')]
 
-has_breaker = ['Bishopville II', 'Cardinal', 'Cherry', 'Elk', 'Gray Fox', 'Harding', 'Harrison', 'Hayes', 'Hickory', 'Hickson', 'Jefferson', 'Marshall', 'McLean', 'Ogburn', 
+has_breaker = ['Bishopville II', 'Cardinal', 'Cherry Blossom', 'Elk', 'Gray Fox', 'Harding', 'Harrison', 'Hayes', 'Hickory', 'Hickson', 'Jefferson', 'Marshall', 'McLean', 'Ogburn', 
                'Shorthorn', 'Sunflower', 'Tedder', 'Thunderhead', 'Warbler', 'Washington', 'Whitehall', 'Whitetail']
 
 
@@ -109,15 +109,26 @@ def email_notification(SiteName, status, device, poa, amps):
     if poa == 9999 or poa == -1:
         poa = "No Comms"
     if amps:
-        amp_data_str = '\n'.join(str(data) for data in amps)
+        # Determine the maximum width needed for any number in all phases
+        max_width = max(len(str(value)) for phase in amps for value in phase)
+        
+        # Format the amp data with the determined maximum width
+        amp_data_str = '\n'.join([
+            ' '.join(f"{value:>{max_width}}" for value in phase)
+            for phase in amps  
+        ])
         html_body_breaker = f"""<div style="color:black;">
                                 <p>Hello Admins,</p>
                                 
                                 <p>{SiteName} is OFFLINE according to the {device}! Utility Voltage {status}. This Message is Auto-Generated.
                                 <br>POA: {poa} W/M²
                                 <br>Please Investigate the Outage on Also Energy remotely!</p>
-                                <p>Amp Data [A], [B], [C]: {amp_data_str}</p>
+                                <p>Amp Data: 
+                                <br>A: {amp_data_str.splitlines()[0]}
+                                <br>B: {amp_data_str.splitlines()[1]}
+                                <br>C: {amp_data_str.splitlines()[2]}</p>
 
+                                
                                 <p>Thank you,
                                 <br>NCC AE API</p>
                                 </div>"""
@@ -129,6 +140,7 @@ def email_notification(SiteName, status, device, poa, amps):
                         <br>POA: {poa} W/M²
                         <br>Please Investigate the Outage on Also Energy remotely!</p>
                         
+
                         <p>Thank you,
                         <br>NCC AE API</p>
                         </div>"""
@@ -145,10 +157,15 @@ def email_notification(SiteName, status, device, poa, amps):
 def connect_db():
     global c, dbconn_str, dbconnection, db
     # Create a connection to the Access database
-    dbconn_str = r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=C:\Users\OMOPS\OneDrive - Narenco\Documents\AE API DB.accdb;'
+    dbconn_str = (
+                r'DRIVER={ODBC Driver 18 for SQL Server};'
+                r'SERVER=localhost\SQLEXPRESS01;'
+                r'DATABASE=NARENCO_O&M_AE;'
+                r'Trusted_Connection=yes;'
+                r'Encrypt=no;'
+            )
     dbconnection = pyodbc.connect(dbconn_str)
     c = dbconnection.cursor()
-    db = r"C:\Users\OMOPS\OneDrive - Narenco\Documents\AE API DB.accdb"
 
 
 def update_breaker_status():    
@@ -341,31 +358,31 @@ def db_to_dict():
     for table in tables:
         table_name = table.table_name
         if "Breaker" in table_name and table_name not in excluded_tables:
-            c.execute(f"SELECT TOP {breaker_pulls} [Status] FROM [{table_name}] ORDER BY [Date & Time] DESC")
+            c.execute(f"SELECT TOP {breaker_pulls} [Status] FROM [{table_name}] ORDER BY [Timestamp] DESC")
             breaker_rows = c.fetchall()
             breaker_data[table_name] = breaker_rows
         elif "Meter" in table_name and table_name not in excluded_tables and 'Wellons' not in table_name:
-            c.execute(f"SELECT TOP {meter_pulls} [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], [lastUpload], kW FROM [{table_name}] ORDER BY [Date & Time] DESC")
+            c.execute(f"SELECT TOP {meter_pulls} [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], [Last Upload], Watts FROM [{table_name}] ORDER BY [Timestamp] DESC")
             meter_rows = c.fetchall()
             meter_data[table_name] = meter_rows
         elif "Meter" in table_name and 'Wellons' in table_name and table_name not in excluded_tables:
-            c.execute(f"SELECT TOP 60 [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], [lastUpload], kW FROM [{table_name}] ORDER BY [Date & Time] DESC")
+            c.execute(f"SELECT TOP 60 [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], [Last Upload], Watts FROM [{table_name}] ORDER BY [Timestamp] DESC")
             meter_rows = c.fetchall()
             meter_data[table_name] = meter_rows
         elif "POA" in table_name and table_name not in excluded_tables:
-            c.execute(f"SELECT TOP 3 [W/M²] FROM [{table_name}] WHERE lastUpload >= ? ORDER BY [Date & Time] DESC", formatted_time)
+            c.execute(f"SELECT TOP 3 [W/M²] FROM [{table_name}] WHERE [Last Upload] >= ? ORDER BY [Timestamp] DESC", formatted_time)
             poadatap = c.fetchall()
             poa_data[table_name] = poadatap
 
     #ic(breaker_data)
-    comptime = meter_data['Freight Line Meter Data'][0][6]
+    comptime = meter_data['Freightliner Meter Data'][0][6]
     comptime2 = meter_data['Harding Meter Data'][0][6]
     db_update_time = 15
     timecompare = current_time - timedelta(minutes=db_update_time)
     print(f"Times: {timecompare} | {comptime} | {comptime2}")
     if timecompare > comptime:
         if timecompare > comptime2:
-            os.startfile(r"G:\Shared drives\O&M\NCC Automations\Notification System\API Data Pull, Multi.py")
+            os.startfile(r"G:\Shared drives\O&M\NCC Automations\Notification System\API Data Pull, Multi SQL.py")
             time.sleep(120)
     print("Pulled Data calling check to send")
     update_breaker_status()
