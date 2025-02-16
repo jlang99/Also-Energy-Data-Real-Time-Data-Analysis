@@ -212,19 +212,25 @@ for ro, (name, invnum, metermax, varname, custid) in enumerate(master_List_Sites
     #End
     #INVERTER INFO
     if name != 'CDIA':
+        if invnum > 74:
+            span_col = 4
+        else:
+            span_col = 2
         globals()[f'{varname}invsLabel'] = Label(custid, text=name)
-        globals()[f'{varname}invsLabel'].grid(row= 0, column= ro*2, columnspan= 2)
+        globals()[f'{varname}invsLabel'].grid(row= 0, column= ro*2, columnspan= span_col)
     for num in range(1, invnum+1):
+        column_offset = 0 if num <= 74 else 2  # Adjust column for inverters over 74
+        row_offset = num if num <= 74 else num - 74  # Reset row for inverters over 74
         if name != 'CDIA':
             globals()[f'{varname}inv{num}cbval'] = IntVar()
             all_CBs.append(globals()[f'{varname}inv{num}cbval'])
             globals()[f'{varname}inv{num}cb'] = Checkbutton(custid, text=str(num), variable=globals()[f'{varname}inv{num}cbval'])
-            globals()[f'{varname}inv{num}cb'].grid(row= num, column= ro*2)
+            globals()[f'{varname}inv{num}cb'].grid(row= row_offset, column= (ro*2)+column_offset)
             
             globals()[f'{varname}invup{num}cbval'] = IntVar()
             all_CBs.append(globals()[f'{varname}invup{num}cbval'])
             globals()[f'{varname}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{varname}invup{num}cbval'])
-            globals()[f'{varname}invup{num}cb'].grid(row= num, column= (ro*2)+1)
+            globals()[f'{varname}invup{num}cb'].grid(row= row_offset, column= (ro*2)+1+column_offset)
 
 class PausableTimer:
     def __init__(self, timeout, callback):
@@ -370,7 +376,7 @@ def last_closed(site):
         query1 = f"""
         SELECT TOP 1 [Timestamp] 
         FROM [{site} Breaker Data 1]
-        WHERE [Status] = True
+        WHERE [Status] = 1
         ORDER BY [Timestamp] DESC
         """
         c.execute(query1)
@@ -378,7 +384,7 @@ def last_closed(site):
         query2 = f"""
         SELECT TOP 1 [Timestamp] 
         FROM [{site} Breaker Data 2]
-        WHERE [Status] = True
+        WHERE [Status] = 1
         ORDER BY [Timestamp] DESC
         """
         c.execute(query2)
@@ -407,7 +413,7 @@ def last_closed(site):
         query = f"""
         SELECT TOP 1 [Timestamp] 
         FROM [{site} Breaker Data]
-        WHERE [Status] = True
+        WHERE [Status] = 1
         ORDER BY [Timestamp] DESC
         """
         c.execute(query)
