@@ -1,8 +1,9 @@
 #AE API GUI
+import warnings
 import pyodbc
 from datetime import datetime, date, time, timedelta
 from tkinter import *
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 import atexit
 import time as ty
 import threading
@@ -15,7 +16,13 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import subprocess
 import os
+import glob
 import json
+import re
+
+#Underperformance Analysis Packages
+import pandas as pd
+from sklearn.linear_model import LinearRegression
 
 breaker_pulls = 6
 meter_pulls = 8
@@ -118,8 +125,10 @@ meterkWLabel = Label(root, bg="#ADD8E6", text="Meter kW")
 meterkWLabel.grid(row=0, column=4)
 meterratioLabel = Label(root, bg="#ADD8E6", text= "% of Max")
 meterratioLabel.grid(row=0, column= 5)
+meterpvsystLabel = Label(root, bg="#ADD8E6", text= "% of PvSyst")
+meterpvsystLabel.grid(row=0, column= 6)
 POALabel = Label(root, bg="#ADD8E6", text= "POA")
-POALabel.grid(row=0, column= 6)
+POALabel.grid(row=0, column= 7)
 
 
 #Inv Windows
@@ -155,14 +164,14 @@ except Exception as e:
     print(f"Error loading icon: {e}")
 #Inverter Windows created
 
-
-master_List_Sites = [('Bishopville II', 36, 9900000, 'bishopvilleII', inv), ('Bluebird', 24, 3000000, 'bluebird', narenco), ('Bulloch 1A', 24, 3000000, 'bulloch1a', solrvr), ('Bulloch 1B', 24, 3000000, 'bulloch1b', solrvr), ('Cardinal', 59, 7080000, 'cardinal', narenco), ('CDIA', 1, 192000, 'cdia', narenco),
-                     ('Cherry Blossom', 4, 10000000, 'cherryblossom', narenco), ('Cougar', 30, 2670000, 'cougar', narenco), ('Conetoe', 4, 5000000, 'conetoe', soltage), ('Duplin', 21, 5040000, 'duplin', soltage), ('Elk', 43, 5380000, 'elk', solrvr), ('Freightliner', 18, 2250000, 'freightliner', ncemc), ('Gray Fox', 40, 5000000, 'grayfox', solrvr),
-                      ('Harding', 24, 3000000, 'harding', solrvr), ('Harrison', 43, 5380000, 'harrison', narenco), ('Hayes', 26, 3240000, 'hayes', narenco), ('Hickory', 2, 5000000, 'hickory', narenco), ('Hickson', 16, 2000000, 'hickson', inv), ('Holly Swamp', 16, 2000000, 'hollyswamp', ncemc),
-                       ('Jefferson', 64, 8000000, 'jefferson', inv), ('Marshall', 16, 2000000, 'marshall', inv), ('McLean', 40, 5000000, 'mcLean', solrvr), ('Ogburn', 16, 2000000, 'ogburn', inv), ('PG', 18, 2210000, 'pg', ncemc), ('Richmond', 24, 3000000, 'richmond', solrvr),
-                        ('Shorthorn', 72, 9000000, 'shorthorn', solrvr), ('Sunflower', 80, 10000000, 'sunflower', solrvr), ('Tedder', 16, 2000000, 'tedder', inv), ('Thunderhead', 16, 2000000, 'thunderhead', inv), ('Upson', 24, 3000000, 'upson', solrvr), 
-                        ('Van Buren', 17, 2000000, 'vanburen', inv), ('Warbler', 32, 4000000, 'warbler', solrvr), ('Washington', 40, 5000000, 'washington', solrvr), ('Wayne 1', 4, 5000000, 'wayne1', soltage), ('Wayne 2', 4, 5000000, 'wayne2', soltage), 
-                        ('Wayne 3', 4, 5000000, 'wayne3', soltage), ('Wellons', 6, 5000000, 'wellons', narenco), ('Whitehall', 16, 2000000, 'whitehall', solrvr), ('Whitetail', 80, 10000000, 'whitetail', solrvr), ('Violet', 2, 5000000, 'violet', narenco)]
+#(Site Name, Num Of Invs, Max Meter Value W's, varname, window group var, PVSYST Site Name)
+master_List_Sites = [('Bishopville II', 36, 9900000, 'bishopvilleII', inv, None), ('Bluebird', 24, 3000000, 'bluebird', narenco, 'BLUEBIRD'), ('Bulloch 1A', 24, 3000000, 'bulloch1a', solrvr, 'BULLOCH1A'), ('Bulloch 1B', 24, 3000000, 'bulloch1b', solrvr, 'BULLOCH1B'), ('Cardinal', 59, 7080000, 'cardinal', narenco, 'CARDINAL'), ('CDIA', 1, 192000, 'cdia', narenco, None),
+                     ('Cherry Blossom', 4, 10000000, 'cherryblossom', narenco, 'CHERRY BLOSSOM'), ('Cougar', 30, 2670000, 'cougar', narenco, 'COUGAR'), ('Conetoe', 4, 5000000, 'conetoe1', soltage, None), ('Duplin', 21, 5040000, 'duplin', soltage, None), ('Elk', 43, 5380000, 'elk', solrvr, 'ELK'), ('Freightliner', 18, 2250000, 'freightliner', ncemc, 'FREIGHTLINE'), ('Gray Fox', 40, 5000000, 'grayfox', solrvr, 'GRAYFOX'),
+                      ('Harding', 24, 3000000, 'harding', solrvr, 'HARDING'), ('Harrison', 43, 5380000, 'harrison', narenco, 'HARRISON'), ('Hayes', 26, 3240000, 'hayes', narenco, 'HAYES'), ('Hickory', 2, 5000000, 'hickory', narenco, 'HICKORY'), ('Hickson', 16, 2000000, 'hickson', inv, None), ('Holly Swamp', 16, 2000000, 'hollyswamp', ncemc, 'HOLLYSWAMP'),
+                       ('Jefferson', 64, 8000000, 'jefferson', inv, None), ('Marshall', 16, 2000000, 'marshall', inv, None), ('McLean', 40, 5000000, 'mclean', solrvr, 'MCLEAN'), ('Ogburn', 16, 2000000, 'ogburn', inv, None), ('PG', 18, 2210000, 'pg', ncemc, 'PG'), ('Richmond', 24, 3000000, 'richmond', solrvr, 'RICHMOND'),
+                        ('Shorthorn', 72, 9000000, 'shorthorn', solrvr, 'SHORTHORN'), ('Sunflower', 80, 10000000, 'sunflower', solrvr, 'SUNFLOWER'), ('Tedder', 16, 2000000, 'tedder', inv, None), ('Thunderhead', 16, 2000000, 'thunderhead', inv, None), ('Upson', 24, 3000000, 'upson', solrvr, None), 
+                        ('Van Buren', 17, 2000000, 'vanburen', inv, 'VAN BUREN'), ('Warbler', 32, 4000000, 'warbler', solrvr, 'WARBLER'), ('Washington', 40, 5000000, 'washington', solrvr, None), ('Wayne 1', 4, 5000000, 'wayne1', soltage, None), ('Wayne 2', 4, 5000000, 'wayne2', soltage, None), 
+                        ('Wayne 3', 4, 5000000, 'wayne3', soltage, None), ('Wellons', 6, 5000000, 'wellons', narenco, 'WELLONS'), ('Whitehall', 16, 2000000, 'whitehall', solrvr, 'WHITEHALL'), ('Whitetail', 80, 10000000, 'whitetail', solrvr, None), ('Violet', 2, 5000000, 'violet', narenco, 'VIOLET')]
 
 
 sites_WObreakers = ['Bluebird', 'Bulloch 1A', 'Bulloch 1B', 'Conetoe', 'CDIA', 'Cougar', 'Duplin', 'Freightliner', 'Holly Swamp', 'PG', 'Richmond', 'Upson', 'Van Buren', 'Wayne 1', 'Wayne 2', 'Wayne 3', 'Wellons']
@@ -173,9 +182,39 @@ has_breaker = ['Bishopville II', 'Cardinal', 'Cherry Blossom', 'Elk', 'Gray Fox'
 all_CBs = []
 
 
+normal_numbering = ['Bluebird', 'Cardinal', 'Cherry Blossom', 'Cougar', 'Harrison', 'Hayes', 'Hickory', 'Violet', 'HICKSON',
+                    'JEFFERSON', 'Marshall', 'OGBURN', 'Tedder', 'Thunderhead', 'Van Buren', 'Bulloch 1A', 'Bulloch 1B', 'Elk', 'Duplin',
+                    'Harding', 'Mclean', 'Richmond Cadle', 'Shorthorn', 'Sunflower', 'Upson', 'Warbler', 'Washington', 'Whitehall', 'Whitetail',
+                    'Conetoe 1', 'Wayne I', 'Wayne II', 'Wayne III', 'Freight Line', 'Holly Swamp', 'PG']
+
+number20set = ['Gray Fox']
+number9set = ['BISHOPVILLE']
+number2set = ['Wellons Farm']
+
+def define_inv_num(site, group, num):
+    group = int(group)
+    num = int(num)
+
+    if site in normal_numbering:
+        return num
+    elif site in number20set:
+        inv = num+((20*group)-20)
+        return inv
+    elif site in number9set:
+        inv = num+((9*group)-9)
+        return inv
+    elif site in number2set:
+        inv = num+((2*group)-2)
+        return inv
+
+
+def open_wo_tracking(name):
+    os.startfile(f"G:\\Shared drives\\O&M\\NCC Automations\\Notification System\\WO Tracking\\{name} Open WO's.txt")
+
+
 #Start looping through the dictionary at the top to create what is Below. 
 #This one shall create the Sites Breaker/Meter/POA window
-for ro, (name, invnum, metermax, varname, custid) in enumerate(master_List_Sites, start=1):
+for ro, (name, invnum, metermax, varname, custid, pvsyst_name) in enumerate(master_List_Sites, start=1):
     #Site Info
     globals()[f'{varname}Label'] = Label(root, bg="#ADD8E6", text=f'{name}', fg= 'black')
     globals()[f'{varname}Label'].grid(row=ro, column= 0, sticky=W)
@@ -205,10 +244,13 @@ for ro, (name, invnum, metermax, varname, custid) in enumerate(master_List_Sites
     globals()[f'{varname}meterRatioLabel'] = Label(root, bg="#ADD8E6", text='Ratio', fg= 'black')
     globals()[f'{varname}meterRatioLabel'].grid(row=ro, column= 5)
 
+    globals()[f'{varname}meterPvSystLabel'] = Label(root, bg="#ADD8E6", text='Ratio', fg= 'black')
+    globals()[f'{varname}meterPvSystLabel'].grid(row=ro, column= 6)
+
     globals()[f'{varname}POAcbval'] = IntVar()
     all_CBs.append(globals()[f'{varname}POAcbval'])
     globals()[f'{varname}POAcb'] = Checkbutton(root, bg="#ADD8E6", text='X', variable=globals()[f'{varname}POAcbval'], fg= 'black')
-    globals()[f'{varname}POAcb'].grid(row=ro, column= 6)
+    globals()[f'{varname}POAcb'].grid(row=ro, column= 7)
     #End
     #INVERTER INFO
     if name != 'CDIA':
@@ -216,7 +258,7 @@ for ro, (name, invnum, metermax, varname, custid) in enumerate(master_List_Sites
             span_col = 4
         else:
             span_col = 2
-        globals()[f'{varname}invsLabel'] = Label(custid, text=name)
+        globals()[f'{varname}invsLabel'] = Button(custid, text=name, command=lambda name=varname: open_wo_tracking(name))
         globals()[f'{varname}invsLabel'].grid(row= 0, column= ro*2, columnspan= span_col)
     for num in range(1, invnum+1):
         column_offset = 0 if num <= 74 else 2  # Adjust column for inverters over 74
@@ -274,7 +316,29 @@ class PausableTimer:
         return time_left
 
 
+##########
+##########
+##########
+##########
+##########
+#TEMPORARY CHECKS TO BE REMOVED WHEN DEVICE IS REPIARED
+conetoe_check = False
+def conetoe_offline():
+    global conetoe_check
+    try:
+        if int(hardingPOAcb.cget("text")) >= 400 and datetime.now().hour >= 9:
+            messagebox.showinfo(title="Comm Outage", parent=alertW, message="Call Conetoe Utilities:\nWO 29980\n757-857-2888\nID: 710R41")
+            conetoe_check = True
+    except ValueError:
+        print("POA Value is not a valid Integer")
 
+
+##########
+##########
+##########
+##########
+##########
+##########
 def connect_Logbook():
     global cur, lbconnection
 
@@ -444,7 +508,7 @@ def update_data():
     status_all = {}
     #Retireve Current INV status's and store in lists
     for site_info in master_List_Sites:
-        name, inverters, metermax, var_name, custid = site_info
+        name, inverters, metermax, var_name, custid, pvsyst_name = site_info
         l = []
         if name != "CDIA":
             for i in range(1, inverters + 1):
@@ -461,7 +525,7 @@ def update_data():
     h_tm_now = int(str_tm_now)
 
     for site_info in master_List_Sites:
-        name, inverters, metermax, var_name, custid = site_info
+        name, inverters, metermax, var_name, custid, pvsyst_name = site_info
         if name == "Violet":
             time_date_compare = (timecurrent - timedelta(hours=4))
         else:
@@ -685,6 +749,8 @@ def update_data():
                                     messagebox.showwarning(title=f"{name}", parent= alertW, message= f"Inverter Offline, Good DC Voltage | {online_last}")
 
                             globals()[f'{var_name}meterkWLabel'].config(text="X✓", bg='orange')
+                            globals()[f'{var_name}Label'].config(bg='orange')
+
                         else:
                             if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
                                 var_key = f'{var_name}statusLabel'
@@ -697,9 +763,13 @@ def update_data():
                                     messagebox.showwarning(title=f"{name}", parent= alertW, message= f"Inverter Offline, Bad DC Voltage | {online_last}")
 
                             globals()[f'{var_name}meterkWLabel'].config(text="❌❌", bg='red')
+                            globals()[f'{var_name}Label'].config(bg='red')
+
                     else:
                         if check_inv_consecutively_online(point[1] for point in data):
                             globals()[f'{var_name}meterkWLabel'].config(text="✓✓✓", bg='green')
+                            globals()[f'{var_name}Label'].config(bg='#ADD8E6')
+
                 else:
                     invlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
                     globals()[f'{var_name}meterkWLabel'].config(bg='pink')
@@ -932,8 +1002,33 @@ def update_data():
                 globals()[f'{var_name}meterVLabel'].config(bg='pink')
                 globals()[f'{var_name}meterRatioLabel'].config(bg='pink')
 
+        performance_ratio, degradation, meter_est = pvsyst_est(meterdatakWM, poa, pvsyst_name)
+        if pvsyst_name is not None:
+            print(f'{pvsyst_name:<15} | {round(performance_ratio, 1)}% | {round(degradation*100, 2)}% Loss | {round(meter_est, 2):<13} W or kW?')
         
+        if performance_ratio != 0:
+            if performance_ratio > 90:
+                pvSyst_color = '#ADD8E6'  # Light Blue
+            elif 90 > performance_ratio > 80:
+                pvSyst_color = '#87CEEB'  # Sky Blue
+            elif 80 > performance_ratio > 70:
+                pvSyst_color = '#1E90FF'  # Dodger Blue
+            elif 70 > performance_ratio > 60:
+                pvSyst_color = '#4682B4'  # Steel Blue
+            elif 60 > performance_ratio > 50:
+                pvSyst_color = '#4169E1'  # Royal Blue
+            else: 
+                pvSyst_color = 'gray'
+            globals()[f'{var_name}meterPvSystLabel'].config(text=f'{round(performance_ratio, 1)}%', bg=pvSyst_color)
+        else:
+            globals()[f'{var_name}meterPvSystLabel'].config(text='N/A')
 
+
+
+
+
+    if conetoe_check == False:
+        conetoe_offline()
 
     dbconnection.close()
 
@@ -957,7 +1052,7 @@ def update_data():
     #Retireve Current INV status's and store in lists
 
     for site_info in master_List_Sites:
-        name, inverters, metermax, var_name, custid = site_info
+        name, inverters, metermax, var_name, custid, pvsyst_name = site_info
         l = []
         if name != "CDIA":
             for i in range(1, inverters + 1):
@@ -968,7 +1063,7 @@ def update_data():
             poststatus_all[f'{var_name}'] = l
     #ic(poststatus_all['vanburen'])
     for index, site_info in enumerate(master_List_Sites):
-        name, inverters, metermax, var_name, custid = site_info
+        name, inverters, metermax, var_name, custid, pvsyst_name = site_info
         if name != "CDIA":
             master_cb_skips_INV_checks = True if globals()[f'{var_name}metercbval'].get() == 0 else False
             if poststatus_all[f'{var_name}']:
@@ -1007,7 +1102,7 @@ def update_data():
     
     #Comapres all lists of sites inverters to see what remains online
     for site_info in master_List_Sites:
-        name, inverters, metermax, var_name, custid = site_info
+        name, inverters, metermax, var_name, custid, pvsyst_name = site_info
         if int(globals()[f'{var_name}POAcb'].cget("text")) > 100:
             if name != "CDIA":
                 compare_lists(name, status_all[f'{var_name}'], poststatus_all[f'{var_name}'])
@@ -1026,7 +1121,76 @@ def update_data():
     underperformance_check_button.config(state=NORMAL)
     notes_button.config(state=NORMAL)
 
+def pysyst_connect():
+    global cursor_p, connect_pvsystdb
+    #Connect to PV Syst DB for Performance expectations
+    pvsyst_db = r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=G:\Shared drives\O&M\NCC Automations\Performance Reporting\PVsyst (Josephs Edits).accdb;'
+    connect_pvsystdb = pyodbc.connect(pvsyst_db)
+    cursor_p = connect_pvsystdb.cursor()
 
+def pvsyst_est(meterval, poa_val, pvsyst_name):
+    if pvsyst_name == None:
+        return (0,0,0)
+    if poa_val == 9999:
+        return (0,0,0)
+
+
+
+    pysyst_connect()
+    if pvsyst_name not in ["WELLONS", "FREIGHTLINE", "WARBLER", "PG", "HOLLYSWAMP"]:
+        meterval = meterval/1000
+
+
+    query = "SELECT [GlobInc_WHSQM], [EGrid_KWH] FROM [PVsystHourly] WHERE [PlantName] = ?"
+    date_query = "SELECT [SimulationDate] FROM [PVsystHourly] WHERE [PlantName] = ?"
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=UserWarning)
+        # Execute the query and read into a DataFrame
+        slope_df = pd.read_sql_query(query, connect_pvsystdb, params=[pvsyst_name])
+    
+    meter = 'EGrid_KWH'
+    poa = 'GlobInc_WHSQM'
+    # Reshape the data for sklearn
+    X = slope_df[poa].values.reshape(-1, 1)
+    y = slope_df[meter].values
+    
+    # Create and fit the model
+    model = LinearRegression()
+    model.fit(X, y)
+    
+    # Get the slope (coefficient) and intercept
+    slope = model.coef_[0]
+    intercept = model.intercept_
+    
+    meter_est = slope * poa_val + intercept
+
+    cursor_p.execute(date_query, pvsyst_name)
+    simulation_date = cursor_p.fetchone()[0]
+    connect_pvsystdb.close()
+    try:
+        difference_in_days = (datetime.now() - simulation_date).days
+        difference_in_years = difference_in_days / 365.25  # Using 365.25 to account for leap years
+        degradation_percentage = difference_in_years * 0.005
+        if pvsyst_name == 'WELLONS':
+            print('Wellons p50: ', meter_est, ' | ', degradation_percentage)
+
+        meter_estdegrad = meter_est * (1 - degradation_percentage)
+        performance = (meterval/meter_estdegrad)*100 #%
+        return (performance, degradation_percentage, meter_est)
+    except TypeError as e:
+        print(e)
+        print("Moving On...")
+        return (0,0,0)
+
+
+
+
+
+
+
+
+    # Need to import pvsyst data then regression calc for estimated production, then divide intp our groups based on strings per inv to get inverter level underperformance. 
 
 
 
@@ -1061,7 +1225,7 @@ def underperformance_data():
                 underperformance_data[table_name] = invkw_rows
 
         
-        for site, inv, metermax, var, custid in master_List_Sites:
+        for site, inv, metermax, var, custid, pvsyst_name in master_List_Sites:
             if site != "Duplin":
                 for i in range(1, inv + 1):
                     globals()[f'{var}inv{i}daykw'] = underperformance_data[f'{site} INV {i} Data']
@@ -1073,7 +1237,6 @@ def underperformance_data():
                 for i in range(1, 19):
                     globals()[f'duplinsinv{i}daykw'] = underperformance_data[f'Duplin String INV {i} Data']
                     globals()[f'duplinsinv{i}daykwavg'] = np.mean(globals()[f'duplinsinv{i}daykw'])
-
 
         bluebirddaykwList = [(bluebirdinv1daykwavg, "1"), (bluebirdinv2daykwavg, "2"), (bluebirdinv3daykwavg, "3"), (bluebirdinv4daykwavg, "4"), (bluebirdinv5daykwavg, "5"), (bluebirdinv6daykwavg, "6"), (bluebirdinv7daykwavg, "7"), (bluebirdinv8daykwavg, "8"), (bluebirdinv9daykwavg, "9"), (bluebirdinv10daykwavg, "10"), (bluebirdinv11daykwavg, "11"), (bluebirdinv12daykwavg, "12"), (bluebirdinv13daykwavg, "13"), (bluebirdinv14daykwavg, "14"), (bluebirdinv15daykwavg, "15"), (bluebirdinv16daykwavg, "16"), (bluebirdinv17daykwavg, "17"), (bluebirdinv18daykwavg, "18"), (bluebirdinv19daykwavg, "19"), (bluebirdinv20daykwavg, "20"), (bluebirdinv21daykwavg, "21"), (bluebirdinv22daykwavg, "22"), (bluebirdinv23daykwavg, "23"), (bluebirdinv24daykwavg, "24")]
         cardinal96daykwList = [(cardinalinv1daykwavg, "1"), (cardinalinv2daykwavg, "2"), (cardinalinv3daykwavg, "3"), (cardinalinv4daykwavg, "4"), (cardinalinv5daykwavg, "5"), (cardinalinv6daykwavg, "6"), (cardinalinv7daykwavg, "7"), (cardinalinv22daykwavg, "22"), (cardinalinv23daykwavg, "23"), (cardinalinv24daykwavg, "24"), (cardinalinv25daykwavg, "25"), (cardinalinv26daykwavg, "26"), (cardinalinv27daykwavg, "27"), (cardinalinv28daykwavg, "28"), (cardinalinv43daykwavg, "43"), (cardinalinv44daykwavg, "44"), (cardinalinv45daykwavg, "45"), (cardinalinv46daykwavg, "46"), (cardinalinv47daykwavg, "47")]
@@ -1109,8 +1272,8 @@ def underperformance_data():
         grayfoxdaykwList = [(grayfoxinv1daykwavg, "1-1"), (grayfoxinv2daykwavg, "1-2"), (grayfoxinv3daykwavg, "1-3"), (grayfoxinv4daykwavg, "1-4"), (grayfoxinv5daykwavg, "1-5"), (grayfoxinv6daykwavg, "1-6"), (grayfoxinv7daykwavg, "1-7"), (grayfoxinv8daykwavg, "1-8"), (grayfoxinv9daykwavg, "1-9"), (grayfoxinv10daykwavg, "1-10"), (grayfoxinv11daykwavg, "1-11"), (grayfoxinv12daykwavg, "1-12"), (grayfoxinv13daykwavg, "1-13"), (grayfoxinv14daykwavg, "1-14"), (grayfoxinv15daykwavg, "1-15"), (grayfoxinv16daykwavg, "1-16"), (grayfoxinv17daykwavg, "1-17"), (grayfoxinv18daykwavg, "1-18"), (grayfoxinv19daykwavg, "1-19"), (grayfoxinv20daykwavg, "1-20"), (grayfoxinv21daykwavg, "2-1"), (grayfoxinv22daykwavg, "2-2"), (grayfoxinv23daykwavg, "2-3"), (grayfoxinv24daykwavg, "2-4"), (grayfoxinv25daykwavg, "2-5"), (grayfoxinv26daykwavg, "2-6"), (grayfoxinv27daykwavg, "2-7"), (grayfoxinv28daykwavg, "2-8"), (grayfoxinv29daykwavg, "2-9"), (grayfoxinv30daykwavg, "3-1"), (grayfoxinv31daykwavg, "3-11"), (grayfoxinv32daykwavg, "3-12"), (grayfoxinv33daykwavg, "3-13"), (grayfoxinv34daykwavg, "3-14"), (grayfoxinv35daykwavg, "3-15"), (grayfoxinv36daykwavg, "3-16"), (grayfoxinv37daykwavg, "3-17"), (grayfoxinv38daykwavg, "3-18"), (grayfoxinv39daykwavg, "3-19"), (grayfoxinv40daykwavg, "3-20")]
         hardingdaykwList = [(hardinginv4daykwavg, "4"), (hardinginv5daykwavg, "5"), (hardinginv6daykwavg, "6"),  (hardinginv10daykwavg, "10"), (hardinginv11daykwavg, "11"), (hardinginv12daykwavg, "12"), (hardinginv13daykwavg, "13"), (hardinginv14daykwavg, "14"), (hardinginv15daykwavg, "15"),  (hardinginv17daykwavg, "17"), (hardinginv18daykwavg, "18"), (hardinginv19daykwavg, "19")]
         harding12strdaykwList = [(hardinginv1daykwavg, "1"), (hardinginv2daykwavg, "2"), (hardinginv3daykwavg, "3"), (hardinginv7daykwavg, "7"), (hardinginv8daykwavg, "8"), (hardinginv9daykwavg, "9"), (hardinginv16daykwavg, "16"), (hardinginv20daykwavg, "20"), (hardinginv21daykwavg, "21"), (hardinginv22daykwavg, "22"), (hardinginv23daykwavg, "23"), (hardinginv24daykwavg, "24")]
-        mcLeandaykwList = [ (mcLeaninv2daykwavg, "2"), (mcLeaninv3daykwavg, "3"), (mcLeaninv4daykwavg, "4"), (mcLeaninv5daykwavg, "5"), (mcLeaninv6daykwavg, "6"), (mcLeaninv7daykwavg, "7"), (mcLeaninv8daykwavg, "8"), (mcLeaninv9daykwavg, "9"), (mcLeaninv10daykwavg, "10"), (mcLeaninv11daykwavg, "11"), (mcLeaninv12daykwavg, "12"), (mcLeaninv13daykwavg, "13"), (mcLeaninv14daykwavg, "14"), (mcLeaninv15daykwavg, "15"), (mcLeaninv16daykwavg, "16"), (mcLeaninv18daykwavg, "18"), (mcLeaninv20daykwavg, "20"),  (mcLeaninv22daykwavg, "22"),  (mcLeaninv24daykwavg, "24"), (mcLeaninv25daykwavg, "25"), (mcLeaninv26daykwavg, "26"), (mcLeaninv30daykwavg, "30")]
-        mcLean10strdaykwList = [(mcLeaninv1daykwavg, "1"), (mcLeaninv17daykwavg, "17"), (mcLeaninv19daykwavg, "19"), (mcLeaninv21daykwavg, "21"), (mcLeaninv23daykwavg, "23"), (mcLeaninv27daykwavg, "27"), (mcLeaninv28daykwavg, "28"), (mcLeaninv29daykwavg, "29"), (mcLeaninv31daykwavg, "31"), (mcLeaninv32daykwavg, "32"), (mcLeaninv33daykwavg, "33"), (mcLeaninv34daykwavg, "34"), (mcLeaninv35daykwavg, "35"), (mcLeaninv36daykwavg, "36"), (mcLeaninv37daykwavg, "37"), (mcLeaninv38daykwavg, "38"), (mcLeaninv39daykwavg, "39"), (mcLeaninv40daykwavg, "40")]
+        mcleandaykwList = [ (mcleaninv2daykwavg, "2"), (mcleaninv3daykwavg, "3"), (mcleaninv4daykwavg, "4"), (mcleaninv5daykwavg, "5"), (mcleaninv6daykwavg, "6"), (mcleaninv7daykwavg, "7"), (mcleaninv8daykwavg, "8"), (mcleaninv9daykwavg, "9"), (mcleaninv10daykwavg, "10"), (mcleaninv11daykwavg, "11"), (mcleaninv12daykwavg, "12"), (mcleaninv13daykwavg, "13"), (mcleaninv14daykwavg, "14"), (mcleaninv15daykwavg, "15"), (mcleaninv16daykwavg, "16"), (mcleaninv18daykwavg, "18"), (mcleaninv20daykwavg, "20"),  (mcleaninv22daykwavg, "22"),  (mcleaninv24daykwavg, "24"), (mcleaninv25daykwavg, "25"), (mcleaninv26daykwavg, "26"), (mcleaninv30daykwavg, "30")]
+        mclean10strdaykwList = [(mcleaninv1daykwavg, "1"), (mcleaninv17daykwavg, "17"), (mcleaninv19daykwavg, "19"), (mcleaninv21daykwavg, "21"), (mcleaninv23daykwavg, "23"), (mcleaninv27daykwavg, "27"), (mcleaninv28daykwavg, "28"), (mcleaninv29daykwavg, "29"), (mcleaninv31daykwavg, "31"), (mcleaninv32daykwavg, "32"), (mcleaninv33daykwavg, "33"), (mcleaninv34daykwavg, "34"), (mcleaninv35daykwavg, "35"), (mcleaninv36daykwavg, "36"), (mcleaninv37daykwavg, "37"), (mcleaninv38daykwavg, "38"), (mcleaninv39daykwavg, "39"), (mcleaninv40daykwavg, "40")]
         richmonddaykwList = [(richmondinv1daykwavg, "1"), (richmondinv2daykwavg, "2"), (richmondinv3daykwavg, "3"), (richmondinv4daykwavg, "4"), (richmondinv5daykwavg, "5"), (richmondinv6daykwavg, "6"), (richmondinv7daykwavg, "7"), (richmondinv11daykwavg, "11"), (richmondinv12daykwavg, "12"), (richmondinv13daykwavg, "13"), (richmondinv14daykwavg, "14"), (richmondinv15daykwavg, "15"), (richmondinv16daykwavg, "16"), (richmondinv17daykwavg, "17"), (richmondinv18daykwavg, "18"), (richmondinv19daykwavg, "19"), (richmondinv20daykwavg, "20"), (richmondinv21daykwavg, "21")]
         richmond10strdaykwList = [(richmondinv8daykwavg, "8"), (richmondinv9daykwavg, "9"), (richmondinv10daykwavg, "10"), (richmondinv22daykwavg, "22"), (richmondinv23daykwavg, "23"), (richmondinv24daykwavg, "24")]  
         shorthorndaykwList = [(shorthorninv1daykwavg, "1"), (shorthorninv2daykwavg, "2"), (shorthorninv3daykwavg, "3"), (shorthorninv4daykwavg, "4"), (shorthorninv5daykwavg, "5"), (shorthorninv6daykwavg, "6"), (shorthorninv7daykwavg, "7"), (shorthorninv8daykwavg, "8"), (shorthorninv9daykwavg, "9"), (shorthorninv10daykwavg, "10"), (shorthorninv11daykwavg, "11"), (shorthorninv12daykwavg, "12"), (shorthorninv13daykwavg, "13"), (shorthorninv14daykwavg, "14"), (shorthorninv15daykwavg, "15"), (shorthorninv16daykwavg, "16"), (shorthorninv17daykwavg, "17"), (shorthorninv18daykwavg, "18"), (shorthorninv19daykwavg, "19"), (shorthorninv20daykwavg, "20"), (shorthorninv22daykwavg, "22"), (shorthorninv23daykwavg, "23"), (shorthorninv24daykwavg, "24"),  (shorthorninv26daykwavg, "26"), (shorthorninv27daykwavg, "27"), (shorthorninv28daykwavg, "28"),  (shorthorninv32daykwavg, "32"), (shorthorninv33daykwavg, "33"),  (shorthorninv37daykwavg, "37"), (shorthorninv38daykwavg, "38"), (shorthorninv39daykwavg, "39"), (shorthorninv40daykwavg, "40"), (shorthorninv41daykwavg, "41"), (shorthorninv42daykwavg, "42"), (shorthorninv43daykwavg, "43"), (shorthorninv45daykwavg, "45"), (shorthorninv46daykwavg, "46"), (shorthorninv47daykwavg, "47"), (shorthorninv48daykwavg, "48"), (shorthorninv52daykwavg, "52"), (shorthorninv53daykwavg, "53"), (shorthorninv57daykwavg, "57"), (shorthorninv58daykwavg, "58"), (shorthorninv59daykwavg, "59"), (shorthorninv60daykwavg, "60"), (shorthorninv61daykwavg, "61"), (shorthorninv62daykwavg, "62"), (shorthorninv63daykwavg, "63"), (shorthorninv64daykwavg, "64"), (shorthorninv65daykwavg, "65"), (shorthorninv66daykwavg, "66")]
@@ -1142,6 +1305,8 @@ def underperformance_data():
         pgdaykwList = [(pginv7daykwavg, "7"), (pginv8daykwavg, "8"), (pginv9daykwavg, "9"), (pginv10daykwavg, "10"), (pginv11daykwavg, "11"), (pginv12daykwavg, "12"), (pginv13daykwavg, "13"), (pginv14daykwavg, "14"), (pginv15daykwavg, "15"), (pginv16daykwavg, "16"), (pginv17daykwavg, "17"), (pginv18daykwavg, "18")]
         pg66daykwList = [(pginv1daykwavg, "1"), (pginv2daykwavg, "2"), (pginv3daykwavg, "3"), (pginv4daykwavg, "4"), (pginv5daykwavg, "5"), (pginv6daykwavg, "6")]
 
+
+
         site_under_Lists = {
             "Duplin Central Inverters": duplinCentraldaykwList,
             "Bulloch 1A 11 String Inverters": bulloch1adaykwList,
@@ -1153,8 +1318,8 @@ def underperformance_data():
 
             "Harding 13 String Inverters": hardingdaykwList,
             "Harding 12 String Inverters": harding12strdaykwList,
-            "McLean Inverters": mcLeandaykwList,
-            "McLean 10 String Inverters": mcLean10strdaykwList,
+            "McLean Inverters": mcleandaykwList,
+            "McLean 10 String Inverters": mclean10strdaykwList,
             "Richmond 11 String Inverters": richmonddaykwList,
             "Richmond 10 String Inverters": richmond10strdaykwList,
             "Shorthorn 12 String Inverters": shorthorndaykwList,
@@ -1219,9 +1384,6 @@ def underperformance_data():
             if underperformers:
                 messagebox.showinfo(parent=alertW, title=site_name, message=f"Inverters {underperformers} Underperforming > 15%")
 
-
-            
-
     gui_update_timer.resume()
 
 
@@ -1281,7 +1443,7 @@ def checkin():
 
 def last_update():
     times = []
-    for site, inv, metermax, var, place in master_List_Sites:
+    for site, inv, metermax, var, place, pvsyst_name in master_List_Sites:
         if site != "CDIA":
             c.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Meter Data] ORDER BY [Timestamp] DESC")
             last_time = c.fetchone()
@@ -1426,6 +1588,100 @@ def db_to_dict():
     print("Query Time (secs):", round(query_end - query_start, 2))
     time_window()
 
+
+
+def parse_wo():
+    directory = "G:\\Shared drives\\O&M\\NCC Automations\\Notification System\\WO Tracking\\"
+    existing_wo_files = glob.glob(os.path.join(directory, "*.txt"))
+    for file in existing_wo_files:
+        try:
+            os.remove(file)
+        except Exception as e:
+            print(f"Error: {e}")
+
+    open_wo_file = filedialog.askopenfilename(parent=alertW,
+        title="Select a file", 
+        filetypes=[("Excel Files", "*.xlsx *.xls")],
+        initialdir="C:\\Users\\OMOPS\\Downloads")
+    wo_data = pd.read_excel(open_wo_file)
+    for index, row in wo_data.iterrows():
+        var_adjustment = [", LLC", "Farm", "Cadle", "Solar"]
+        site = row['Site']
+        if pd.isna(site):
+            continue
+        varname = str(site)
+        for phrase in var_adjustment:
+            varname = varname.replace(phrase, "")
+        if 'Wayne' in site:
+            varname = varname.replace("III", "3")
+            varname = varname.replace("II", "2")
+            varname = varname.replace("I", "1")
+        varname = varname.replace(" ", "").lower()
+        varname = varname.replace("freightline", "freightliner")
+        if site == "BISHOPVILLE":
+            varname = 'bishopvilleII'
+        
+        status = row['Job Status']
+        error_type = row['Fault Code Category']
+        device_type = row['Asset Description']
+        wo_summary = row['Brief Description']
+        notes = row['Work Description']
+        wo_date = row['WO Date']
+        wo_num = row['WO No.']
+
+
+        if error_type == 'No Issue':
+            continue
+
+        #Inverter check
+        if 'inv' in device_type.lower() or 'inv' in wo_summary.lower():
+            inv_pattern = r"(?:inverter|inv)\s*(\d+)?(?:-|\.)?(\d+)?"
+            matchs = re.search(inv_pattern, wo_summary.lower())
+            #Reset Variables
+            group = None
+            num = None
+            if matchs is not None:
+                group = int(matchs.group(1)) if matchs.group(1) is not None else None
+                num = int(matchs.group(2)) if matchs.group(2) is not None else group
+            print(f"{site}  |  {group} | {num}")
+            
+            #Inverter # not Found
+            if group == None:
+                continue
+
+            inv_num = define_inv_num(site, group, num)
+            
+            # Construct the file path for the text file
+            txt_file_path = os.path.join(directory, f"{varname} Open WO's.txt")
+            # Append the row data to the text file
+            with open(txt_file_path, 'a+') as file:
+                file.write(f'{inv_num:<3}|  WO: {wo_num:<8}|  {wo_date}  |  {wo_summary}\n')
+            
+
+            #Color Assignment Logic
+            current_colorstatus = globals()[f'{varname}invup{inv_num}cb'].cget('bg')
+            if current_colorstatus == 'gray':
+                continue
+            
+            if error_type == 'Underperformance':
+                if current_colorstatus == '#b7825f': # Soft Brown Color 
+                    color = 'gray'
+                else:
+                    color = '#1E90FF' # Some Kind of Blue used in POA gradient, Middle of Scale
+            elif error_type == 'Equipment Outage':
+                if current_colorstatus == '#1E90FF': # Some Kind of Blue used in POA gradient, Middle of Scale
+                    color = 'gray'
+                else:
+                    color = '#b7825f' # Soft Brown Color 
+            elif error_type == 'COMMs Outage':
+                color = 'pink'
+            else: 
+                color = 'yellow'
+
+            globals()[f'{varname}invup{inv_num}cb'].config(bg=color)
+
+
+
 STATE_FILE = r"G:\Shared drives\O&M\NCC Automations\Notification System\CheckBoxState.json"
 
 def save_cb_state():
@@ -1447,31 +1703,35 @@ def load_cb_state():
         print(f"File {STATE_FILE} does not exist.")
 def check_button_notes():
     gui_update_timer.pause()
-    messagebox.showinfo(parent=alertW, title="Checkbutton Info", message= "The First column of CheckButtons in the Site Data Window turns off all notifications associated with that Site.\nThe colored INV CheckButtons are to be selected when a WO is open for that device and will turn off notifications of outages with INV\nThe INV CB to the right of the number is for underperfromance tracking, if a WO for underperformance exists, then check it so we don't have to dig for issues in Emaint.\nThe POA CB will change the value to 9999 so that no inv outages are filtered by the POA")
+    messagebox.showinfo(parent=alertW, title="Checkbutton Info", message= """The First column of CheckButtons in the Site Data Window turns off all notifications associated with that Site.
+                        \nThe colored INV CheckButtons are to be selected when a WO is open for that device and will turn off notifications of outages with INV
+                        \nThe INV CB to the right of the number is for underperfromance tracking, if a WO for underperformance exists, then check it so we don't have to dig for issues in Emaint.
+                        \nThis same CB is Colored by the Open WO's Function: Blue = Underperformance  |  Brown = Offline  |  Gray = Both  |
+                        \nThe POA CB will change the value to 9999 so that no inv outages are filtered by the POA""")
     gui_update_timer.resume()
 
 def open_file():
     os.startfile(r"G:\Shared drives\Narenco Projects\O&M Projects\NCC\Procedures\Also Energy GUI Interactions.docx")
-                
+    
 
 cur_time = datetime.now()
 tupdate =  cur_time.strftime('%H:%M')
 notesFrame = Frame(alertW, height= 5, bd= 3, relief= 'groove')
 notesFrame.pack(fill='x')
-alertwnotes = Label(notesFrame, text= "Checkbox: ✓ = Open WO", font= ("Calibiri", 14))
+alertwnotes = Label(notesFrame, text= "1st Checkbox: ✓ = Open WO\n& pauses inv notifications", font= ("Calibiri", 12))
 alertwnotes.pack()
-alertWnote1 = Label(notesFrame, text= "& pauses my notifications", font= ("Calibiri", 14))
-alertWnote1.pack()
 tupdateLabel = Label(alertW, text= "GUI Last Updated", font= ("Calibiri", 18))
 tupdateLabel.pack()
 timmytimeLabel = Label(alertW, text= tupdate, font= ("Calibiri", 30))
 timmytimeLabel.pack()
-underperformance_check_button = Button(alertW, command= underperformance_data, text= "Performance Analysis", font=("Calibiri", 14))
+underperformance_check_button = Button(alertW, command= underperformance_data, text= "Inv Comparison Analysis", font=("Calibiri", 14))
 underperformance_check_button.pack(padx= 2, pady= 2)
 notes_button = Button(alertW, command= lambda: check_button_notes(), text= "Checkbutton Notes", font=("Calibiri", 14))
 notes_button.pack(padx= 2, pady= 2)
 proc_button = Button(alertW, command= lambda: open_file(), text= "Procedure Doc", font=("Calibiri", 14))
 proc_button.pack(padx= 2, pady= 2)
+wo_button = Button(alertW, command= lambda: parse_wo(), text= "Assess Open WO's", font=("Calibiri", 14))
+wo_button.pack(padx= 2, pady= 2)
 
 root.after(10, load_cb_state)
 launch_end = ty.perf_counter()
