@@ -322,6 +322,7 @@ class PausableTimer:
 ##########
 ##########
 #TEMPORARY CHECKS TO BE REMOVED WHEN DEVICE IS REPIARED
+# check if False then call function to implement
 conetoe_check = False
 def conetoe_offline():
     global conetoe_check
@@ -559,6 +560,8 @@ def update_data():
             poa_color = '#4682B4'  # Steel Blue
         elif 350 > poa > 200:
             poa_color = '#4169E1'  # Royal Blue
+        elif poa == 0:
+            poa_color = 'black'
         else: 
             poa_color = 'gray'
         
@@ -727,6 +730,8 @@ def update_data():
                     ratio_color = '#4682B4'  # Steel Blue
                 elif .60 > meterRatio > .50:
                     ratio_color = '#4169E1'  # Royal Blue
+                elif meterRatio < 0.001:
+                    ratio_color = 'black'
                 else: 
                     ratio_color = 'gray'
                 globals()[f'{var_name}meterRatioLabel'].config(text= f"{round(meterRatio*100, 1)}%", bg= ratio_color)
@@ -943,6 +948,8 @@ def update_data():
                     ratio_color = '#4682B4'  # Steel Blue
                 elif .60 > meterRatio > .50:
                     ratio_color = '#4169E1'  # Royal Blue
+                elif meterRatio < 0.001:
+                    ratio_color = 'black'
                 else: 
                     ratio_color = 'gray'
                 print(f"{name:<15} | {round(meterRatio*100, 1):<5} | {meterdatakWM:<9} | {metermax}")
@@ -1024,11 +1031,6 @@ def update_data():
             globals()[f'{var_name}meterPvSystLabel'].config(text='N/A')
 
 
-
-
-
-    if conetoe_check == False:
-        conetoe_offline()
 
     dbconnection.close()
 
