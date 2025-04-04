@@ -59,26 +59,27 @@ hw_sites_mapping = {
         "526555": "Inverter 2-3",
         "526556": "Inverter 2-4",
         "526557": "Inverter 2-5",
-        "526558": "Inverter 3-1",
-        "526559": "Inverter 3-2",
-        "526560": "Inverter 3-3",
-        "526561": "Inverter 3-4",
-        "526562": "Inverter 3-5",
-        "526563": "Inverter 4-1",
-        "526564": "Inverter 4-2",
-        "526565": "Inverter 4-3",
-        "526566": "Inverter 4-4",
-        "526567": "Inverter 4-5",
-        "526568": "Inverter 5-1",
-        "526569": "Inverter 5-2",
-        "526570": "Inverter 5-3",
-        "526571": "Inverter 5-4",
-        "526572": "Inverter 5-5",
-        "526573": "Inverter 6-1",
-        "526574": "Inverter 6-2",
-        "526575": "Inverter 6-3",
-        "526576": "Inverter 6-4",
-        "526577": "Inverter 6-5"
+        "526558": "Inverter 2-5",
+        "526559": "Inverter 3-1",
+        "526560": "Inverter 3-2",
+        "526561": "Inverter 3-3",
+        "526562": "Inverter 3-4",
+        "526563": "Inverter 3-5",
+        "526564": "Inverter 4-1",
+        "526565": "Inverter 4-2",
+        "526566": "Inverter 4-3",
+        "526567": "Inverter 4-4",
+        "526568": "Inverter 4-5",
+        "526569": "Inverter 5-1",
+        "526570": "Inverter 5-2",
+        "526571": "Inverter 5-3",
+        "526572": "Inverter 5-4",
+        "526573": "Inverter 5-5",
+        "526574": "Inverter 6-1",
+        "526575": "Inverter 6-2",
+        "526576": "Inverter 6-3",
+        "526577": "Inverter 6-4",
+        "526578": "Inverter 6-5"
     },
     "weather_stations": {
         "526579": "KZPOA"
@@ -186,10 +187,22 @@ hw_sites_mapping = {
         "156535": "SEL 735 Meter",
     },
     "inverters": {
-        "156547": "Inverter INV 01",
-        "156548": "Inverter INV 02",
-        "156549": "Inverter INV 03",
-        "156550": "Inverter INV 04"
+        "550476": "Inverter 1",
+        "550477": "Inverter 2",
+        "156547": "Inverter 3",
+        "550478": "Inverter 4",
+        "550479": "Inverter 5",
+        "550480": "Inverter 6",
+        "156548": "Inverter 7",
+        "550481": "Inverter 8",
+        "550482": "Inverter 9",
+        "550483": "Inverter 10",
+        "156549": "Inverter 11",
+        "550484": "Inverter 12",
+        "550485": "Inverter 13",
+        "550486": "Inverter 14",
+        "156550": "Inverter 15",
+        "550487": "Inverter 16",
     },
     "weather_stations": {
         "156561": "POA Pyranometer SE 01",
@@ -1683,6 +1696,7 @@ def get_data_for_site(site, site_data, api_data, hw_sites_mapping, start, base_u
 
             elif 400 <= hardware_response.status_code < 500: # Unauthorized or Forbidden
                 print(f"Failed to retrieve hardware data for {hardware_id}. Status Code: {hardware_response.status_code}")
+                sys.exit() #Also Energy has been locking our account so I hope this will prevent that from happening as often. 
             else:
                 print(f"Failed to retrieve hardware data for {hardware_id} at {site} in {category}. Status code: {hardware_response.status_code}")
  
