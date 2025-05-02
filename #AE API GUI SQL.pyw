@@ -175,6 +175,12 @@ try:
     solrvr.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
 except Exception as e:
     print(f"Error loading icon: {e}")
+solrvr2 = Toplevel(root)
+solrvr2.title("SOL River Continued")
+try:
+    solrvr2.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
+except Exception as e:
+    print(f"Error loading icon: {e}")
 soltage = Toplevel(root)
 soltage.title("Soltage")
 soltage.wm_attributes("-topmost", True)
@@ -381,7 +387,7 @@ master_List_Sites = [('Bishopville II', {
     51: "51", 52: "52", 53: "53", 54: "54", 55: "55", 56: "56", 57: "57", 58: "58", 59: "59", 60: "60",
     61: "61", 62: "62", 63: "63", 64: "64", 65: "65", 66: "66", 67: "67", 68: "68", 69: "69", 70: "70",
     71: "71", 72: "72", 73: "73", 74: "74", 75: "75", 76: "76", 77: "77", 78: "78", 79: "79", 80: "80"},
-                    10000000, 'sunflower', solrvr, 'SUNFLOWER'), 
+                    10000000, 'sunflower', solrvr2, 'SUNFLOWER'), 
                     
                     ('Tedder', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
@@ -399,7 +405,7 @@ master_List_Sites = [('Bishopville II', {
     7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
     13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18",
     19: "19", 20: "20", 21: "21", 22: "22", 23: "23", 24: "24"},
-                    3000000, 'upson', solrvr, None), 
+                    3000000, 'upson', solrvr2, None), 
                     
                     ('Van Buren', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
@@ -414,14 +420,14 @@ master_List_Sites = [('Bishopville II', {
     17: "B17", 18: "B18", 19: "B19", 20: "B20", 21: "B21", 22: "B22",
     23: "B23", 24: "B24", 25: "B25", 26: "B26", 27: "B27", 28: "B28",
     29: "B29", 30: "B30", 31: "B31", 32: "B32"},
-                    4000000, 'warbler', solrvr, 'WARBLER'),
+                    4000000, 'warbler', solrvr2, 'WARBLER'),
                     
                     ('Washington', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
     11: "11", 12: "12", 13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18", 19: "19", 20: "20",
     21: "21", 22: "22", 23: "23", 24: "24", 25: "25", 26: "26", 27: "27", 28: "28", 29: "29", 30: "30",
     31: "31", 32: "32", 33: "33", 34: "34", 35: "35", 36: "36", 37: "37", 38: "38", 39: "39", 40: "40"},
-                    5000000, 'washington', solrvr, None), 
+                    5000000, 'washington', solrvr2, None), 
                     
                     ('Wayne 1', {1: "1", 2: "2", 3: "3", 4: "4"}, 5000000, 'wayne1', soltage, None), 
                     
@@ -435,7 +441,7 @@ master_List_Sites = [('Bishopville II', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
     7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
     13: "13", 14: "14", 15: "15", 16: "16"},
-                    2000000, 'whitehall', solrvr, 'WHITEHALL'), 
+                    2000000, 'whitehall', solrvr2, 'WHITEHALL'), 
                     
                     ('Whitetail', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
@@ -446,7 +452,7 @@ master_List_Sites = [('Bishopville II', {
     51: "51", 52: "52", 53: "53", 54: "54", 55: "55", 56: "56", 57: "57", 58: "58", 59: "59", 60: "60",
     61: "61", 62: "62", 63: "63", 64: "64", 65: "65", 66: "66", 67: "67", 68: "68", 69: "69", 70: "70",
     71: "71", 72: "72", 73: "73", 74: "74", 75: "75", 76: "76", 77: "77", 78: "78", 79: "79", 80: "80"},
-                    10000000, 'whitetail', solrvr, None),
+                    10000000, 'whitetail', solrvr2, None),
                     
                     ('Violet', {1:"1", 2:"2"}, 5000000, 'violet', narenco, 'VIOLET')]
 
@@ -1153,7 +1159,7 @@ for ro, (name, invdict, metermax, varname, custid, pvsyst_name) in enumerate(mas
             globals()[f'{varname}inv{inv_val}cbval'] = IntVar()
             all_CBs.append(globals()[f'{varname}inv{inv_val}cbval'])
             globals()[f'{varname}inv{inv_val}cb'] = Checkbutton(custid, text=str(inv_val), variable=globals()[f'{varname}inv{inv_val}cbval'], cursor='hand2')
-            globals()[f'{varname}inv{inv_val}cb'].grid(row= row_offset, column= (ro*3)+column_offset)
+            globals()[f'{varname}inv{inv_val}cb'].grid(row= row_offset, column= (ro*3)+column_offset, sticky=W)
 
             globals()[f'{varname}inv{num}WOLabel'] = Label(custid, text='⬜') #intial Setup of WO Placeholder. 
             globals()[f'{varname}inv{num}WOLabel'].grid(row= row_offset, column= (ro*3)+1+column_offset)
@@ -1161,7 +1167,7 @@ for ro, (name, invdict, metermax, varname, custid, pvsyst_name) in enumerate(mas
             globals()[f'{varname}invup{num}cbval'] = IntVar()
             all_CBs.append(globals()[f'{varname}invup{num}cbval'])
             globals()[f'{varname}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{varname}invup{num}cbval'], cursor='hand2')
-            globals()[f'{varname}invup{num}cb'].grid(row= row_offset, column= (ro*3)+2+column_offset)
+            globals()[f'{varname}invup{num}cb'].grid(row= row_offset, column= (ro*3)+2+column_offset, sticky=W)
 
 class PausableTimer:
     def __init__(self, timeout, callback):
@@ -1382,6 +1388,8 @@ def update_data():
                 if not checkbox_var.get():
                     config_color = globals()[f'{var_name}inv{inv_val}cb'].cget("bg")
                     l.append(config_color)
+                else:
+                    l.append("green") #Checked inverters are known offline, this logs them in this check as 'online' but thats ok since this process is not the one used to check if the inverter is online or not. If we don't do this the message box reports the wrong index.
             status_all[f'{var_name}'] = l
 
 
@@ -1885,8 +1893,11 @@ def update_data():
                 if not checkbox_var.get():
                     config_color = globals()[f'{var_name}inv{inv_val}cb'].cget("bg")
                     l.append(config_color)
+                else:
+                    l.append("green") #Checked inverters are known offline, this logs them in this check as 'online' but thats ok since this process is not the one used to check if the inverter is online or not. If we don't do this the message box reports the wrong index.
             poststatus_all[f'{var_name}'] = l
     #ic(poststatus_all['vanburen'])
+    
     for index, site_info in enumerate(master_List_Sites):
         name, invdict, metermax, var_name, custid, pvsyst_name = site_info
         inverters = len(invdict)
@@ -1909,7 +1920,7 @@ def update_data():
 
 
 
-    def compare_lists(site, before, after):
+    def compare_lists(site, before, after, inverter_dictionary):
         #Comapres 2 lists of sites inverters to see what remains online
         changed_indices = []  # List to store indices of changed items
         
@@ -1918,12 +1929,14 @@ def update_data():
         
         if changes_detected:
             # If changes detected, then identify all items that remain "not ✓"
-            changed_indices = [i + 1 for i, item in enumerate(after) if item != "green"]
+            changed_indices = [i for i, item in enumerate(after) if item != "green"]
         
         if changed_indices:
-            late_starts = ', '.join(str(x) for x in changed_indices)
+            # Look up the corresponding values in the inverter dictionary
+            offline_inverters = [inverter_dictionary.get(i + 1, f"Index {i + 1}") for i in changed_indices]
+            late_starts = ', '.join(offline_inverters)
             messagebox.showinfo(parent=alertW, title=site, message=f"Some Inverters just came Online. Inverters: {late_starts} remain Offline.")
-    
+
     
     
     #Comapres all lists of sites inverters to see what remains online
@@ -1932,7 +1945,7 @@ def update_data():
         inverters = len(invdict)
         if int(globals()[f'{var_name}POAcb'].cget("text")) > 100:
             if name != "CDIA":
-                compare_lists(name, status_all[f'{var_name}'], poststatus_all[f'{var_name}'])
+                compare_lists(name, status_all[f'{var_name}'], poststatus_all[f'{var_name}'], invdict)
 
     update_data_finish = ty.perf_counter()
     print("Update Data Time (secs):", round(update_data_finish - update_data_start, 2))
