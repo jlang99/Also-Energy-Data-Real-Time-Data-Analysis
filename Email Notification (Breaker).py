@@ -83,24 +83,22 @@ class PausableTimer:
             time_left = 0
         return time_left
 
+with open(r"G:\Shared drives\O&M\NCC Automations\Credentials\app credentials.json", 'r') as credsfile:
+    creds = json.load(credsfile)
+with open(r"G:\Shared drives\O&M\NCC Automations\Credentials\Employee Records.json", 'r') as credsfile:
+    employeeData = json.load(credsfile)
 
 
 def email_notification(SiteName, status, device, poa, amps):
-    sender_email = 'omops@narenco.com'
-    test = 'joseph.lang@narenco.com'
-    one = 'brandon.arrowood@narenco.com'
-    two = 'jayme.orrock@narenco.com'
-    three = 'newman.segars@narenco.com'
-    admin = ['newman.segars@narenco.com', 'brandon.arrowood@narenco.com', 'jayme.orrock@narenco.com', 'joseph.lang@narenco.com']
+    sender_email = employeeData['email']['NCC Desk']
+    admin = [employeeData['email']['Newman Segars'],  employeeData['email']['Brandon Arrowood'], employeeData['email']['Jayme Orrock'], employeeData['email']['Joseph Lang']]
     smtp_server = 'smtp.gmail.com'
     smtp_port = 587
-    with open(r"G:\Shared drives\O&M\NCC Automations\Credentials\app credentials.json", 'r') as credsfile:
-        creds = json.load(credsfile)
-    smtp_password = creds['credentials']['weekendEmail']
+
+    smtp_password = creds['credentials']['remoteMonitoring']
 
     msg = MIMEMultipart()
     msg['From'] = sender_email
-    
     msg['To'] = ' , '.join(admin)
     #msg['To'] = test
 
