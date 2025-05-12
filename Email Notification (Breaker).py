@@ -18,6 +18,10 @@ from email.mime.text import MIMEText
 import json
 import os
 
+from PythonTools import CREDS, EMAILS, PausableTimer #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
+
+
+
 #Number of Data points to check
 breaker_pulls = 10
 meter_pulls = 15
@@ -42,60 +46,13 @@ poa_data = {}
 all_CBs = []
 
 
-class PausableTimer:
-    def __init__(self, timeout, callback):
-        self._timeout = timeout
-        self._callback = callback 
-        self._pause_event = threading.Event()
-        self._stop_event = threading.Event()
-        self._timer_thread = threading.Thread(target=self._run)
-        self._pause_event.set()
-        self._elapsed = 0
-
-    def _run(self):
-        start = time.time()
-        while not self._stop_event.is_set() and self._elapsed < self._timeout:
-            if self._pause_event.is_set():
-                time.sleep(0.1)
-                self._elapsed += time.time() - start
-                start = time.time()
-            else:
-                start = time.time()
-                self._pause_event.wait()
-        if not self._stop_event.is_set():
-            self._callback()
-    
-    def start(self):
-        self._timer_thread.start()
-
-    def pause(self):
-        self._pause_event.clear()
-
-    def resume(self):
-        self._pause_event.set()
-
-    def stop(self):
-        self._stop_event.set()
-
-    def time_remaining(self):
-        time_left = self._timeout - self._elapsed
-        if time_left < 0:
-            time_left = 0
-        return time_left
-
-with open(r"G:\Shared drives\O&M\NCC Automations\Credentials\app credentials.json", 'r') as credsfile:
-    creds = json.load(credsfile)
-with open(r"G:\Shared drives\O&M\NCC Automations\Credentials\Employee Records.json", 'r') as credsfile:
-    employeeData = json.load(credsfile)
-
-
 def email_notification(SiteName, status, device, poa, amps):
-    sender_email = employeeData['email']['NCC Desk']
-    admin = [employeeData['email']['Newman Segars'],  employeeData['email']['Brandon Arrowood'], employeeData['email']['Jayme Orrock'], employeeData['email']['Joseph Lang']]
+    sender_email = emails['NCC Desk']
+    admin = [emails['Newman Segars'],  emails['Brandon Arrowood'], emails['Jayme Orrock'], emails['Joseph Lang']]
     smtp_server = 'smtp.gmail.com'
     smtp_port = 587
 
-    smtp_password = creds['credentials']['remoteMonitoring']
+    smtp_password = creds['remoteMonitoring']
 
     msg = MIMEMultipart()
     msg['From'] = sender_email

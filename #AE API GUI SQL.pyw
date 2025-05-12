@@ -19,6 +19,10 @@ import os
 import glob
 import json
 import re
+from bs4 import BeautifulSoup
+
+from PythonTools import CREDS, EMAILS, PausableTimer #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
+
 
 #Underperformance Analysis Packages
 import pandas as pd
@@ -135,11 +139,6 @@ try:
     alertW.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
 except Exception as e:
     print(f"Error loading icon: {e}")
-
-with open(r"G:\Shared drives\O&M\NCC Automations\Credentials\Employee Records.json", 'r') as credsfile:
-    employeeData = json.load(credsfile)
-with open(r"G:\Shared drives\O&M\NCC Automations\Credentials\app credentials.json", 'r') as credsfile:
-    creds = json.load(credsfile)
 
 #Top Labels Main Window
 siteLabel = Label(root, bg="#ADD8E6", text= "Sites", font=('Tk_defaultFont', 10, 'bold'))
@@ -1171,47 +1170,6 @@ for ro, (name, invdict, metermax, varname, custid, pvsyst_name) in enumerate(mas
             globals()[f'{varname}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{varname}invup{num}cbval'], cursor='hand2')
             globals()[f'{varname}invup{num}cb'].grid(row= row_offset, column= (ro*3)+2+column_offset, sticky=W)
 
-class PausableTimer:
-    def __init__(self, timeout, callback):
-        self._timeout = timeout
-        self._callback = callback 
-        self._pause_event = threading.Event()
-        self._stop_event = threading.Event()
-        self._timer_thread = threading.Thread(target=self._run)
-        self._pause_event.set()
-        self._elapsed = 0
-
-    def _run(self):
-        start = ty.time()
-        while not self._stop_event.is_set() and self._elapsed < self._timeout:
-            if self._pause_event.is_set():
-                ty.sleep(0.1)
-                self._elapsed += ty.time() - start
-                start = ty.time()
-            else:
-                start = ty.time()
-                self._pause_event.wait()
-        if not self._stop_event.is_set():
-            self._callback()
-    
-    def start(self):
-        self._timer_thread.start()
-
-    def pause(self):
-        self._pause_event.clear()
-
-    def resume(self):
-        self._pause_event.set()
-
-    def stop(self):
-        self._stop_event.set()
-
-    def time_remaining(self):
-        time_left = self._timeout - self._elapsed
-        if time_left < 0:
-            time_left = 0
-        return time_left
-
 
 ##########
 ##########
@@ -1226,8 +1184,10 @@ def conetoe_offline():
     try:
         if int(hardingPOAcb.cget("text")) >= 400 and datetime.now().hour >= 9:
             msg= "Call Conetoe Utilities:\nWO 29980, 35307\n757-857-2888\nID: 710R41"
-            if not textOnly:
+            if not textOnly.get():
                 messagebox.showinfo(title="Comm Outage", parent=alertW, message=msg)
+            else:
+                text_update_Table += f"<br>{msg}"
             conetoe_check = True
     except ValueError:
         print("POA Value is not a valid Integer")
@@ -1378,19 +1338,19 @@ def update_data():
     update_data_start = ty.perf_counter()
 
     now = datetime.now()
-    textReciepient = employeeData['phoneNumber'][f'{adminTexts.get()}']
-    test = employeeData['phoneNumber']['Joseph Lang']
-    # Create the email message
-    message = MIMEMultipart()
-    message["Subject"] = f"GUI Update {now}"
-    message["From"] = employeeData['email']['NCC Desk']
-    message["To"] = test
-    password = creds['credentials']['remoteMonitoring']
-    sender = employeeData['email']['NCC Desk']
+    if textOnly.get():
+        # Create the email message
+        message = MIMEMultipart()
+        message["Subject"] = f"GUI Update {now}"
+        message["From"] = EMAILS['NCC Desk']
+        user = optionTexts.get()
+        message["To"] = EMAILS[f'{user}'] 
+        password = CREDS['remoteMonitoring']
+        sender = EMAILS['NCC Desk']
     
     #How to Capture the Data from the GUI...
-    #Initiate HTML Table Title
-    text_update_Table = f"""<div style="color:black;"><head><b>"Initiation"</b></head>"""
+    #Initiate HTML Table Title turn these into an actual table so that each notification is a new row. Atleast for now to make sure that everything gets added
+    text_update_Table = f"""<html><div style="color:black;"><head>Initiation</head><body>"""
 
 
 
@@ -1466,10 +1426,10 @@ def update_data():
             poalbl = globals()[f'{var_name}POAcb'].cget('bg')
             if poalbl != 'pink' and poa_noti:
                 msg = f"{name} lost comms with POA sensor at {strtime_poa}"
-                if not textOnly:
+                if not textOnly.get():
                     messagebox.showwarning(parent= alertW, title=f"{name}, POA Comms Error", message=msg)
                 else:
-                    text_update_Table += f"<br>{msg}</br>"
+                    text_update_Table += f"<br>{msg}"
             globals()[f'{var_name}POAcb'].config(bg='pink', text=poa)
         else:
             globals()[f'{var_name}POAcb'].config(bg=poa_color, text=poa)
@@ -1494,10 +1454,10 @@ def update_data():
                             if breakerconfig != "❌❌" and master_cb_skips_INV_check:
                                 last_operational = last_closed(name)
                                 msg= f"{name} Breaker Tripped Open, Please Investigate! {last_operational}"
-                                if not textOnly:
+                                if not textOnly.get():
                                     messagebox.showerror(parent= alertW, title= f"{name}", message= msg)
                                 else:
-                                    text_update_Table += f"<br>{msg}</br>"
+                                    text_update_Table += f"<br>{msg}"
                             breakerstatus = "❌❌"
                             breakerstatuscolor = 'red'
                         globals()[f'{var_name}{two}statusLabel'].config(text= breakerstatus, bg=breakerstatuscolor)
@@ -1506,10 +1466,10 @@ def update_data():
                         globals()[f'{var_name}{two}statusLabel'].config(bg='pink')
                         if bklbl != 'pink' and master_cb_skips_INV_check:
                             msg= f"Breaker Comms lost {bk_Ltime} with the Breaker at {name}! Please Investigate!"
-                            if not textOnly:
+                            if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title=f"{name}, Breaker Comms Loss", message=msg)
                             else:
-                                text_update_Table += f"<br>{msg}</br>"
+                                text_update_Table += f"<br>{msg}"
             elif name in ['Cardinal', 'Harrison', 'Hayes', 'Warbler', 'Hickory']:
                 if metercomms > time_date_compare:
                     if any(meter_data[f'{name} Meter Data'][i][j] == 0 for i in range(meter_pulls) for j in range(3, 6)):
@@ -1517,10 +1477,10 @@ def update_data():
                         if breakerconfig != "❌❌" and master_cb_skips_INV_check:
                             last_operational = last_closed(name)
                             msg= f"{name} Breaker Tripped Open, Please Investigate! {last_operational}"
-                            if not textOnly:
+                            if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title= f"{name}", message= msg)
                             else:
-                                text_update_Table += f"<br>{msg}</br>"
+                                text_update_Table += f"<br>{msg}"
                         breakerstatus = "❌❌"
                         breakerstatuscolor = 'red'     
                     else:
@@ -1533,10 +1493,10 @@ def update_data():
                     globals()[f'{var_name}statusLabel'].config(bg='pink')
                     if bklbl != 'pink' and master_cb_skips_INV_check:
                         msg= f"Meter Comms lost {metercomms_time} with the Meter at {name}! Please Investigate!"
-                        if not textOnly:
+                        if not textOnly.get():
                             messagebox.showerror(parent= alertW, title=f"{name}, Meter Comms Loss", message=msg)   
                         else:
-                            text_update_Table += f"<br>{msg}</br>"
+                            text_update_Table += f"<br>{msg}"
             else:
                 breakercomm = max(comm_data[f'{name} Breaker Data'])[0]
                 bk_Ltime = breakercomm.strftime('%m/%d/%y | %H:%M')
@@ -1551,10 +1511,10 @@ def update_data():
                         if breakerconfig != "❌❌" and master_cb_skips_INV_check:
                             last_operational = last_closed(name)
                             msg= f"{name} Breaker Tripped Open, Please Investigate! {last_operational}"
-                            if not textOnly:
+                            if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title= f"{name}", message= msg)
                             else:
-                                text_update_Table += f"<br>{msg}</br>"
+                                text_update_Table += f"<br>{msg}"
                         breakerstatus = "❌❌"
                         breakerstatuscolor = 'red'
                     globals()[f'{var_name}statusLabel'].config(text= breakerstatus, bg=breakerstatuscolor)
@@ -1563,10 +1523,10 @@ def update_data():
                     globals()[f'{var_name}statusLabel'].config(bg='pink')
                     if bklbl != 'pink' and master_cb_skips_INV_check:
                         msg= f"Breaker Comms lost {bk_Ltime} with the Breaker at {name}! Please Investigate!"
-                        if not textOnly:
+                        if not textOnly.get():
                             messagebox.showerror(parent= alertW, title=f"{name}, Breaker Comms Loss", message= msg)
                         else:
-                            text_update_Table += f"<br>{msg}</br>"
+                            text_update_Table += f"<br>{msg}"
         #INVERTER CHECKS            
         if name == "CDIA":
                 data = inv_data[f'{name} INV 1 Data']
@@ -1607,17 +1567,17 @@ def update_data():
                                     if globals()[var_key].cget("bg") == 'green':
                                         online_last = last_online(name, r, duplin_except)
                                         msg= f"Inverter Offline, Good DC Voltage | {online_last}"
-                                        if not textOnly:
+                                        if not textOnly.get():
                                             messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                         else:
-                                            text_update_Table += f"<br>{msg}</br>"
+                                            text_update_Table += f"<br>{msg}"
                                 else:
                                     online_last = last_online(name, r, duplin_except)
                                     msg= f"Inverter Offline, Good DC Voltage | {online_last}"
-                                    if not textOnly:
+                                    if not textOnly.get():
                                         messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                     else:
-                                        text_update_Table += f"<br>{msg}</br>"
+                                        text_update_Table += f"<br>{msg}"
 
                             globals()[f'{var_name}meterkWLabel'].config(text="X✓", bg='orange')
                             globals()[f'{var_name}Label'].config(bg='orange')
@@ -1629,17 +1589,17 @@ def update_data():
                                     if globals()[var_key].cget("bg") == 'green':
                                         online_last = last_online(name, r, duplin_except)
                                         msg= f"Inverter Offline, Bad DC Voltage | {online_last}"
-                                        if not textOnly:
+                                        if not textOnly.get():
                                             messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                         else:
-                                            text_update_Table += f"<br>{msg}</br>"
+                                            text_update_Table += f"<br>{msg}"
                                 else:
                                     online_last = last_online(name, r, duplin_except)
                                     msg= f"Inverter Offline, Bad DC Voltage | {online_last}"
-                                    if not textOnly:
+                                    if not textOnly.get():
                                         messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                     else:
-                                        text_update_Table += f"<br>{msg}</br>"
+                                        text_update_Table += f"<br>{msg}"
 
                             globals()[f'{var_name}meterkWLabel'].config(text="❌❌", bg='red')
                             globals()[f'{var_name}Label'].config(bg='red')
@@ -1659,16 +1619,16 @@ def update_data():
                         if var_key in globals():
                             if globals()[var_key].cget("bg") == 'green':
                                 msg= f"INV Comms lost {inv_Ltime} with Inverter {r} at {name}! Please Investigate!"
-                                if not textOnly:
+                                if not textOnly.get():
                                     messagebox.showerror(parent= alertW, title=f"{name}, Inverter Comms Loss", message=msg)
                                 else:
-                                    text_update_Table += f"<br>{msg}</br>"
+                                    text_update_Table += f"<br>{msg}"
                         else:
                             msg= f"INV Comms lost {inv_Ltime} with Inverter {r} at {name}! Please Investigate!"
-                            if not textOnly:
+                            if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title=f"{name}, Inverter Comms Loss", message=msg)
                             else:
-                                text_update_Table += f"<br>{msg}</br>"
+                                text_update_Table += f"<br>{msg}"
         else:
             for r in range(1, inverters + 1):
                 if r in invdict:  # Check if the key exists in the dictionary
@@ -1705,17 +1665,17 @@ def update_data():
                                     if globals()[var_key].cget("bg") == 'green':
                                         online_last = last_online(name, inv_num, duplin_except)
                                         msg= f"Inverter {inv_val} Offline, Good DC Voltage | {online_last}"
-                                        if not textOnly:
+                                        if not textOnly.get():
                                             messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                         else:
-                                            text_update_Table += f"<br>{msg}</br>"
+                                            text_update_Table += f"<br>{msg}"
                                 else:
                                     online_last = last_online(name, inv_num, duplin_except)
                                     msg= f"Inverter {inv_val} Offline, Good DC Voltage | {online_last}"
-                                    if not textOnly:
+                                    if not textOnly.get():
                                         messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                     else:
-                                        text_update_Table += f"<br>{msg}</br>"
+                                        text_update_Table += f"<br>{msg}"
                             globals()[f'{var_name}inv{inv_val}cb'].config(bg='orange')
                         else:
                             if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
@@ -1724,17 +1684,17 @@ def update_data():
                                     if globals()[var_key].cget("bg") == 'green':
                                         online_last = last_online(name, inv_num, duplin_except)
                                         msg= f"Inverter {inv_val} Offline, Bad DC Voltage | {online_last}"
-                                        if not textOnly:
+                                        if not textOnly.get():
                                             messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                         else:
-                                            text_update_Table += f"<br>{name} | {msg}</br>"                                            
+                                            text_update_Table += f"<br>{name} | {msg}"                                            
                                 else:
                                     online_last = last_online(name, inv_num, duplin_except)
                                     msg= f"Inverter {inv_val} Offline, Bad DC Voltage | {online_last}"
-                                    if not textOnly:
+                                    if not textOnly.get():
                                         messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                     else:
-                                        text_update_Table += f"<br>{name} | {msg}</br>"                                        
+                                        text_update_Table += f"<br>{name} | {msg}"                                        
 
                             globals()[f'{var_name}inv{inv_val}cb'].config(bg='red')
                     else:
@@ -1748,16 +1708,16 @@ def update_data():
                         if var_key in globals():
                             if globals()[var_key].cget("bg") == 'green':
                                 msg= f"INV Comms lost {inv_Ltime} with Inverter {inv_val} at {name}! Please Investigate!"
-                                if not textOnly:
+                                if not textOnly.get():
                                     messagebox.showerror(parent= alertW, title=f"{name}, Inverter Comms Loss", message=msg)
                                 else:
-                                    text_update_Table += f"<br>{msg}</br>"                                   
+                                    text_update_Table += f"<br>{msg}"                                   
                         else:
                             msg= f"INV Comms lost {inv_Ltime} with Inverter {inv_val} at {name}! Please Investigate!"
-                            if not textOnly:
+                            if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title=f"{name}, Inverter Comms Loss", message=msg)
                             else:
-                                text_update_Table += f"<br>{msg}</br>"
+                                text_update_Table += f"<br>{msg}"
         #Meter Check
         if name != "CDIA":
             meter_Ltime = metercomms.strftime('%m/%d/%y | %H:%M')
@@ -1824,55 +1784,55 @@ def update_data():
                     if meterVconfig != '❌❌':
                         online = meter_last_online(name)
                         msg= f"Loss of Utility Voltage or Lost Comms with Meter. {online}"
-                        if not textOnly:
+                        if not textOnly.get():
                             messagebox.showerror(parent=alertW, title= f"{name} Meter", message= msg)
                         else:
-                            text_update_Table += f"<br>{name} | {msg}</br>"
+                            text_update_Table += f"<br>{name} | {msg}"
                 elif meterdataVA < val:
                     meterVstatus= 'X✓✓'
                     meterVstatuscolor= 'orange'
                     if meterVconfig != 'X✓✓':
                         msg= f"Loss of Utility Phase A Voltage or Lost Comms with Meter."
-                        if not textOnly:
+                        if not textOnly.get():
                             messagebox.showerror(parent=alertW, title= f"{name} Meter", message= msg)
                         else:
-                            text_update_Table += f"<br>{name} | {msg}</br>"
+                            text_update_Table += f"<br>{name} | {msg}"
                 elif meterdataVB < val:
                     meterVstatus= '✓X✓'
                     meterVstatuscolor= 'orange'
                     if meterVconfig != '✓X✓':
                         msg= f"Loss of Utility Phase B Voltage or Lost Comms with Meter."
-                        if not textOnly:
+                        if not textOnly.get():
                             messagebox.showerror(parent=alertW, title= f"{name} Meter", message= msg)
                         else:
-                            text_update_Table += f"<br>{name} | {msg}</br>"
+                            text_update_Table += f"<br>{name} | {msg}"
                 elif meterdataVC < val:
                     meterVstatus= '✓✓X'
                     meterVstatuscolor= 'orange'
                     if meterVconfig != '✓✓X':
                         msg= f"Loss of Utility Phase C Voltage or Lost Comms with Meter."
-                        if not textOnly:
+                        if not textOnly.get():
                             messagebox.showerror(parent=alertW, title= f"{name} Meter", message= msg)
                         else:
-                            text_update_Table += f"<br>{name} | {msg}</br>"
+                            text_update_Table += f"<br>{name} | {msg}"
                 elif percent_difference_AB >= dif or percent_difference_AC >= dif or percent_difference_BC >= dif:
                     meterVstatus= '???'
                     meterVstatuscolor= 'orange'
                     if meterVconfig != '???':
                         msg= f"Voltage Imbalance greater than {dif}%"
-                        if not textOnly:
+                        if not textOnly.get():
                             messagebox.showerror(parent=alertW, title= f"{name} Meter", message= msg)
                         else:
-                            text_update_Table += f"<br>{name} | {msg}</br>"
+                            text_update_Table += f"<br>{name} | {msg}"
                 else:
                     meterVstatus= '✓✓✓'
                     meterVstatuscolor= 'green'
                     if meterVconfig not in  ['✓✓✓', 'V']:
                         msg= "Utility Voltage Restored!!! Close the Breaker"
-                        if not textOnly:
+                        if not textOnly.get():
                             messagebox.showinfo(parent=alertW, title=f"{name} Meter", message= msg)
                         else:
-                            text_update_Table += f"<br>{name} | {msg}</br>"
+                            text_update_Table += f"<br>{name} | {msg}"
 
                 globals()[f'{var_name}meterVLabel'].config(text= meterVstatus, bg= meterVstatuscolor)
 
@@ -1906,10 +1866,10 @@ def update_data():
                         if meterlbl != 'red' and master_cb_skips_INV_check and poa > 10:
                             online = meter_last_online(name)
                             msg= f"Site: {name}\nMeter Production: {round(meterdataKW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}"
-                            if not textOnly:
+                            if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title=f"{name}, Power Loss", message=msg)
                             else:
-                                text_update_Table += f"<br>{msg}</br>"  
+                                text_update_Table += f"<br>{msg}"  
                     elif meterdataAC or meterdataAB or meterdataKW < 2: #This is a continuation of the above 'Juke' The Elif below is yet another continuation as Vanburen gets trapped by the very first if statement
                         meterkWstatus= '❌❌'
                         meterkWstatuscolor= 'red'
@@ -1917,26 +1877,26 @@ def update_data():
                         if meterlbl != 'red' and master_cb_skips_INV_check and poa > 10:
                             online = meter_last_online(name)
                             msg= f"Site: {name}\nMeter Production: {round(meterdataKW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}"
-                            if not textOnly:
+                            if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title=f"{name}, Meter Power Loss", message=msg)
                             else:
-                                text_update_Table += f"<br>{msg}</br>"
+                                text_update_Table += f"<br>{msg}"
                     elif meterdatakWM < total_invkW * mvi_percent and name != "CDIA": #Less than XX% of total INV's
                         print(f'{name}:  {meterdatakWM} | {total_invkW*mvi_percent} ~ {mvi_percent*100}% | {total_invkW}')
                         print(allinv_kW)
                         if poa != 9999:
                             if globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and poa >= 250:
                                 msg=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue'
-                                if not textOnly:
+                                if not textOnly.get():
                                     messagebox.showwarning(parent= alertW, title=name, message=msg)
                                 else:
-                                    text_update_Table += f"<br>{msg}</br>"   
+                                    text_update_Table += f"<br>{msg}"   
                         elif globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and 9 <= h_tm_now < 15:
                             msg= f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue'
-                            if not textOnly:
+                            if not textOnly.get():
                                 messagebox.showwarning(parent= alertW, title=name, message=msg)
                             else:
-                                text_update_Table += f"<br>{msg}</br>"
+                                text_update_Table += f"<br>{msg}"
                         meterkWstatus= '???'
                         meterkWstatuscolor= 'orange'
 
@@ -1946,16 +1906,16 @@ def update_data():
                     if poa != 9999:
                         if globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and poa >= 250: #Might should change this so that we check the INV groups poa values for each data entry. 
                             msg=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue'
-                            if not textOnly:
+                            if not textOnly.get():
                                 messagebox.showwarning(parent= alertW, title=name, message=msg)
                             else:
-                                text_update_Table += f"<br>{msg}</br>"
+                                text_update_Table += f"<br>{msg}"
                     elif globals()[f'{var_name}meterkWLabel'].cget('text') != '???' and 9 <= h_tm_now < 15:
                         msg=f'{name} experiencing Meter vs. Inv kW discrepancy\nPlease investigate the meter and look for Phase Issue'
-                        if not textOnly:
+                        if not textOnly.get():
                             messagebox.showwarning(parent= alertW, title=name, message=msg)
                         else:
-                            text_update_Table += f"<br>{msg}</br>"
+                            text_update_Table += f"<br>{msg}"
                     meterkWstatus= '???'
                     meterkWstatuscolor= 'orange'
                         
@@ -1993,16 +1953,31 @@ def update_data():
                 meterlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
                 if meterlbl != 'pink' and master_cb_skips_INV_check:
                     msg=f"Meter Comms lost {meter_Ltime} with the Meter at {name}! Please Investigate!"
-                    if not textOnly:
+                    if not textOnly.get():
                         messagebox.showerror(parent= alertW, title=f"{name}, Meter Comms Loss", message=msg)
                     else:
-                        text_update_Table += f"<br>{msg}</br>"
+                        text_update_Table += f"<br>{msg}"
                 globals()[f'{var_name}meterkWLabel'].config(bg='pink')
                 globals()[f'{var_name}meterVLabel'].config(bg='pink')
                 globals()[f'{var_name}meterRatioLabel'].config(bg='pink')
             
     underperformance_data_update() #Inverter Comparison Type Underperformance Check
     #conetoe_offline()
+
+    if textOnly.get():
+        text_update_Table += "</body></html>"
+        
+        # Connect to Gmail SMTP server and send email
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(sender, password)
+            soup = BeautifulSoup(text_update_Table, 'html.parser')
+            message.attach(MIMEText(soup.prettify(), 'html'))
+            print("\n", text_update_Table)
+            print("\n", soup.prettify())
+            print("\n",message.as_string())
+            print("\n", textOnly.get())
+            server.send_message(message)
 
 
     dbconnection.close()
@@ -2020,10 +1995,10 @@ def update_data():
                 return allinvstat
         except Exception as errorr:
             msg = f"Error Reading Site {num} txt file"
-            if not textOnly:
+            if not textOnly.get():
                 messagebox.showerror(parent= alertW, message= errorr, title=msg)
             else:
-                text_update_Table += f"<br>{msg} | {errorr}</br>"
+                text_update_Table += f"<br>{msg} | {errorr}"
             return '1'
 
 
@@ -2062,10 +2037,10 @@ def update_data():
                         if ((POA_data[f'{name} POA Data'][0] > 250 and begin) or (h_tm_now >= 10 and POA_data[f'{name} POA Data'][0] > 75)):
                             print(f'{name} Past', status_all[f'{var_name}'])
                             msg= f"All Inverters Offline, Please Investigate!"
-                            if not textOnly:
+                            if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title= f"{name}", message=msg)
                             else:
-                                text_update_Table += f"<br>{name} | {msg}</br>"
+                                text_update_Table += f"<br>{name} | {msg}"
                             stat = 0
                             allinv_message_update(index + 1, stat)
                 else:
@@ -2093,10 +2068,10 @@ def update_data():
             offline_inverters = [inverter_dictionary.get(i + 1, f"Index {i + 1}") for i in changed_indices]
             late_starts = ', '.join(offline_inverters)
             msg=f"Some Inverters just came Online. Inverters: {late_starts} remain Offline."
-            if not textOnly:
+            if not textOnly.get():
                 messagebox.showinfo(parent=alertW, title=site, message=msg)
             else:
-                text_update_Table += f"<br>{site} | {msg}</br>"
+                text_update_Table += f"<br>{site} | {msg}"
 
     
     
@@ -2120,6 +2095,7 @@ def update_data():
         gui_update_timer.start()
 
     notes_button.config(state=NORMAL)
+    sendTexts.config(state=NORMAL)
 
 def pysyst_connect():
     global cursor_p, connect_pvsystdb
@@ -2442,7 +2418,8 @@ def underperformance_data_update(): #Inv Comparison Function
         calculate_percentages(underperformance_list) #Updates GUI widgets with new percentages
     
 
-    #Send Email to Text Recipients and test output.
+
+    
     
 
 
@@ -2547,7 +2524,7 @@ def last_update():
 
 def time_window():
 
-    global timecurrent
+    global timecurrent, text_update_Table
     #SELECT 15 = 30 Mins
     c.execute("SELECT TOP 16 [Timestamp] FROM [Ogburn Meter Data] ORDER BY [Timestamp] DESC")
     data_timestamps = c.fetchall()
@@ -2587,10 +2564,15 @@ def time_window():
     if recent_update < timecompare:
         os.startfile(r"G:\Shared drives\O&M\NCC Automations\Notification System\API Data Pull, Multi SQL.py")
         msg = f"The Database has not been updated in {str(db_update_time)} Minutes and usually updates every 2\nLaunching Data Pull Script in response."
-        if not textOnly:
+        if not textOnly.get():
             messagebox.showerror(parent=timeW, title="Notification System/GUI", message=msg)
         else:
-            text_update_Table += f"<br>{msg}</br>"
+            try:
+                text_update_Table += f"<br>{msg}"
+            except UnboundLocalError:
+                pass
+            except NameError:
+                pass
         ty.sleep(180)
 
     tupdate = timecurrent.strftime('%H:%M')
@@ -2602,6 +2584,7 @@ def time_window():
 def db_to_dict():
     query_start = ty.perf_counter()
     notes_button.config(state=DISABLED)
+    sendTexts.config(state=DISABLED)
 
     connect_db()
     global tables, inv_data, breaker_data, meter_data, comm_data, POA_data, begin
@@ -2829,7 +2812,7 @@ notificationFrame.pack(side=RIGHT, fill='both')
 notificationNotes = Label(notificationFrame, text="Notification Settings\n(Not Yet Working)", font=("Calibiri", 14))
 notificationNotes.pack()
 textOnly = IntVar()
-sendTexts = Checkbutton(notificationFrame, text="Send Texts (Disable Local MsgBox's)", cursor='hand2', variable=textOnly)
+sendTexts = Checkbutton(notificationFrame, text="Send Emails (Disable Local MsgBox's)", cursor='hand2', variable=textOnly)
 sendTexts.pack(padx=2)
 adminTexts = StringVar()
 optionTexts = ttk.Combobox(notificationFrame, textvariable=adminTexts, values=["Joseph Lang", "Brandon Arrowood", "Jacob Budd"], state="readonly")

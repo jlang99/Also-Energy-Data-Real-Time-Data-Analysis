@@ -12,15 +12,24 @@ import multiprocessing
 from multiprocessing import Manager
 from icecream import ic
 import urllib3
+
+from PythonTools import CREDS, EMAILS, PausableTimer #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
+
+
 urllib3.disable_warnings()
 #Attmepted
 #os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 #os.environ['SSL_CERT_FILE'] = certifi.where()
 dataPullTime = 1
-email = 'omops@narenco.com'
-with open(r"G:\Shared drives\O&M\NCC Automations\Credentials\app credentials.json", 'r') as credsfile:
-    creds = json.load(credsfile)
-password = creds['credentials']['AlsoEnergy']
+
+
+
+
+email = EMAILS['NCC Desk']
+
+
+
+password = CREDS['AlsoEnergy']
 base_url = "https://api.alsoenergy.com"
 token_endpoint = "/Auth/token"
 
@@ -1691,6 +1700,9 @@ def get_data_for_site(site, site_data, api_data, hw_sites_mapping, start, base_u
 
                 api_data[hardware_id] = register_values
 
+                #Added to reduce strain on AE API server
+                time.sleep(.01)
+
                 #with open(troubleshooting_file, 'a') as tfile:
                 #    json.dump(register_values, tfile, indent=2)
 
@@ -1727,6 +1739,7 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
 
             for site, site_data in hw_sites_mapping.items():
                 pool.apply_async(get_data_for_site, args=(site, site_data, api_data, hw_sites_mapping, start, base_url, access_token))
+                time.sleep(1) #Again added to reduce strain on AE API Server
             pool.close()
             pool.join()
 
