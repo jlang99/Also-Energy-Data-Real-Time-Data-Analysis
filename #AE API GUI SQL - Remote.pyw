@@ -21,6 +21,7 @@ import json
 import re
 from bs4 import BeautifulSoup
 
+# Source is an __init__.py file
 from PythonTools import CREDS, EMAILS, PausableTimer #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
 
 #Underperformance Analysis Packages
@@ -155,48 +156,29 @@ POALabel = Label(root, bg="#ADD8E6", text= "POA", font=('Tk_defaultFont', 10, 'b
 POALabel.grid(row=0, column= 7)
 
 #Windows with multiple pages of Site inv data
-solrvr_win = Toplevel(root)
-solrvr_win.title("Sol River's Portfolio")
+inv_win = Toplevel(root)
+inv_win.title("Inverter's Portfolio")
 try:
-    solrvr_win.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
+    inv_win.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
 except Exception as e:
     print(f"Error loading icon: {e}")
-notebook = ttk.Notebook(solrvr_win)
-style = ttk.Style(solrvr_win)
-style.configure("TNotebook.Tab", padding=[180, 2], font=('Tk_defaultFont', 12, 'bold'))
+notebook = ttk.Notebook(inv_win)
+
 solrvr = ttk.Frame(notebook)
 solrvr2 = ttk.Frame(notebook)
+harrisonST = ttk.Frame(notebook)
+narenco = ttk.Frame(notebook)
+ncemc = ttk.Frame(notebook)
+soltage = ttk.Frame(notebook)
+
+notebook.add(narenco, text="NARENCO")
+notebook.add(harrisonST, text="Harrison Street")
+notebook.add(soltage, text="Soltage")
+notebook.add(ncemc, text="NCEMC")
 notebook.add(solrvr, text="Bulloch 1A - Shorthorn")
 notebook.add(solrvr2, text="Sunflower - Whitetail")
-notebook.pack(expand=True, fill='both')
 
-#Static Inv Windows
-inv = Toplevel(root)
-inv.title("Harrison Street")
-try:
-    inv.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-except Exception as e:
-    print(f"Error loading icon: {e}")
-narenco = Toplevel(root)
-narenco.title("NARENCO")
-try:
-    narenco.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-except Exception as e:
-    print(f"Error loading icon: {e}")
-soltage = Toplevel(root)
-soltage.title("Soltage")
-soltage.wm_attributes("-topmost", True)
-try:
-    soltage.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-except Exception as e:
-    print(f"Error loading icon: {e}")
-ncemc = Toplevel(root)
-ncemc.title("NCEMC")
-ncemc.wm_attributes("-topmost", True)
-try:
-    ncemc.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-except Exception as e:
-    print(f"Error loading icon: {e}")
+notebook.pack(expand=True, fill='both')
 #Inverter Windows created
 ''' Data Structure for master_List_Sites
 (Site Name, {
@@ -211,7 +193,7 @@ master_List_Sites = [('Bishopville II', {
     19: "3-1", 20: "3-2", 21: "3-3", 22: "3-4", 23: "3-5", 24: "3-6",
     25: "3-7", 26: "3-8", 27: "3-9", 28: "4-1", 29: "4-2", 30: "4-3",
     31: "4-4", 32: "4-5", 33: "4-6", 34: "4-7", 35: "4-8", 36: "4-9"},
-                        9900000, 'bishopvilleII', inv, None),
+                        9900000, 'bishopvilleII', harrisonST, None),
 
                     ('Bluebird', {
     1: "A1", 2: "A2", 3: "A3", 4: "A4", 5: "A5", 6: "A6",
@@ -318,7 +300,7 @@ master_List_Sites = [('Bishopville II', {
     1: "1-1", 2: "1-2", 3: "1-3", 4: "1-4", 5: "1-5", 6: "1-6",
     7: "1-7", 8: "1-8", 9: "1-9", 10: "1-10", 11: "1-11", 12: "1-12",
     13: "1-13", 14: "1-14", 15: "1-15", 16: "1-16"},
-                     2000000, 'hickson', inv, None),
+                     2000000, 'hickson', harrisonST, None),
 
                     ('Holly Swamp', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
@@ -335,13 +317,13 @@ master_List_Sites = [('Bishopville II', {
     43: "3.11", 44: "3.12", 45: "3.13", 46: "3.14", 47: "3.15", 48: "3.16",
     49: "4.1", 50: "4.2", 51: "4.3", 52: "4.4", 53: "4.5", 54: "4.6", 55: "4.7", 56: "4.8", 57: "4.9", 58: "4.10",
     59: "4.11", 60: "4.12", 61: "4.13", 62: "4.14", 63: "4.15", 64: "4.16"},
-                     8000000, 'jefferson', inv, None),
+                     8000000, 'jefferson', harrisonST, None),
 
                     ('Marshall', {
     1: "1.1", 2: "1.2", 3: "1.3", 4: "1.4", 5: "1.5", 6: "1.6",
     7: "1.7", 8: "1.8", 9: "1.9", 10: "1.10", 11: "1.11", 12: "1.12",
     13: "1.13", 14: "1.14", 15: "1.15", 16: "1.16"},
-                    2000000, 'marshall', inv, None),
+                    2000000, 'marshall', harrisonST, None),
 
                     ('McLean', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
@@ -354,7 +336,7 @@ master_List_Sites = [('Bishopville II', {
     1: "1-1", 2: "1-2", 3: "1-3", 4: "1-4", 5: "1-5", 6: "1-6",
     7: "1-7", 8: "1-8", 9: "1-9", 10: "1-10", 11: "1-11", 12: "1-12",
     13: "1-13", 14: "1-14", 15: "1-15", 16: "1-16"},
-                    2000000, 'ogburn', inv, None),
+                    2000000, 'ogburn', harrisonST, None),
                     
                     ('PG', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
@@ -395,13 +377,13 @@ master_List_Sites = [('Bishopville II', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
     7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
     13: "13", 14: "14", 15: "15", 16: "16"},
-                    2000000, 'tedder', inv, None),
+                    2000000, 'tedder', harrisonST, None),
 
                     ('Thunderhead', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
     7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
     13: "13", 14: "14", 15: "15", 16: "16"},
-                    2000000, 'thunderhead', inv, None),
+                    2000000, 'thunderhead', harrisonST, None),
                     ('Upson', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
     7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
@@ -413,7 +395,7 @@ master_List_Sites = [('Bishopville II', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
     7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
     13: "13", 14: "14", 15: "15", 16: "16", 17: "17"},
-                    2000000, 'vanburen', inv, 'VAN BUREN'), 
+                    2000000, 'vanburen', harrisonST, 'VAN BUREN'), 
                     
                     ('Warbler', {
     1: "A1", 2: "A2", 3: "A3", 4: "A4", 5: "A5", 6: "A6",
@@ -1141,18 +1123,22 @@ for ro, (name, invdict, metermax, varname, custid, pvsyst_name) in enumerate(mas
     globals()[f'{varname}POAcb'].grid(row=ro, column= 7)
     #End
     #INVERTER INFO
-    length_limit = 73
+    length_limit = 38
     if name != 'CDIA':
-        if invnum > length_limit:
+        if invnum > length_limit*2:
+            span_col = 9
+        elif length_limit*2 > invnum > length_limit:
             span_col = 6
         else:
             span_col = 3
+        print(f"{name} | Invs: {invnum} | {length_limit*2} | {span_col}")
 
         globals()[f'{varname}invsLabel'] = Button(custid, text=name, command=lambda name=varname: open_wo_tracking(name), bg=main_color, font=("Tk_defaultFont", 12, 'bold'), cursor='hand2')
-        globals()[f'{varname}invsLabel'].grid(row= 0, column= ro*3, columnspan= span_col, sticky='ew')
+        globals()[f'{varname}invsLabel'].grid(row= 0, column= ro*6, columnspan= span_col, sticky='ew')
     for num in range(1, invnum+1):
-        column_offset = 0 if num <= length_limit else 3
-        row_offset = num if num <= length_limit else num - length_limit
+        block_number = (num - 1) // length_limit
+        column_offset = block_number * 3
+        row_offset = (num - 1) % length_limit + 1
         if name != 'CDIA':
             if num in invdict:  # Check if the key exists in the dictionary
                 inv_val = invdict[num]
@@ -1162,15 +1148,15 @@ for ro, (name, invdict, metermax, varname, custid, pvsyst_name) in enumerate(mas
             globals()[f'{varname}inv{inv_val}cbval'] = IntVar()
             all_CBs.append(globals()[f'{varname}inv{inv_val}cbval'])
             globals()[f'{varname}inv{inv_val}cb'] = Checkbutton(custid, text=str(inv_val), variable=globals()[f'{varname}inv{inv_val}cbval'], cursor='hand2')
-            globals()[f'{varname}inv{inv_val}cb'].grid(row= row_offset, column= (ro*3)+column_offset, sticky=W)
+            globals()[f'{varname}inv{inv_val}cb'].grid(row= row_offset, column= (ro*6)+column_offset, sticky=W)
 
             globals()[f'{varname}inv{num}WOLabel'] = Label(custid, text='⬜') #intial Setup of WO Placeholder. 
-            globals()[f'{varname}inv{num}WOLabel'].grid(row= row_offset, column= (ro*3)+1+column_offset)
+            globals()[f'{varname}inv{num}WOLabel'].grid(row= row_offset, column= (ro*6)+1+column_offset)
 
             globals()[f'{varname}invup{num}cbval'] = IntVar()
             all_CBs.append(globals()[f'{varname}invup{num}cbval'])
             globals()[f'{varname}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{varname}invup{num}cbval'], cursor='hand2')
-            globals()[f'{varname}invup{num}cb'].grid(row= row_offset, column= (ro*3)+2+column_offset, sticky=W)
+            globals()[f'{varname}invup{num}cb'].grid(row= row_offset, column= (ro*6)+2+column_offset, sticky=W)
 
 
 ##########
@@ -1213,7 +1199,7 @@ def connect_db():
     # Create a connection to the Access database
     globals()['dbconn_str'] = (
                 r'DRIVER={ODBC Driver 18 for SQL Server};'
-                r'SERVER=localhost\SQLEXPRESS01;'
+                r'SERVER=localhost\SQLEXPRESS;'
                 r'DATABASE=NARENCO_O&M_AE;'
                 r'Trusted_Connection=yes;'
                 r'Encrypt=no;'
@@ -1477,11 +1463,7 @@ def update_data():
                                 text_update_Table.append("<br>" + str(msg))
             elif name in {'Cardinal', 'Harrison', 'Hayes', 'Warbler', 'Hickory'}:
                 if metercomms > time_date_compare:
-                    rows_w_zeros = 0
-                    for i in range(meter_pulls):
-                        if any(meter_data[f'{name} Meter Data'][i][j] == 0 for j in range(3,6)):
-                            rows_w_zeros += 1
-                    if rows_w_zeros >= 2:
+                    if any(meter_data[f'{name} Meter Data'][i][j] == 0 for i in range(meter_pulls) for j in range(3, 6)):
                         breakerconfig = globals()[f'{var_name}statusLabel'].cget("text")
                         if breakerconfig != "❌❌" and master_cb_skips_INV_check:
                             last_operational = last_closed(name)
@@ -1575,14 +1557,14 @@ def update_data():
                                 if var_key in globals():
                                     if globals()[var_key].cget("bg") == 'green':
                                         online_last = last_online(name, r, duplin_except)
-                                        msg= f"{name} | Inverter Offline, Good DC Voltage | {online_last}"
+                                        msg= f"Inverter Offline, Good DC Voltage | {online_last}"
                                         if not textOnly.get():
                                             messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                         else:
                                             text_update_Table.append("<br>" + str(msg))
                                 else:
                                     online_last = last_online(name, r, duplin_except)
-                                    msg= f"{name} | Inverter Offline, Good DC Voltage | {online_last}"
+                                    msg= f"Inverter Offline, Good DC Voltage | {online_last}"
                                     if not textOnly.get():
                                         messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                     else:
@@ -1597,14 +1579,14 @@ def update_data():
                                 if var_key in globals():
                                     if globals()[var_key].cget("bg") == 'green':
                                         online_last = last_online(name, r, duplin_except)
-                                        msg= f"{name} | Inverter Offline, Bad DC Voltage | {online_last}"
+                                        msg= f"Inverter Offline, Bad DC Voltage | {online_last}"
                                         if not textOnly.get():
                                             messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                         else:
                                             text_update_Table.append("<br>" + str(msg))
                                 else:
                                     online_last = last_online(name, r, duplin_except)
-                                    msg= f"{name} | Inverter Offline, Bad DC Voltage | {online_last}"
+                                    msg= f"Inverter Offline, Bad DC Voltage | {online_last}"
                                     if not textOnly.get():
                                         messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                     else:
@@ -1673,14 +1655,14 @@ def update_data():
                                 if var_key in globals():
                                     if globals()[var_key].cget("bg") == 'green':
                                         online_last = last_online(name, inv_num, duplin_except)
-                                        msg= f"{name} | Inverter {inv_val} Offline, Good DC Voltage | {online_last}"
+                                        msg= f"Inverter {inv_val} Offline, Good DC Voltage | {online_last}"
                                         if not textOnly.get():
                                             messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                         else:
                                             text_update_Table.append("<br>" + str(msg))
                                 else:
                                     online_last = last_online(name, inv_num, duplin_except)
-                                    msg= f"{name} | Inverter {inv_val} Offline, Good DC Voltage | {online_last}"
+                                    msg= f"Inverter {inv_val} Offline, Good DC Voltage | {online_last}"
                                     if not textOnly.get():
                                         messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                     else:
@@ -1692,18 +1674,18 @@ def update_data():
                                 if var_key in globals():
                                     if globals()[var_key].cget("bg") == 'green':
                                         online_last = last_online(name, inv_num, duplin_except)
-                                        msg= f"{name} | Inverter {inv_val} Offline, Bad DC Voltage | {online_last}"
+                                        msg= f"Inverter {inv_val} Offline, Bad DC Voltage | {online_last}"
                                         if not textOnly.get():
                                             messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                         else:
-                                            text_update_Table.append("<br>" + str(msg))                                            
+                                            text_update_Table.append("<br>" + str(name) + " | " + str(msg))                                            
                                 else:
                                     online_last = last_online(name, inv_num, duplin_except)
-                                    msg= f"{name} | Inverter {inv_val} Offline, Bad DC Voltage | {online_last}"
+                                    msg= f"Inverter {inv_val} Offline, Bad DC Voltage | {online_last}"
                                     if not textOnly.get():
                                         messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                     else:
-                                        text_update_Table.append("<br>" + str(msg))                                        
+                                        text_update_Table.append("<br>" + str(name) + " | " + str(msg))                                        
 
                             globals()[f'{var_name}inv{inv_val}cb'].config(bg='red')
                     else:
@@ -1782,7 +1764,7 @@ def update_data():
                 else:
                     val = 5000
 
-                if name in  ["Wellons", "Cherry Blossom"]:
+                if name in  {"Wellons", "Cherry Blossom"}:
                     dif = 9
                 else:
                     dif = 5
@@ -1939,40 +1921,37 @@ def update_data():
                 globals()[f'{var_name}meterVLabel'].config(bg='pink')
                 globals()[f'{var_name}meterRatioLabel'].config(bg='pink')
             
-    underperformance_data_update() #Inverter Comparison Type Underperformance Check
+    #underperformance_data_update() #Inverter Comparison Type Underperformance Check
     #conetoe_offline()
 
     if textOnly.get():
         text_update_Table.append("</body></html>")
-        print("Table: ", text_update_Table)
         if text_update_Table != [html_start, "</body></html>"]:
             # Connect to Gmail SMTP server and send email
             with smtplib.SMTP("smtp.gmail.com", 587) as server:
                 server.starttls()
                 server.login(sender, password)
                 msg_list = "".join(text_update_Table)
-                soup = BeautifulSoup(msg_list, 'html.parser')
+                soup = BeautifulSoup(text_update_Table, 'html.parser')
                 message.attach(MIMEText(soup.prettify(), 'html'))
                 print("\n", text_update_Table)
                 print("\n", soup.prettify())
                 print("\n",message.as_string())
                 print("\n", textOnly.get())
                 server.send_message(message)
-        else:
-            print("No New Updates | Email Passed")
 
 
     dbconnection.close()
 
 
     def allinv_message_update(num, state):
-        with open(f"C:\\Users\\OMOPS\\OneDrive - Narenco\\Documents\\APISiteStat\\Site {num} All INV Msg Stat.txt", "w+") as outfile:
+        with open(f"G:\\Shared drives\\O&M\\NCC Automations\\Notification System\\APISiteStat\\Site {num} All INV Msg Stat.txt", "w+") as outfile:
                 outfile.write(str(state))
 
     def allinv_message_check(num):
         global text_update_Table
         try:
-            with open(f"C:\\Users\\OMOPS\\OneDrive - Narenco\\Documents\\APISiteStat\\Site {num} All INV Msg Stat.txt", "r+") as rad:
+            with open(f"G:\\Shared drives\\O&M\\NCC Automations\\Notification System\\APISiteStat\\Site {num} All INV Msg Stat.txt", "r+") as rad:
                 allinvstat = rad.read()
                 return allinvstat
         except Exception as errorr:
@@ -2069,10 +2048,7 @@ def update_data():
     print("Update Data Time (secs):", round(update_data_finish - update_data_start, 2))
     global gui_update_timer
     target_time = time(8, 30)
-    if textOnly.get():
-        gui_update_timer = PausableTimer(420, db_to_dict)
-        gui_update_timer.start() 
-    elif timecurrent.time() < target_time:
+    if timecurrent.time() < target_time:
         gui_update_timer = PausableTimer(300, db_to_dict)
         gui_update_timer.start()
     else:
@@ -2097,8 +2073,8 @@ def pvsyst_est(meterval, poa_val, pvsyst_name):
 
 
 
-    
-    if pvsyst_name not in ["WELLONS", "FREIGHTLINE", "WARBLER", "PG", "HOLLYSWAMP"]:
+    pysyst_connect()
+    if pvsyst_name not in {"WELLONS", "FREIGHTLINE", "WARBLER", "PG", "HOLLYSWAMP"}:
         meterval = meterval/1000
 
 
@@ -2128,7 +2104,7 @@ def pvsyst_est(meterval, poa_val, pvsyst_name):
 
     cursor_p.execute(date_query, pvsyst_name)
     simulation_date = cursor_p.fetchone()[0]
-    
+    connect_pvsystdb.close()
     try:
         difference_in_days = (datetime.now() - simulation_date).days
         difference_in_years = difference_in_days / 365.25  # Using 365.25 to account for leap years
@@ -2502,11 +2478,6 @@ def last_update():
     return most_recent
 
 
-
-
-
-
-
 def time_window():
 
     global timecurrent, text_update_Table
@@ -2580,7 +2551,7 @@ def db_to_dict():
     #ic(tables)
     excluded_tables = ["1)Sites", "2)Breakers", "3)Meters", "4)Inverters", "5)POA"]
 
-    tb_file = r"C:\Users\omops\Documents\Automations\Troubleshooting.txt"
+    tb_file = r"G:\Shared drives\O&M\NCC Automations\Notification System\Troubleshooting.txt"
     comm_data = {}
     for table in tables:
         table_name = table.table_name
@@ -2660,8 +2631,7 @@ def parse_wo():
 
     open_wo_file = filedialog.askopenfilename(parent=alertW,
         title="Select a file", 
-        filetypes=[("Excel Files", "*.xlsx *.xls")],
-        initialdir="C:\\Users\\OMOPS\\Downloads")
+        filetypes=[("Excel Files", "*.xlsx *.xls")])
     wo_data = pd.read_excel(open_wo_file)
     for index, row in wo_data.iterrows():
         var_adjustment = [", LLC", "Farm", "Cadle", "Solar"]
@@ -2711,15 +2681,12 @@ def parse_wo():
 
             inv_num = define_inv_num(site, group, num)
             
-            if inv_num is None:
-                print(f"Num: {inv_num} | {site} | {wo_num} | {wo_summary}\n")
-            else:            
-                # Construct the file path for the text file
-                txt_file_path = os.path.join(directory, f"{varname} Open WO's.txt")
-                # Append the row data to the text file
-                with open(txt_file_path, 'a+') as file:
-                    file.write(f'{inv_num:<3}|  WO: {wo_num:<8}|  {wo_date}  |  {wo_summary}\n')
-                
+            # Construct the file path for the text file
+            txt_file_path = os.path.join(directory, f"{varname} Open WO's.txt")
+            # Append the row data to the text file
+            with open(txt_file_path, 'a+') as file:
+                file.write(f'{inv_num:<3}|  WO: {wo_num:<8}|  {wo_date}  |  {wo_summary}\n')
+            
 
             #Color Assignment Logic
             current_colorstatus = globals()[f'{varname}inv{inv_num}WOLabel'].cget('text')
@@ -2807,7 +2774,7 @@ adminTexts = StringVar()
 optionTexts = ttk.Combobox(notificationFrame, textvariable=adminTexts, values=["Joseph Lang", "Brandon Arrowood", "Jacob Budd", "Administrators + NCC", "Administrators Only"], state="readonly")
 optionTexts.pack()
 optionTexts.current(0)
-notes_settings = Label(notificationFrame, text="\nSelect from the Dropdown\nBefore turning the function on\nwith the Checkbox\n")
+notes_settings = Label(notificationFrame, text="Select from the Dropdown\nBefore turning the function on\nwith the Checkbox\n")
 notes_settings.pack()
 
 comms_delay = BooleanVar()
@@ -2828,7 +2795,7 @@ root.mainloop()
 #At Exit Tasks
 def allinv_message_reset():
     for num in range(1, 38):
-        with open(f"C:\\Users\\OMOPS\\OneDrive - Narenco\\Documents\\APISiteStat\\Site {num} All INV Msg Stat.txt", "w+") as outfile:
+        with open(f"G:\\Shared drives\\O&M\\NCC Automations\\Notification System\\APISiteStat\\Site {num} All INV Msg Stat.txt", "w+") as outfile:
             outfile.write("1")
 
 

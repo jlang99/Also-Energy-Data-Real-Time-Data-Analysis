@@ -7,13 +7,78 @@ import json, os
 import pyodbc
 import re
 import sys
+import subprocess
+import socket
 from tkinter import messagebox
+import tkinter as tk
 import multiprocessing
 from multiprocessing import Manager
 from icecream import ic
 import urllib3
 
+
 from PythonTools import CREDS, EMAILS, PausableTimer #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
+
+
+def check_sql_server_status(service_name):
+    """
+    Checks if the SQL Server service is installed and running.
+    Returns:
+        'running': if the service is running.
+        'stopped': if the service is installed but not running.
+        'not_installed': if the service is not installed.
+        'error': for other errors.
+    """
+    try:
+        # Use CREATE_NO_WINDOW flag to prevent console window from appearing
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        
+        output = subprocess.check_output(
+            ['sc', 'query', service_name], 
+            text=True, 
+            stderr=subprocess.STDOUT,
+            startupinfo=startupinfo
+        )
+        if "RUNNING" in output:
+            return 'running'
+        elif "STOPPED" in output:
+            return 'stopped'
+        else:
+            return 'error'
+    except subprocess.CalledProcessError as e:
+        if "The specified service does not exist as an installed service." in e.output:
+            return 'not_installed'
+        else:
+            if "STOPPED" in e.output: # Sometimes sc query can return error on stopped service
+                return 'stopped'
+            return 'error'
+    except FileNotFoundError:
+        # This would happen if 'sc.exe' is not in the system's PATH.
+        return 'error'
+
+def check_and_handle_sql_server():
+    """Checks for SQL Server and prompts user if needed."""
+    # Create a temporary root for message boxes and hide it.
+    temp_root = tk.Tk()
+    temp_root.withdraw()
+
+    sql_service_names = ['MSSQL$SQLEXPRESS01', 'MSSQL$SQLEXPRESS']
+    status = None
+    for service_name in sql_service_names:
+        status = check_sql_server_status(service_name)
+        if status == 'running':
+            break  # If one is running, stop checking
+
+    if status == 'running':
+        temp_root.destroy()
+        return # SQL Server is running, proceed with app
+    
+    messagebox.showerror("SQL Server Not Found", 
+                         "SQL Server Express (SQLEXPRESS) is not installed or the service 'MSSQL$SQLEXPRESS' cannot be found.\n\nPlease install SQL Server Express Edition 2022 and then run the DB Table Creation Tool and try again.", parent=temp_root)
+    
+    temp_root.destroy()
+    sys.exit(1)
 
 
 urllib3.disable_warnings()
@@ -1590,6 +1655,14 @@ def counting_fails(auth_file):
         auth_file.truncate()
         return new_value
 
+def token_management():
+    if 'access_token' in globals():
+        print(globals()['access_token'])
+        pass
+    else:
+        print("Calling Access Token")
+        get_access_token()
+
 # Make the POST request to obtain an access token
 def get_access_token():
     headers = {
@@ -1601,8 +1674,14 @@ def get_access_token():
         'password': password,
     }
     access_token_url = base_url + token_endpoint
-    response = requests.post(access_token_url, headers=headers, data=data, verify=False) #I know that I shouldn't set verify to false for security reasons. But the Code worked flawlessly for over a year being set to True by Default and this was the only thing out of 10 things I tried that worked. 🤷‍♂️ Adivce is welcomed to joseph.lang@narenco.com. If you message me, please include 'Found on GitHub, looking to help', so that I know it's not spam.
-    return response
+    globals()['initial_response'] = requests.post(access_token_url, headers=headers, data=data, verify=False) #I know that I shouldn't set verify to false for security reasons. But the Code worked flawlessly for over a year being set to True by Default and this was the only thing out of 10 things I tried that worked. 🤷‍♂️ Adivce is welcomed to joseph.lang@narenco.com. If you message me, please include 'Found on GitHub, looking to help', so that I know it's not spam.
+    print("Starting response", initial_response.status_code)
+    if initial_response.status_code == 200:
+        globals()['access_token'] = initial_response.json().get('access_token')
+    else:
+        new_value = counting_fails(auth_file)
+        print(f"Failed Attempts: {new_value}")
+
 
 # Function to make API request with authentication
 def make_api_request(get_hardware_url, access_token):
@@ -1612,19 +1691,8 @@ def make_api_request(get_hardware_url, access_token):
     headers['Authorization'] = f"Bearer {access_token}"
     return requests.get(get_hardware_url, headers=headers, verify=False) #I know that I shouldn't set verify to false for security reasons. But the Code worked flawlessly for over a year being set to True by Default and this was the only thing out of 10 things I tried that worked. 🤷‍♂️ Adivce is welcomed to joseph.lang@narenco.com. If you message me, please include 'Found on GitHub, looking to help', so that I know it's not spam.
 
-#Testing Status Code if statements
-class MockResponse:
-    def __init__(self, status_code):
-        self.status_code = status_code
-
-    def json(self):
-        # Return a dummy JSON response if needed
-        return {}
-
 def get_data_for_site(site, site_data, api_data, hw_sites_mapping, start, base_url, access_token):
     troubleshooting_file = r"C:\Users\omops\Documents\Automations\Troubleshooting.txt"
-
-    global category, hardware_data, hardware_id, hdname
     
     current = time.perf_counter()
     #print("Start Processing:", site, round(current-start, 2))
@@ -1632,6 +1700,7 @@ def get_data_for_site(site, site_data, api_data, hw_sites_mapping, start, base_u
         for hardware_id, hdname in hardware_data.items():
             get_hardware_url = f"{base_url}/Hardware/{hardware_id}"
             hardware_response = make_api_request(get_hardware_url, access_token)
+            #print(f"Hardware Response {site} | {hdname}: {hardware_response.status_code}")
 
             if hardware_response.status_code == 200:
                 register_values = {}
@@ -1706,39 +1775,41 @@ def get_data_for_site(site, site_data, api_data, hw_sites_mapping, start, base_u
                 #with open(troubleshooting_file, 'a') as tfile:
                 #    json.dump(register_values, tfile, indent=2)
 
-            elif 400 <= hardware_response.status_code < 500: # Unauthorized or Forbidden
+            elif hardware_response.status_code == 401: # Unauthorized or Forbidden
                 print(f"Failed to retrieve hardware data for {hardware_id}. Status Code: {hardware_response.status_code}")
                 sys.exit() #Also Energy has been locking our account so I hope this will prevent that from happening as often. 
-            else:
+            elif hardware_response.status_code > 401:
                 print(f"Failed to retrieve hardware data for {hardware_id} at {site} in {category}. Status code: {hardware_response.status_code}")
+                time.sleep(60)
  
     end = time.perf_counter()
     print(f"Pulled Data: {site:<15}| Time Taken: {round(end-current, 2)}")
 
 if __name__ == '__main__': #This is absolutely necessary due to running the async pool.
     def my_main():
-        global hw_sites_mapping, sites_endpoint, dataPullTime
-        global today_date
-        global start
+        global hw_sites_mapping, sites_endpoint, dataPullTime, today_date, start, api_data, access_token
+        def error_callback(e):
+            """A callback function to handle and print errors from worker processes."""
+            print(f"ERROR in worker process: {e}")
+   
+        
         # Get today's date
         today_date = datetime.date.today()
 
         # Your existing code for obtaining the access token and initializing dictionaries
         start = time.perf_counter()
 
-        global api_data
         api_data = multiprocessing.Manager().dict()
+        
+        #Calls get access token if access token is not already defined. Hopoing this avoid multiple authentications and therefor AE locking out our account. 
+        token_management()
 
-        response = get_access_token()
-        # Check if the token request was successful (status code 200)
-        if response.status_code == 200:
-            # Extract the access token from the response
-            access_token = response.json().get('access_token')
 
+        if access_token:
             pool = multiprocessing.Pool()
 
             for site, site_data in hw_sites_mapping.items():
-                pool.apply_async(get_data_for_site, args=(site, site_data, api_data, hw_sites_mapping, start, base_url, access_token))
+                pool.apply_async(get_data_for_site, args=(site, site_data, api_data, hw_sites_mapping, start, base_url, access_token), error_callback=error_callback)
                 time.sleep(1) #Again added to reduce strain on AE API Server
             pool.close()
             pool.join()
@@ -1750,13 +1821,17 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
             with open(json_loop_exit_file, "w+") as outfile: 
                 json.dump(api_data_dict, outfile, indent=2)
             
-            #print(api_data_dict)
-
+            print(api_data_dict)
+            hostname = socket.gethostname()
+            if hostname == "NAR-OMOPSXPS":
+                server = "SQLEXPRESS01"
+            else:
+                server = "SQLEXPRESS"
             # Create a connection to the Access database
-            global dbconn_str, dbconnection, cursor
+            global dbconnection, cursor
             connection_string = (
                 r'DRIVER={ODBC Driver 18 for SQL Server};'
-                r'SERVER=localhost\SQLEXPRESS01;'
+                fr'SERVER=localhost\{server};'
                 r'DATABASE=NARENCO_O&M_AE;'
                 r'Trusted_Connection=yes;'
                 r'Encrypt=no;'
@@ -1766,154 +1841,153 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
 
             data_start = time.perf_counter()
             #Variables Defined for the right now Data
-
-            for site, site_data in hw_sites_mapping.items():
-                inv_num = 1   
-                for device_category, devices in site_data.items():
-                    for hardwareid, device_name in devices.items():
-                        if device_category == "breakers":
-                            if hardwareid == "390118":
-                                violet_Exception = " 2"
-                            elif hardwareid == "390117":
-                                violet_Exception = " 1"
-                            else:
-                                violet_Exception = ""
-                            try:
-                                hdtimestamp_Relay = api_data_dict[f'{hardwareid}']['pytimestamp']
-                                aetimestamp_Relay = '1999-01-01 00:00:00' if api_data_dict[f'{hardwareid}']['aetimestamp'] == '0001-01-01 00:00:00' else api_data_dict[f'{hardwareid}']['aetimestamp']
-                                relay_stat = api_data_dict[f'{hardwareid}']['Status']
-                                valid_values = ['1', '240', 'closed']
-                                openClose = True if relay_stat.lower().strip() in valid_values else False
-                                cursor.execute(f"""INSERT INTO [{site} Breaker Data{violet_Exception}]
-                                            (Timestamp, [Last Upload], Status, HardwareId)
-                                                VALUES (?,?,?,?)""", hdtimestamp_Relay, aetimestamp_Relay, openClose, hardwareid)
-                                dbconnection.commit()
-                            except KeyError:
-                                print(f"No Comms with {site} Relay") 
-                        if device_category == "meters":
-                            try:
-                                voltsA = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['Volts A']).group()) if re.search(r'\d+', api_data_dict[f'{hardwareid}']['Volts A']) else 0
-                                voltsB = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['Volts B']).group()) if re.search(r'\d+', api_data_dict[f'{hardwareid}']['Volts B']) else 0
-                                voltsC = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['Volts C']).group()) if re.search(r'\d+', api_data_dict[f'{hardwareid}']['Volts C']) else 0
-                                ampsA = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['Amps A']).group()) if re.search(r'\d+', api_data_dict[f'{hardwareid}']['Amps A']) else 0
-                                ampsB = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['Amps B']).group()) if re.search(r'\d+', api_data_dict[f'{hardwareid}']['Amps B']) else 0
-                                ampsC = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['Amps C']).group()) if re.search(r'\d+', api_data_dict[f'{hardwareid}']['Amps C']) else 0
-                                if api_data_dict[f'{hardwareid}']['KW'].startswith('-'):
-                                    meterkw = 0
+            if api_data_dict:
+                for site, site_data in hw_sites_mapping.items():
+                    inv_num = 1   
+                    for device_category, devices in site_data.items():
+                        for hardwareid, device_name in devices.items():
+                            if device_category == "breakers":
+                                if hardwareid == "390118":
+                                    violet_Exception = " 2"
+                                elif hardwareid == "390117":
+                                    violet_Exception = " 1"
                                 else:
-                                    meterkw = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['KW']).group()) if re.search(r'\d+', api_data_dict[f'{hardwareid}']['KW']) else 0
+                                    violet_Exception = ""
+                                try:
+                                    hdtimestamp_Relay = api_data_dict[f'{hardwareid}']['pytimestamp']
+                                    aetimestamp_Relay = '1999-01-01 00:00:00' if api_data_dict[f'{hardwareid}']['aetimestamp'] == '0001-01-01 00:00:00' else api_data_dict[f'{hardwareid}']['aetimestamp']
+                                    relay_stat = api_data_dict[f'{hardwareid}']['Status']
+                                    valid_values = ['1', '240', 'closed']
+                                    openClose = True if relay_stat.lower().strip() in valid_values else False
+                                    cursor.execute(f"""INSERT INTO [{site} Breaker Data{violet_Exception}]
+                                                (Timestamp, [Last Upload], Status, HardwareId)
+                                                    VALUES (?,?,?,?)""", hdtimestamp_Relay, aetimestamp_Relay, openClose, hardwareid)
+                                    dbconnection.commit()
+                                except KeyError:
+                                    print(f"No Comms with {site} Relay") 
+                            if device_category == "meters":
+                                try:
+                                    voltsA = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['Volts A']).group()) if re.search(r'\d+', api_data_dict[f'{hardwareid}']['Volts A']) else 0
+                                    voltsB = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['Volts B']).group()) if re.search(r'\d+', api_data_dict[f'{hardwareid}']['Volts B']) else 0
+                                    voltsC = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['Volts C']).group()) if re.search(r'\d+', api_data_dict[f'{hardwareid}']['Volts C']) else 0
+                                    ampsA = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['Amps A']).group()) if re.search(r'\d+', api_data_dict[f'{hardwareid}']['Amps A']) else 0
+                                    ampsB = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['Amps B']).group()) if re.search(r'\d+', api_data_dict[f'{hardwareid}']['Amps B']) else 0
+                                    ampsC = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['Amps C']).group()) if re.search(r'\d+', api_data_dict[f'{hardwareid}']['Amps C']) else 0
+                                    if api_data_dict[f'{hardwareid}']['KW'].startswith('-'):
+                                        meterkw = 0
+                                    else:
+                                        meterkw = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['KW']).group()) if re.search(r'\d+', api_data_dict[f'{hardwareid}']['KW']) else 0
 
-                                if "kW" in api_data_dict[f'{hardwareid}']['KW']:
-                                    meterkw = meterkw*1000
-                                elif "MW" in api_data_dict[f'{hardwareid}']['KW']:
-                                    meterkw = meterkw*1000000
+                                    if "kW" in api_data_dict[f'{hardwareid}']['KW']:
+                                        meterkw = meterkw*1000
+                                    elif "MW" in api_data_dict[f'{hardwareid}']['KW']:
+                                        meterkw = meterkw*1000000
+                                    
+
+                                    hdtimestamp_Meter = api_data_dict[f'{hardwareid}']['pytimestamp']
+                                    aetimestamp_Meter = '1999-01-01 00:00:00' if api_data_dict[f'{hardwareid}']['aetimestamp'] == '0001-01-01 00:00:00' else api_data_dict[f'{hardwareid}']['aetimestamp']
+                                    cursor.execute(f""" INSERT INTO [{site} Meter Data] (Timestamp, [Last Upload], [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], Watts, HardwareId) VALUES (?,?,?,?,?,?,?,?,?,?)"""
+                                                , hdtimestamp_Meter, aetimestamp_Meter, voltsA, voltsB, voltsC, ampsA, ampsB, ampsC, meterkw, hardwareid)
+                                    dbconnection.commit()
+                                except KeyError as e:
+                                    print(f"No Comms with {site} Meter", e)
+                                except AttributeError:
+                                    print(f"{site} Meter Volt or Amp value is Null")
+                            if device_category == "weather_stations":
+                                #POA
+                                try:
+                                    hdtimestamp_POA = api_data_dict[f'{hardwareid}']['pytimestamp']
+                                    aetimestamp_POA = '1999-01-01 00:00:00' if api_data_dict[f'{hardwareid}']['aetimestamp'] == '0001-01-01 00:00:00' else api_data_dict[f'{hardwareid}']['aetimestamp']
+                                    poa = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['POA']).group())
+                                    cursor.execute(f"""INSERT INTO [{site} POA Data] (Timestamp, [Last Upload], [W/M²], HardwareId) VALUES (?,?,?,?)""", hdtimestamp_POA, aetimestamp_POA, poa, hardwareid)
+                                    dbconnection.commit()
+                                except KeyError:
+                                    print(f"No Comms with {site} POA")
+                                except AttributeError:
+                                    print(f"{site} POA 0 W/M²")
+                                    poa = 0
+                                    hdtimestamp_POA = api_data_dict[f'{hardwareid}']['pytimestamp']
+                                    aetimestamp_POA = '1999-01-01 00:00:00' if api_data_dict[f'{hardwareid}']['aetimestamp'] == '0001-01-01 00:00:00' else api_data_dict[f'{hardwareid}']['aetimestamp']
+                                    cursor.execute(f"""INSERT INTO [{site} POA Data] (Timestamp, [Last Upload], [W/M²], HardwareId) VALUES (?,?,?,?)""", hdtimestamp_POA, aetimestamp_POA, poa, hardwareid)
+                                    dbconnection.commit()
+                            if device_category == "inverters":
+                                # Duplin String/Central Inv Work Around
+                                str_invs = ["94056", "94057", "94058", "94059", "94060", "94061", "94062", "94063", "94064", "94065", "94066", "94067", "94068", "94069", "94070", "94071", "94072", "94073"]
+                                cent_invs = ["94053", "94055", "94054"]
+                                if hardwareid in str_invs:
+                                    duplin_exception = " String"
+                                elif hardwareid in cent_invs:
+                                    duplin_exception = " Central"
+                                else:
+                                    duplin_exception = ""
+
+                                #Inverters
+                                try:
+                                    if api_data_dict[f'{hardwareid}']['KW'].startswith('-'):
+                                        invkW = 0
+                                    else:
+                                        invkW = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['KW']).group())
+                                    invcomms = True
                                 
-
-                                hdtimestamp_Meter = api_data_dict[f'{hardwareid}']['pytimestamp']
-                                aetimestamp_Meter = '1999-01-01 00:00:00' if api_data_dict[f'{hardwareid}']['aetimestamp'] == '0001-01-01 00:00:00' else api_data_dict[f'{hardwareid}']['aetimestamp']
-                                cursor.execute(f""" INSERT INTO [{site} Meter Data] (Timestamp, [Last Upload], [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], Watts, HardwareId) VALUES (?,?,?,?,?,?,?,?,?,?)"""
-                                            , hdtimestamp_Meter, aetimestamp_Meter, voltsA, voltsB, voltsC, ampsA, ampsB, ampsC, meterkw, hardwareid)
-                                dbconnection.commit()
-                            except KeyError as e:
-                                print(f"No Comms with {site} Meter", e)
-                            except AttributeError:
-                                print(f"{site} Meter Volt or Amp value is Null")
-                        if device_category == "weather_stations":
-                            #POA
-                            try:
-                                hdtimestamp_POA = api_data_dict[f'{hardwareid}']['pytimestamp']
-                                aetimestamp_POA = '1999-01-01 00:00:00' if api_data_dict[f'{hardwareid}']['aetimestamp'] == '0001-01-01 00:00:00' else api_data_dict[f'{hardwareid}']['aetimestamp']
-                                poa = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['POA']).group())
-                                cursor.execute(f"""INSERT INTO [{site} POA Data] (Timestamp, [Last Upload], [W/M²], HardwareId) VALUES (?,?,?,?)""", hdtimestamp_POA, aetimestamp_POA, poa, hardwareid)
-                                dbconnection.commit()
-                            except KeyError:
-                                print(f"No Comms with {site} POA")
-                            except AttributeError:
-                                print(f"{site} POA 0 W/M²")
-                                poa = 0
-                                hdtimestamp_POA = api_data_dict[f'{hardwareid}']['pytimestamp']
-                                aetimestamp_POA = '1999-01-01 00:00:00' if api_data_dict[f'{hardwareid}']['aetimestamp'] == '0001-01-01 00:00:00' else api_data_dict[f'{hardwareid}']['aetimestamp']
-                                cursor.execute(f"""INSERT INTO [{site} POA Data] (Timestamp, [Last Upload], [W/M²], HardwareId) VALUES (?,?,?,?)""", hdtimestamp_POA, aetimestamp_POA, poa, hardwareid)
-                                dbconnection.commit()
-                        if device_category == "inverters":
-                            # Duplin String/Central Inv Work Around
-                            str_invs = ["94056", "94057", "94058", "94059", "94060", "94061", "94062", "94063", "94064", "94065", "94066", "94067", "94068", "94069", "94070", "94071", "94072", "94073"]
-                            cent_invs = ["94053", "94055", "94054"]
-                            if hardwareid in str_invs:
-                                duplin_exception = " String"
-                            elif hardwareid in cent_invs:
-                                duplin_exception = " Central"
-                            else:
-                                duplin_exception = ""
-
-                            #Inverters
-                            try:
-                                if api_data_dict[f'{hardwareid}']['KW'].startswith('-'):
+                                except KeyError:
+                                    print(f"No Comms with {site}{duplin_exception} Inv {inv_num} kW")
+                                    invcomms = False
+                                except AttributeError:
+                                    print(f"{site}{duplin_exception} Inv {inv_num} kW not reporting to AE")
                                     invkW = 0
+                                    invcomms = True
+
+                                if invcomms:
+                                    if "kW" in api_data_dict[f'{hardwareid}']['KW']:
+                                        invkW = invkW*1000
+                                    elif "MW" in api_data_dict[f'{hardwareid}']['KW']:
+                                        invkW = invkW*1000000
+                                try:
+                                    hdtimestamp_inv = api_data_dict[f'{hardwareid}']['pytimestamp']
+                                    
+                                except:
+                                    print("I Never thought this would happen, INV timestamp error")
+
+                                try:
+                                    aetimestamp_inv = '1999-01-01 00:00:00' if api_data_dict[f'{hardwareid}']['aetimestamp'] == '0001-01-01 00:00:00' else api_data_dict[f'{hardwareid}']['aetimestamp']
+                                except:
+                                    print("AE INV Timestamp Error")
+
+                                try:
+                                    invDCV = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['DC V']).group())
+                                except KeyError:
+                                    print(f"No Comms with {site}{duplin_exception} Inv {inv_num}")
+                                except AttributeError:
+                                    print(f"{site}{duplin_exception} Inv {inv_num} DC V not reporting to AE")
+                                    invDCV = 0
+                                if duplin_exception == " String":  #Adjusts the inv_num for namng convention when Central and String inverters in use.   
+                                    cursor.execute(f""" INSERT INTO [{site}{duplin_exception} INV {inv_num - 3} Data] (Timestamp, [Last Upload], Watts, [dc V], HardwareID) VALUES (?,?,?,?,?)""",
+                                                (hdtimestamp_inv, aetimestamp_inv, invkW, invDCV, hardwareid))
+                                    dbconnection.commit()
                                 else:
-                                    invkW = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['KW']).group())
-                                invcomms = True
-                            
-                            except KeyError:
-                                print(f"No Comms with {site}{duplin_exception} Inv {inv_num} kW")
-                                invcomms = False
-                            except AttributeError:
-                                print(f"{site}{duplin_exception} Inv {inv_num} kW not reporting to AE")
-                                invkW = 0
-                                invcomms = True
-
-                            if invcomms:
-                                if "kW" in api_data_dict[f'{hardwareid}']['KW']:
-                                    invkW = invkW*1000
-                                elif "MW" in api_data_dict[f'{hardwareid}']['KW']:
-                                    invkW = invkW*1000000
-                            try:
-                                hdtimestamp_inv = api_data_dict[f'{hardwareid}']['pytimestamp']
-                                
-                            except:
-                                print("I Never thought this would happen, INV timestamp error")
-
-                            try:
-                                aetimestamp_inv = '1999-01-01 00:00:00' if api_data_dict[f'{hardwareid}']['aetimestamp'] == '0001-01-01 00:00:00' else api_data_dict[f'{hardwareid}']['aetimestamp']
-                            except:
-                                print("AE INV Timestamp Error")
-
-                            try:
-                                invDCV = float(re.search(r'\d+', api_data_dict[f'{hardwareid}']['DC V']).group())
-                            except KeyError:
-                                print(f"No Comms with {site}{duplin_exception} Inv {inv_num}")
-                            except AttributeError:
-                                print(f"{site}{duplin_exception} Inv {inv_num} DC V not reporting to AE")
-                                invDCV = 0
-                            if duplin_exception == " String":  #Adjusts the inv_num for namng convention when Central and String inverters in use.   
-                                cursor.execute(f""" INSERT INTO [{site}{duplin_exception} INV {inv_num - 3} Data] (Timestamp, [Last Upload], Watts, [dc V], HardwareID) VALUES (?,?,?,?,?)""",
-                                            (hdtimestamp_inv, aetimestamp_inv, invkW, invDCV, hardwareid))
-                                dbconnection.commit()
-                            else:
-                                cursor.execute(f""" INSERT INTO [{site}{duplin_exception} INV {inv_num} Data] (Timestamp, [Last Upload], Watts, [dc V], HardwareID) VALUES (?,?,?,?,?)""",
-                                            (hdtimestamp_inv, aetimestamp_inv, invkW, invDCV, hardwareid))
-                                dbconnection.commit()
-                            inv_num += 1
+                                    cursor.execute(f""" INSERT INTO [{site}{duplin_exception} INV {inv_num} Data] (Timestamp, [Last Upload], Watts, [dc V], HardwareID) VALUES (?,?,?,?,?)""",
+                                                (hdtimestamp_inv, aetimestamp_inv, invkW, invDCV, hardwareid))
+                                    dbconnection.commit()
+                                inv_num += 1
 
 
-            finish = time.perf_counter()
-            print("Data Injection Time:", round(finish - data_start, 5))
-            # Close the connection after all data is inserted
-            dbconnection.close()
+                finish = time.perf_counter()
+                print("Data Injection Time:", round(finish - data_start, 5))
+                # Close the connection after all data is inserted
+                dbconnection.close()
 
-            end = time.perf_counter()
-            dataPullTime = round((end - start)/60, 3)
-            print("Total Time:", round((end - start)/60, 3), "Minutes")
-            reset_count(auth_file)
-        else:
-            print(f"Token request failed. Status code: {response.status_code}")
-            print("Why did it Fail?", response.text)
-            new_value = counting_fails(auth_file)
-            print(f"Failed Attempts: {new_value}")
+                end = time.perf_counter()
+                dataPullTime = round((end - start)/60, 3)
+                print("Total Time:", round((end - start)/60, 3), "Minutes")
+                reset_count(auth_file)
 
 
-    loop_exit_file = "C:\\Users\\OMOPS\\OneDrive - Narenco\\Documents\\APISiteStat\\Exiting Loop due to Failed Authentications.txt"
+    loop_exit_file = r"G:\Shared drives\O&M\NCC Automations\Notification System\APISiteStat\Exiting Loop due to Failed Authentications.txt"
     auth_file = open(loop_exit_file, "r+")
+    
+    #Checks for Instacne of SQL Server and if Running. If not installed locally, it will close program.
+    check_and_handle_sql_server()
+
 
     my_main()
     wait_time = datetime.datetime.now().replace(hour=8, minute=30, second=0, microsecond=0)
@@ -1938,7 +2012,7 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
             time.sleep(180)     
         else:
             wait = (2 - dataPullTime) * 60
-            if wait <= 0:
+            if wait <= 10:
                 wait = 10  
             print(f"Waiting {round(wait, 2)} Seconds then pulling data again")
             time.sleep(wait)
