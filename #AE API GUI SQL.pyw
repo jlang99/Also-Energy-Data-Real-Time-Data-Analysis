@@ -26,6 +26,7 @@ from PythonTools import CREDS, EMAILS, PausableTimer #Both of these Variables ar
 #Underperformance Analysis Packages
 import pandas as pd
 from sklearn.linear_model import LinearRegression
+from PIL import Image, ImageDraw, ImageTk
 
 breaker_pulls = 6
 meter_pulls = 8
@@ -61,16 +62,16 @@ except Exception as e:
     print(f"Error loading icon: {e}")
 timeW.title("Timestamps")
 timeW.wm_attributes("-topmost", True)
-timeW_notes= Label(timeW, text= "Data Pull Timestamps", font= ("Calibiri", 16))
+timeW_notes= Label(timeW, text= "Data Pull Timestamps", font= ("Calibiri", 14))
 timeW_notes.grid(row=0, column= 0, columnspan= 3)
 
 # Fit in another 2 columns and make them sticky to eeach other like these below.
-time1= Label(timeW, text= "First:", font= ("Calibiri", 14))
-time2= Label(timeW, text= "Second:", font= ("Calibiri", 14))
-time3= Label(timeW, text= "Third:", font= ("Calibiri", 14))
-time4= Label(timeW, text= "Fourth:", font= ("Calibiri", 14))
-time5= Label(timeW, text= "Tenth:", font= ("Calibiri", 14))
-timeL= Label(timeW, text= "Fifteenth:", font= ("Calibiri", 14))
+time1= Label(timeW, text= "First:", font= ("Calibiri", 12))
+time2= Label(timeW, text= "Second:", font= ("Calibiri", 12))
+time3= Label(timeW, text= "Third:", font= ("Calibiri", 12))
+time4= Label(timeW, text= "Fourth:", font= ("Calibiri", 12))
+time5= Label(timeW, text= "Tenth:", font= ("Calibiri", 12))
+timeL= Label(timeW, text= "Fifteenth:", font= ("Calibiri", 12))
 time1.grid(row=1, column= 0, sticky=E)
 time2.grid(row=2, column= 0, sticky=E)
 time3.grid(row=3, column = 0, sticky=E)
@@ -92,21 +93,23 @@ timeLv.grid(row=6, column = 1, sticky=W)
 
 
 
-datalbl= Label(timeW, text= "MsgBox Data:", font= ("Calibiri", 16))
+datalbl= Label(timeW, text= "MsgBox Data:", font= ("Calibiri", 14))
 datalbl.grid(row=1, column=2)
-inverterT = Label(timeW, text= "Inverters:", font= ("Calibiri", 14))
+inverterT = Label(timeW, text= "Inverters:", font= ("Calibiri", 12))
 inverterT.grid(row=2, column=2)
 spread15 = Label(timeW, text= "Time")
 spread15.grid(row=3, column=2)
 breakermeter = Label(timeW, text= """Breakers &
-Meters:""", font= ("Calibiri", 14))
+Meters:""", font= ("Calibiri", 12))
 breakermeter.grid(row=4, column=2)
 spread10 = Label(timeW, text= "Time")
 spread10.grid(row=5, column=2)
 
 
-underperfdatalbl= Label(timeW, text= "% Params", font= ("Calibiri", 16))
-underperfdatalbl.grid(row=0, column=3)
+
+underperf_Maincbvar = BooleanVar()
+underperf_Maincb = Checkbutton(timeW, text="Select to turn on the Inverter\nUnderperformance check\nBelow is the parameters\nfor the data", cursor='hand2', variable=underperf_Maincbvar)
+underperf_Maincb.grid(row=0, column=3)
 
 underperf_range = IntVar()
 underperf_range.set(30)
@@ -161,31 +164,46 @@ try:
     solrvr_win.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
 except Exception as e:
     print(f"Error loading icon: {e}")
-notebook = ttk.Notebook(solrvr_win)
-style = ttk.Style(solrvr_win)
-style.configure("TNotebook.Tab", padding=[180, 2], font=('Tk_defaultFont', 12, 'bold'))
-solrvr = ttk.Frame(notebook)
-solrvr2 = ttk.Frame(notebook)
-notebook.add(solrvr, text="Bulloch 1A - Shorthorn")
-notebook.add(solrvr2, text="Sunflower - Whitetail")
-notebook.pack(expand=True, fill='both')
+solrvrnotebook = ttk.Notebook(solrvr_win)
+style = ttk.Style(root)
+style.configure("TNotebook.Tab", padding=[90, 2], font=('Tk_defaultFont', 12, 'bold'))
+solrvr = ttk.Frame(solrvrnotebook)
+solrvr2 = ttk.Frame(solrvrnotebook)
+solrvr3 = ttk.Frame(solrvrnotebook)
+solrvrnotebook.add(solrvr, text="Bulloch 1A - Richmond")
+solrvrnotebook.add(solrvr2, text="Shorthorn - Washington")
+solrvrnotebook.add(solrvr3, text="Whitehall - Whitetail")
+solrvrnotebook.pack(expand=True, fill='both')
+
+hst_win = Toplevel(root)
+hst_win.title("Harrison Street's Portfolio")
+try:
+    hst_win.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
+except Exception as e:
+    print(f"Error loading icon: {e}")
+hstnotebook = ttk.Notebook(hst_win)
+hst = ttk.Frame(hstnotebook)
+hst2 = ttk.Frame(hstnotebook)
+hstnotebook.add(hst, text="Bishopville II - Tedder")
+hstnotebook.add(hst2, text="Thunderhead - Van Buren")
+hstnotebook.pack(expand=True, fill='both')
+
+nar_win = Toplevel(root)
+nar_win.title("NARENCO's Portfolio")
+try:
+    nar_win.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
+except Exception as e:
+    print(f"Error loading icon: {e}")
+narnotebook = ttk.Notebook(nar_win)
+nar = ttk.Frame(narnotebook)
+nar2 = ttk.Frame(narnotebook)
+narnotebook.add(nar, text="Bluebird - Hickory")
+narnotebook.add(nar2, text="Wellons - Violet")
+narnotebook.pack(expand=True, fill='both')
 
 #Static Inv Windows
-inv = Toplevel(root)
-inv.title("Harrison Street")
-try:
-    inv.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-except Exception as e:
-    print(f"Error loading icon: {e}")
-narenco = Toplevel(root)
-narenco.title("NARENCO")
-try:
-    narenco.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-except Exception as e:
-    print(f"Error loading icon: {e}")
 soltage = Toplevel(root)
 soltage.title("Soltage")
-soltage.wm_attributes("-topmost", True)
 try:
     soltage.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
 except Exception as e:
@@ -211,14 +229,14 @@ master_List_Sites = [('Bishopville II', {
     19: "3-1", 20: "3-2", 21: "3-3", 22: "3-4", 23: "3-5", 24: "3-6",
     25: "3-7", 26: "3-8", 27: "3-9", 28: "4-1", 29: "4-2", 30: "4-3",
     31: "4-4", 32: "4-5", 33: "4-6", 34: "4-7", 35: "4-8", 36: "4-9"},
-                        9900000, 'bishopvilleII', inv, None),
+                        9900000, 'bishopvilleII', hst, None),
 
                     ('Bluebird', {
     1: "A1", 2: "A2", 3: "A3", 4: "A4", 5: "A5", 6: "A6",
     7: "A7", 8: "A8", 9: "A9", 10: "A10", 11: "A11", 12: "A12",
     13: "B13", 14: "B14", 15: "B15", 16: "B16", 17: "B17", 18: "B18",
     19: "B19", 20: "B20", 21: "B21", 22: "B22", 23: "B23", 24: "B24"}, 
-                    3000000, 'bluebird', narenco, 'BLUEBIRD'),
+                    3000000, 'bluebird', nar, 'BLUEBIRD'),
 
                     ('Bulloch 1A', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
@@ -241,12 +259,12 @@ master_List_Sites = [('Bishopville II', {
     31: "31", 32: "32", 33: "33", 34: "34", 35: "35", 36: "36", 37: "37", 38: "38", 39: "39", 40: "40",
     41: "41", 42: "42", 43: "43", 44: "44", 45: "45", 46: "46", 47: "47", 48: "48", 49: "49", 50: "50",
     51: "51", 52: "52", 53: "53", 54: "54", 55: "55", 56: "56", 57: "57", 58: "58", 59: "59"}, 
-                    7080000, 'cardinal', narenco, 'CARDINAL'),
+                    7080000, 'cardinal', nar, 'CARDINAL'),
 
-                    ('CDIA', {1:"1"}, 192000, 'cdia', narenco, None),
+                    ('CDIA', {1:"1"}, 192000, 'cdia', nar, None),
 
                     ('Cherry Blossom', {1: "1", 2: "2", 3: "3", 4: "4"},
-                     10000000, 'cherryblossom', narenco, 'CHERRY BLOSSOM'),
+                     10000000, 'cherryblossom', nar, 'CHERRY BLOSSOM'),
 
                     ('Cougar', {
     1: "1-1", 2: "1-2", 3: "1-3", 4: "1-4", 5: "1-5", 6: "2-1",
@@ -254,7 +272,7 @@ master_List_Sites = [('Bishopville II', {
     13: "3-2", 14: "3-3", 15: "3-4", 16: "3-5", 17: "4-1", 18: "4-2",
     19: "4-3", 20: "4-4", 21: "4-5", 22: "5-1", 23: "5-2", 24: "5-3",
     25: "5-4", 26: "5-5", 27: "6-1", 28: "6-2", 29: "6-3", 30: "6-4", 31:"6-5"},
-                     2670000, 'cougar', narenco, 'COUGAR'),
+                     2670000, 'cougar', nar, 'COUGAR'),
 
                     ('Conetoe', {
     1: "1-1", 2: "1-2", 3: "1-3", 4: "1-4",
@@ -303,22 +321,22 @@ master_List_Sites = [('Bishopville II', {
     21: "21", 22: "22", 23: "23", 24: "24", 25: "25", 26: "26", 27: "27", 28: "28", 29: "29", 30: "30",
     31: "31", 32: "32", 33: "33", 34: "34", 35: "35", 36: "36", 37: "37", 38: "38", 39: "39", 40: "40",
     41: "41", 42: "42", 43: "43"},
-                    5380000, 'harrison', narenco, 'HARRISON'),
+                    5380000, 'harrison', nar, 'HARRISON'),
 
                     ('Hayes', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
     7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
     13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18",
     19: "19", 20: "20", 21: "21", 22: "22", 23: "23", 24: "24", 25: "25", 26: "26"},
-                     3240000, 'hayes', narenco, 'HAYES'),
+                     3240000, 'hayes', nar, 'HAYES'),
 
-                    ('Hickory', {1:"1", 2:"2"}, 5000000, 'hickory', narenco, 'HICKORY'),
+                    ('Hickory', {1:"1", 2:"2"}, 5000000, 'hickory', nar, 'HICKORY'),
                     
                     ('Hickson', {
     1: "1-1", 2: "1-2", 3: "1-3", 4: "1-4", 5: "1-5", 6: "1-6",
     7: "1-7", 8: "1-8", 9: "1-9", 10: "1-10", 11: "1-11", 12: "1-12",
     13: "1-13", 14: "1-14", 15: "1-15", 16: "1-16"},
-                     2000000, 'hickson', inv, None),
+                     2000000, 'hickson', hst, None),
 
                     ('Holly Swamp', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
@@ -335,13 +353,13 @@ master_List_Sites = [('Bishopville II', {
     43: "3.11", 44: "3.12", 45: "3.13", 46: "3.14", 47: "3.15", 48: "3.16",
     49: "4.1", 50: "4.2", 51: "4.3", 52: "4.4", 53: "4.5", 54: "4.6", 55: "4.7", 56: "4.8", 57: "4.9", 58: "4.10",
     59: "4.11", 60: "4.12", 61: "4.13", 62: "4.14", 63: "4.15", 64: "4.16"},
-                     8000000, 'jefferson', inv, None),
+                     8000000, 'jefferson', hst, None),
 
                     ('Marshall', {
     1: "1.1", 2: "1.2", 3: "1.3", 4: "1.4", 5: "1.5", 6: "1.6",
     7: "1.7", 8: "1.8", 9: "1.9", 10: "1.10", 11: "1.11", 12: "1.12",
     13: "1.13", 14: "1.14", 15: "1.15", 16: "1.16"},
-                    2000000, 'marshall', inv, None),
+                    2000000, 'marshall', hst, None),
 
                     ('McLean', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
@@ -354,7 +372,7 @@ master_List_Sites = [('Bishopville II', {
     1: "1-1", 2: "1-2", 3: "1-3", 4: "1-4", 5: "1-5", 6: "1-6",
     7: "1-7", 8: "1-8", 9: "1-9", 10: "1-10", 11: "1-11", 12: "1-12",
     13: "1-13", 14: "1-14", 15: "1-15", 16: "1-16"},
-                    2000000, 'ogburn', inv, None),
+                    2000000, 'ogburn', hst, None),
                     
                     ('PG', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
@@ -378,7 +396,7 @@ master_List_Sites = [('Bishopville II', {
     51: "51", 52: "52", 53: "53", 54: "54", 55: "55", 56: "56", 57: "57", 58: "58", 59: "59", 60: "60",
     61: "61", 62: "62", 63: "63", 64: "64", 65: "65", 66: "66", 67: "67", 68: "68", 69: "69", 70: "70",
     71: "71", 72: "72"},
-                    9000000, 'shorthorn', solrvr, 'SHORTHORN'),
+                    9000000, 'shorthorn', solrvr2, 'SHORTHORN'),
 
                     ('Sunflower', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
@@ -395,13 +413,13 @@ master_List_Sites = [('Bishopville II', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
     7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
     13: "13", 14: "14", 15: "15", 16: "16"},
-                    2000000, 'tedder', inv, None),
+                    2000000, 'tedder', hst, None),
 
                     ('Thunderhead', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
     7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
     13: "13", 14: "14", 15: "15", 16: "16"},
-                    2000000, 'thunderhead', inv, None),
+                    2000000, 'thunderhead', hst2, None),
                     ('Upson', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
     7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
@@ -413,7 +431,7 @@ master_List_Sites = [('Bishopville II', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
     7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
     13: "13", 14: "14", 15: "15", 16: "16", 17: "17"},
-                    2000000, 'vanburen', inv, 'VAN BUREN'), 
+                    2000000, 'vanburen', hst2, 'VAN BUREN'), 
                     
                     ('Warbler', {
     1: "A1", 2: "A2", 3: "A3", 4: "A4", 5: "A5", 6: "A6",
@@ -437,13 +455,13 @@ master_List_Sites = [('Bishopville II', {
                     
                     ('Wayne 3', {1: "1", 2: "2", 3: "3", 4: "4"}, 5000000, 'wayne3', soltage, None), 
                     
-                    ('Wellons', {1: "1-1", 2: "1-2", 3: "2-1", 4: "2-2", 5:"3-1", 6:"3-2"}, 5000000, 'wellons', narenco, 'WELLONS'), 
+                    ('Wellons', {1: "1-1", 2: "1-2", 3: "2-1", 4: "2-2", 5:"3-1", 6:"3-2"}, 5000000, 'wellons', nar2, 'WELLONS'), 
                     
                     ('Whitehall', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
     7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
     13: "13", 14: "14", 15: "15", 16: "16"},
-                    2000000, 'whitehall', solrvr2, 'WHITEHALL'), 
+                    2000000, 'whitehall', solrvr3, 'WHITEHALL'), 
                     
                     ('Whitetail', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
@@ -454,9 +472,9 @@ master_List_Sites = [('Bishopville II', {
     51: "51", 52: "52", 53: "53", 54: "54", 55: "55", 56: "56", 57: "57", 58: "58", 59: "59", 60: "60",
     61: "61", 62: "62", 63: "63", 64: "64", 65: "65", 66: "66", 67: "67", 68: "68", 69: "69", 70: "70",
     71: "71", 72: "72", 73: "73", 74: "74", 75: "75", 76: "76", 77: "77", 78: "78", 79: "79", 80: "80"},
-                    10000000, 'whitetail', solrvr2, None),
+                    10000000, 'whitetail', solrvr3, None),
                     
-                    ('Violet', {1:"1", 2:"2"}, 5000000, 'violet', narenco, 'VIOLET')]
+                    ('Violet', {1:"1", 2:"2"}, 5000000, 'violet', nar2, 'VIOLET')]
 
 site_INV_groups = {
     "Cardinal": {
@@ -1938,8 +1956,10 @@ def update_data():
                 globals()[f'{var_name}meterkWLabel'].config(bg='pink')
                 globals()[f'{var_name}meterVLabel'].config(bg='pink')
                 globals()[f'{var_name}meterRatioLabel'].config(bg='pink')
-            
-    underperformance_data_update() #Inverter Comparison Type Underperformance Check
+
+
+    if underperf_Maincbvar.get() == True:
+        underperformance_data_update() #Inverter Comparison Type Underperformance Check
     #conetoe_offline()
 
     if textOnly.get():
@@ -2175,151 +2195,115 @@ def underperformance_data_update(): #Inv Comparison Function
             invkw_rows = c.fetchall()
             data_list = [list(row) for row in invkw_rows]
             df = pd.DataFrame(data_list, columns=['Timestamp', 'Watts'])
-
-            if table_name == "Duplin String INV 17 Data":
-                ic(df)
-
             underperformance_data[table_name] = df
     
 
 
-    grouped_data = {}
+    
     for site, invdict, metermax, var, custid, pvsyst_name in master_List_Sites:
         inv_count = len(invdict)
         if site == "CDIA":
             continue
         # Initialize a dictionary to store dataframes for each group for the current site
-        site_grouped_data = {}
         for i in range(1, inv_count + 1):
             if site == "Duplin":
                 if i <= 3:
                     strVcent = 'Central'
                     num = i
+                    alt = ''
                 else:
                     strVcent = 'String'
+                    alt = 's'
                     num = i - 3
-                table_name = f'{site} {strVcent} INV {i} Data'
+                table_name = f'{site} {strVcent} INV {num} Data'
                 df = underperformance_data.get(table_name, pd.DataFrame(columns=['Timestamp', 'Watts']))
-                df.rename(columns={'Watts': f'{var}_{strVcent}_INV_{num}_Watts'}, inplace=True)
+                df_filtered = df[df['Watts'] >= 1].copy()
+                df_filtered['Timestamp'] = pd.to_datetime(df_filtered['Timestamp'])
+                df_grouped = df_filtered.groupby('Timestamp').mean().reset_index()
+                df_resampled = df_grouped.set_index('Timestamp').resample('5min').ffill()
+                df_resampled['kWh'] = df_resampled['Watts'] * (2 / 60) / 1000
+                globals()[f'{var}{alt}inv{num}daykw'] = df_resampled['kWh'].sum()
+                globals()[f'{var}{alt}inv{num}daykwavg'] = df_resampled['Watts'].mean()
             else:
                 table_name = f'{site} INV {i} Data'
                 df = underperformance_data.get(table_name, pd.DataFrame(columns=['Timestamp', 'Watts']))
-                df.rename(columns={'Watts': f'{var}_INV_{i}_Watts'}, inplace=True)
+                df_filtered = df[df['Watts'] >= 1].copy()
+                df_filtered['Timestamp'] = pd.to_datetime(df_filtered['Timestamp'])
+                df_grouped = df_filtered.groupby('Timestamp').mean().reset_index()
+                df_resampled = df_grouped.set_index('Timestamp').resample('5min').ffill()
+                df_resampled['kWh'] = df_resampled['Watts'] * (2 / 60) / 1000
+                globals()[f'{var}inv{i}daykw'] = df_resampled['kWh'].sum()
+                globals()[f'{var}inv{i}daykwavg'] = df_resampled['Watts'].mean()
 
-            # Determine the group for the current inverter
-            found_group = False
-            if site in site_INV_groups:
-                for group_name, group_cols in site_INV_groups[site].items():
-                    if f'{var}_INV_{i}_Watts' in [col for col in group_cols]:
-                        if group_name not in site_grouped_data:
-                            site_grouped_data[group_name] = []
-                        site_grouped_data[group_name].append(df)
-                        found_group = True
-                        break
-            if not found_group:
-                if site not in site_grouped_data:
-                    site_grouped_data[site] = []
-                site_grouped_data[site].append(df)
-            #Add Site Data to Main Data Dictionary    
-            grouped_data[site] = site_grouped_data
-        # Concatenate dataframes for each group and store them
-        for site, dfs in grouped_data.items():
-            for inverter_group, watts_data in dfs.items():
-                if dfs:
-                    combined_df = pd.concat(watts_data, ignore_index=True)
-                    # Drop rows where *any* column containing 'Watts' is 0
-                    cols_to_check = [col for col in combined_df.columns if 'Watts' in col]
-                    combined_df = combined_df[~(combined_df[cols_to_check] < 1).any(axis=1)]
-                    if site == 'Duplin' or site == "Elk":
-                        ic(combined_df)
 
-                    # Calculate and assign the mean for each 'Watts' column
-                    for col in cols_to_check:
-                        mean_value = combined_df[col].mean()
-                        # Assign the mean to the appropriate global variable
-                        if site == "Duplin":
-                            if "Central" in col:
-                                replace1 = col.replace(f'duplin_Central_INV_', '')
-                                inv_number = replace1.replace('_Watts', '')
-                                globals()[f'duplininv{inv_number}daykwavg'] = mean_value
-                            elif "String" in col:
-                                replace1 = col.replace(f'duplin_String_INV_', '')
-                                inv_number = int(replace1.replace('_Watts', ''))
-                                globals()[f'duplinsinv{inv_number}daykwavg'] = mean_value
-                            
-                        else:
-                            replace1 = col.replace(f'{var}_INV_', '')
-                            inv_number = replace1.replace('_Watts', '')
-                            globals()[f'{var}inv{inv_number}daykwavg'] = mean_value
-
-    
-    bluebirddaykwList = [(bluebirdinv1daykwavg, bluebirdinvup1cb), (bluebirdinv2daykwavg, bluebirdinvup2cb), (bluebirdinv3daykwavg, bluebirdinvup3cb), (bluebirdinv4daykwavg, bluebirdinvup4cb), (bluebirdinv5daykwavg, bluebirdinvup5cb), (bluebirdinv6daykwavg, bluebirdinvup6cb), (bluebirdinv7daykwavg, bluebirdinvup7cb), (bluebirdinv8daykwavg, bluebirdinvup8cb), (bluebirdinv9daykwavg, bluebirdinvup9cb), (bluebirdinv10daykwavg, bluebirdinvup10cb), (bluebirdinv11daykwavg, bluebirdinvup11cb), (bluebirdinv12daykwavg, bluebirdinvup12cb), (bluebirdinv13daykwavg, bluebirdinvup13cb), (bluebirdinv14daykwavg, bluebirdinvup14cb), (bluebirdinv15daykwavg, bluebirdinvup15cb), (bluebirdinv16daykwavg, bluebirdinvup16cb), (bluebirdinv17daykwavg, bluebirdinvup17cb), (bluebirdinv18daykwavg, bluebirdinvup18cb), (bluebirdinv19daykwavg, bluebirdinvup19cb), (bluebirdinv20daykwavg, bluebirdinvup20cb), (bluebirdinv21daykwavg, bluebirdinvup21cb), (bluebirdinv22daykwavg, bluebirdinvup22cb), (bluebirdinv23daykwavg, bluebirdinvup23cb), (bluebirdinv24daykwavg, bluebirdinvup24cb)]
-    cardinal96daykwList = [(cardinalinv1daykwavg, cardinalinvup1cb), (cardinalinv2daykwavg, cardinalinvup2cb), (cardinalinv3daykwavg, cardinalinvup3cb), (cardinalinv4daykwavg, cardinalinvup4cb), (cardinalinv5daykwavg, cardinalinvup5cb), (cardinalinv6daykwavg, cardinalinvup6cb), (cardinalinv7daykwavg, cardinalinvup7cb), (cardinalinv22daykwavg, cardinalinvup22cb), (cardinalinv23daykwavg, cardinalinvup23cb), (cardinalinv24daykwavg, cardinalinvup24cb), (cardinalinv25daykwavg, cardinalinvup25cb), (cardinalinv26daykwavg, cardinalinvup26cb), (cardinalinv27daykwavg, cardinalinvup27cb), (cardinalinv28daykwavg, cardinalinvup28cb), (cardinalinv43daykwavg, cardinalinvup43cb), (cardinalinv44daykwavg, cardinalinvup44cb), (cardinalinv45daykwavg, cardinalinvup45cb), (cardinalinv46daykwavg, cardinalinvup46cb), (cardinalinv47daykwavg, cardinalinvup47cb)]
-    cardinal952daykwList = [(cardinalinv8daykwavg, cardinalinvup8cb), (cardinalinv9daykwavg, cardinalinvup9cb), (cardinalinv10daykwavg, cardinalinvup10cb), (cardinalinv11daykwavg, cardinalinvup11cb), (cardinalinv12daykwavg, cardinalinvup12cb), (cardinalinv13daykwavg, cardinalinvup13cb), (cardinalinv14daykwavg, cardinalinvup14cb), (cardinalinv29daykwavg, cardinalinvup29cb), (cardinalinv30daykwavg, cardinalinvup30cb), (cardinalinv31daykwavg, cardinalinvup31cb), (cardinalinv32daykwavg, cardinalinvup32cb), (cardinalinv33daykwavg, cardinalinvup33cb), (cardinalinv34daykwavg, cardinalinvup34cb), (cardinalinv35daykwavg, cardinalinvup35cb), (cardinalinv48daykwavg, cardinalinvup48cb), (cardinalinv49daykwavg, cardinalinvup49cb), (cardinalinv50daykwavg, cardinalinvup50cb), (cardinalinv51daykwavg, cardinalinvup51cb), (cardinalinv52daykwavg, cardinalinvup52cb), (cardinalinv53daykwavg, cardinalinvup53cb)]
-    cardinal944daykwList = [(cardinalinv15daykwavg, cardinalinvup15cb), (cardinalinv16daykwavg, cardinalinvup16cb), (cardinalinv17daykwavg, cardinalinvup17cb), (cardinalinv18daykwavg, cardinalinvup18cb), (cardinalinv19daykwavg, cardinalinvup19cb), (cardinalinv20daykwavg, cardinalinvup20cb), (cardinalinv21daykwavg, cardinalinvup21cb), (cardinalinv36daykwavg, cardinalinvup36cb), (cardinalinv37daykwavg, cardinalinvup37cb), (cardinalinv38daykwavg, cardinalinvup38cb), (cardinalinv39daykwavg, cardinalinvup39cb), (cardinalinv40daykwavg, cardinalinvup40cb), (cardinalinv41daykwavg, cardinalinvup41cb), (cardinalinv42daykwavg, cardinalinvup42cb), (cardinalinv54daykwavg, cardinalinvup54cb), (cardinalinv55daykwavg, cardinalinvup55cb), (cardinalinv56daykwavg, cardinalinvup56cb), (cardinalinv57daykwavg, cardinalinvup57cb), (cardinalinv58daykwavg, cardinalinvup58cb), (cardinalinv59daykwavg, cardinalinvup59cb)]
-    cherryblossomdaykwList = [(cherryblossominv1daykwavg, cherryblossominvup1cb), (cherryblossominv2daykwavg, cherryblossominvup2cb), (cherryblossominv3daykwavg, cherryblossominvup3cb), (cherryblossominv4daykwavg, cherryblossominvup4cb)]
-    harrisondaykwList = [(harrisoninv2daykwavg, harrisoninvup2cb), (harrisoninv3daykwavg, harrisoninvup3cb), (harrisoninv4daykwavg, harrisoninvup4cb), (harrisoninv5daykwavg, harrisoninvup5cb), (harrisoninv6daykwavg, harrisoninvup6cb), (harrisoninv7daykwavg, harrisoninvup7cb), (harrisoninv9daykwavg, harrisoninvup9cb), (harrisoninv11daykwavg, harrisoninvup11cb), (harrisoninv12daykwavg, harrisoninvup12cb), (harrisoninv13daykwavg, harrisoninvup13cb), (harrisoninv14daykwavg, harrisoninvup14cb), (harrisoninv15daykwavg, harrisoninvup15cb), (harrisoninv16daykwavg, harrisoninvup16cb), (harrisoninv18daykwavg, harrisoninvup18cb), (harrisoninv19daykwavg, harrisoninvup19cb), (harrisoninv20daykwavg, harrisoninvup20cb), (harrisoninv22daykwavg, harrisoninvup22cb), (harrisoninv23daykwavg, harrisoninvup23cb), (harrisoninv24daykwavg, harrisoninvup24cb), (harrisoninv25daykwavg, harrisoninvup25cb), (harrisoninv26daykwavg, harrisoninvup26cb), (harrisoninv27daykwavg, harrisoninvup27cb), (harrisoninv28daykwavg, harrisoninvup28cb), (harrisoninv31daykwavg, harrisoninvup31cb), (harrisoninv32daykwavg, harrisoninvup32cb), (harrisoninv33daykwavg, harrisoninvup33cb), (harrisoninv34daykwavg, harrisoninvup34cb), (harrisoninv35daykwavg, harrisoninvup35cb), (harrisoninv36daykwavg, harrisoninvup36cb), (harrisoninv37daykwavg, harrisoninvup37cb), (harrisoninv38daykwavg, harrisoninvup38cb), (harrisoninv39daykwavg, harrisoninvup39cb), (harrisoninv42daykwavg, harrisoninvup42cb), (harrisoninv43daykwavg, harrisoninvup43cb)]
-    harrison92daykwList = [(harrisoninv1daykwavg, harrisoninvup1cb), (harrisoninv8daykwavg, harrisoninvup8cb), (harrisoninv10daykwavg, harrisoninvup10cb), (harrisoninv17daykwavg, harrisoninvup17cb), (harrisoninv21daykwavg, harrisoninvup21cb), (harrisoninv29daykwavg, harrisoninvup29cb), (harrisoninv30daykwavg, harrisoninvup30cb), (harrisoninv40daykwavg, harrisoninvup40cb), (harrisoninv41daykwavg, harrisoninvup41cb)]
-    hayesdaykwList = [(hayesinv1daykwavg, hayesinvup1cb), (hayesinv2daykwavg, hayesinvup2cb), (hayesinv3daykwavg, hayesinvup3cb), (hayesinv4daykwavg, hayesinvup4cb), (hayesinv5daykwavg, hayesinvup5cb), (hayesinv6daykwavg, hayesinvup6cb), (hayesinv7daykwavg, hayesinvup7cb), (hayesinv8daykwavg, hayesinvup8cb), (hayesinv9daykwavg, hayesinvup9cb), (hayesinv10daykwavg, hayesinvup10cb), (hayesinv11daykwavg, hayesinvup11cb), (hayesinv12daykwavg, hayesinvup12cb), (hayesinv13daykwavg, hayesinvup13cb), (hayesinv14daykwavg, hayesinvup14cb), (hayesinv15daykwavg, hayesinvup15cb), (hayesinv16daykwavg, hayesinvup16cb), (hayesinv17daykwavg, hayesinvup17cb), (hayesinv19daykwavg, hayesinvup19cb), (hayesinv20daykwavg, hayesinvup20cb), (hayesinv21daykwavg, hayesinvup21cb), (hayesinv23daykwavg, hayesinvup23cb), (hayesinv24daykwavg, hayesinvup24cb), (hayesinv25daykwavg, hayesinvup25cb), (hayesinv26daykwavg, hayesinvup26cb)]
-    hayes96daykwList = [(hayesinv22daykwavg, hayesinvup22cb), (hayesinv18daykwavg, hayesinvup18cb)]
-    hickorydaykwList = [(hickoryinv1daykwavg, hickoryinvup1cb), (hickoryinv2daykwavg, hickoryinvup2cb)]
-    vanburendaykwList = [(vanbureninv7daykwavg, vanbureninvup7cb), (vanbureninv8daykwavg, vanbureninvup8cb), (vanbureninv9daykwavg, vanbureninvup9cb), (vanbureninv10daykwavg, vanbureninvup10cb), (vanbureninv11daykwavg, vanbureninvup11cb), (vanbureninv12daykwavg, vanbureninvup12cb), (vanbureninv13daykwavg, vanbureninvup13cb), (vanbureninv14daykwavg, vanbureninvup14cb), (vanbureninv15daykwavg, vanbureninvup15cb), (vanbureninv16daykwavg, vanbureninvup16cb), (vanbureninv17daykwavg, vanbureninvup17cb)]
-    vanburen93daykwList = [(vanbureninv1daykwavg, vanbureninvup1cb), (vanbureninv2daykwavg, vanbureninvup2cb), (vanbureninv3daykwavg, vanbureninvup3cb), (vanbureninv4daykwavg, vanbureninvup4cb), (vanbureninv5daykwavg, vanbureninvup5cb), (vanbureninv6daykwavg, vanbureninvup6cb)]
-    violetdaykwList = [(violetinv1daykwavg, violetinvup1cb), (violetinv2daykwavg, violetinvup2cb)]
-    wellonsdaykwList = [(wellonsinv1daykwavg, wellonsinvup1cb), (wellonsinv2daykwavg, wellonsinvup2cb), (wellonsinv3daykwavg, wellonsinvup3cb), (wellonsinv4daykwavg, wellonsinvup4cb), (wellonsinv5daykwavg, wellonsinvup5cb), (wellonsinv6daykwavg, wellonsinvup6cb)]
-    bishopvilleIIdaykwList = [(bishopvilleIIinv6daykwavg, bishopvilleIIinvup6cb), (bishopvilleIIinv7daykwavg, bishopvilleIIinvup7cb), (bishopvilleIIinv8daykwavg, bishopvilleIIinvup8cb), (bishopvilleIIinv9daykwavg, bishopvilleIIinvup9cb), (bishopvilleIIinv10daykwavg, bishopvilleIIinvup10cb), (bishopvilleIIinv13daykwavg, bishopvilleIIinvup13cb),  (bishopvilleIIinv15daykwavg, bishopvilleIIinvup15cb),  (bishopvilleIIinv19daykwavg, bishopvilleIIinvup19cb), (bishopvilleIIinv20daykwavg, bishopvilleIIinvup20cb), (bishopvilleIIinv21daykwavg, bishopvilleIIinvup21cb), (bishopvilleIIinv22daykwavg, bishopvilleIIinvup22cb), (bishopvilleIIinv23daykwavg, bishopvilleIIinvup23cb),  (bishopvilleIIinv26daykwavg, bishopvilleIIinvup26cb), (bishopvilleIIinv27daykwavg, bishopvilleIIinvup27cb), (bishopvilleIIinv28daykwavg, bishopvilleIIinvup28cb), (bishopvilleIIinv29daykwavg, bishopvilleIIinvup29cb), (bishopvilleIIinv30daykwavg, bishopvilleIIinvup30cb), (bishopvilleIIinv32daykwavg, bishopvilleIIinvup32cb),  (bishopvilleIIinv34daykwavg, bishopvilleIIinvup34cb)]
-    bishopvilleII34strdaykwList = [(bishopvilleIIinv1daykwavg, bishopvilleIIinvup1cb), (bishopvilleIIinv2daykwavg, bishopvilleIIinvup2cb), (bishopvilleIIinv3daykwavg, bishopvilleIIinvup3cb), (bishopvilleIIinv4daykwavg, bishopvilleIIinvup4cb), (bishopvilleIIinv5daykwavg, bishopvilleIIinvup5cb), (bishopvilleIIinv11daykwavg, bishopvilleIIinvup11cb), (bishopvilleIIinv12daykwavg, bishopvilleIIinvup12cb), (bishopvilleIIinv14daykwavg, bishopvilleIIinvup14cb), (bishopvilleIIinv16daykwavg, bishopvilleIIinvup16cb), (bishopvilleIIinv17daykwavg, bishopvilleIIinvup17cb), (bishopvilleIIinv18daykwavg, bishopvilleIIinvup18cb), (bishopvilleIIinv31daykwavg, bishopvilleIIinvup31cb), (bishopvilleIIinv33daykwavg, bishopvilleIIinvup33cb), (bishopvilleIIinv35daykwavg, bishopvilleIIinvup35cb), (bishopvilleIIinv36daykwavg, bishopvilleIIinvup36cb)]
-    bishopvilleII36strdaykwList = [(bishopvilleIIinv24daykwavg, bishopvilleIIinvup24cb), (bishopvilleIIinv25daykwavg, bishopvilleIIinvup25cb)]
-    hicksondaykwList = [(hicksoninv7daykwavg, hicksoninvup7cb), (hicksoninv8daykwavg, hicksoninvup8cb), (hicksoninv9daykwavg, hicksoninvup9cb), (hicksoninv12daykwavg, hicksoninvup12cb), (hicksoninv13daykwavg, hicksoninvup13cb), (hicksoninv14daykwavg, hicksoninvup14cb), (hicksoninv15daykwavg, hicksoninvup15cb), (hicksoninv16daykwavg, hicksoninvup16cb)]
-    hickson17strdaykwList = [(hicksoninv1daykwavg, hicksoninvup1cb), (hicksoninv2daykwavg, hicksoninvup2cb), (hicksoninv3daykwavg, hicksoninvup3cb), (hicksoninv4daykwavg, hicksoninvup4cb), (hicksoninv5daykwavg, hicksoninvup5cb), (hicksoninv6daykwavg, hicksoninvup6cb), (hicksoninv10daykwavg, hicksoninvup10cb), (hicksoninv11daykwavg, hicksoninvup11cb)]
-    jeffersondaykwList = [(jeffersoninv5daykwavg, jeffersoninvup5cb),  (jeffersoninv7daykwavg, jeffersoninvup7cb), (jeffersoninv8daykwavg, jeffersoninvup8cb), (jeffersoninv9daykwavg, jeffersoninvup9cb), (jeffersoninv10daykwavg, jeffersoninvup10cb), (jeffersoninv11daykwavg, jeffersoninvup11cb), (jeffersoninv12daykwavg, jeffersoninvup12cb), (jeffersoninv15daykwavg, jeffersoninvup15cb), (jeffersoninv16daykwavg, jeffersoninvup16cb), (jeffersoninv19daykwavg, jeffersoninvup19cb), (jeffersoninv24daykwavg, jeffersoninvup24cb), (jeffersoninv26daykwavg, jeffersoninvup26cb), (jeffersoninv27daykwavg, jeffersoninvup27cb), (jeffersoninv28daykwavg, jeffersoninvup28cb), (jeffersoninv29daykwavg, jeffersoninvup29cb), (jeffersoninv30daykwavg, jeffersoninvup30cb), (jeffersoninv31daykwavg, jeffersoninvup31cb), (jeffersoninv32daykwavg, jeffersoninvup32cb), (jeffersoninv33daykwavg, jeffersoninvup33cb), (jeffersoninv34daykwavg, jeffersoninvup34cb), (jeffersoninv35daykwavg, jeffersoninvup35cb), (jeffersoninv36daykwavg, jeffersoninvup36cb), (jeffersoninv37daykwavg, jeffersoninvup37cb), (jeffersoninv38daykwavg, jeffersoninvup38cb), (jeffersoninv39daykwavg, jeffersoninvup39cb),  (jeffersoninv48daykwavg, jeffersoninvup48cb), (jeffersoninv57daykwavg, jeffersoninvup57cb), (jeffersoninv58daykwavg, jeffersoninvup58cb), (jeffersoninv59daykwavg, jeffersoninvup59cb), (jeffersoninv60daykwavg, jeffersoninvup60cb), (jeffersoninv61daykwavg, jeffersoninvup61cb), (jeffersoninv62daykwavg, jeffersoninvup62cb), (jeffersoninv63daykwavg, jeffersoninvup63cb), (jeffersoninv64daykwavg, jeffersoninvup64cb)]
-    jefferson18strdaykwList = [(jeffersoninv1daykwavg, jeffersoninvup1cb), (jeffersoninv2daykwavg, jeffersoninvup2cb), (jeffersoninv3daykwavg, jeffersoninvup3cb), (jeffersoninv4daykwavg, jeffersoninvup4cb), (jeffersoninv6daykwavg, jeffersoninvup6cb), (jeffersoninv13daykwavg, jeffersoninvup13cb), (jeffersoninv14daykwavg, jeffersoninvup14cb), (jeffersoninv17daykwavg, jeffersoninvup17cb), (jeffersoninv18daykwavg, jeffersoninvup18cb), (jeffersoninv20daykwavg, jeffersoninvup20cb), (jeffersoninv21daykwavg, jeffersoninvup21cb), (jeffersoninv22daykwavg, jeffersoninvup22cb), (jeffersoninv23daykwavg, jeffersoninvup23cb), (jeffersoninv25daykwavg, jeffersoninvup25cb), (jeffersoninv40daykwavg, jeffersoninvup40cb), (jeffersoninv41daykwavg, jeffersoninvup41cb), (jeffersoninv42daykwavg, jeffersoninvup42cb), (jeffersoninv43daykwavg, jeffersoninvup43cb), (jeffersoninv44daykwavg, jeffersoninvup44cb),  (jeffersoninv45daykwavg, jeffersoninvup45cb), (jeffersoninv46daykwavg, jeffersoninvup46cb), (jeffersoninv47daykwavg, jeffersoninvup47cb), (jeffersoninv49daykwavg, jeffersoninvup49cb), (jeffersoninv50daykwavg, jeffersoninvup50cb), (jeffersoninv51daykwavg, jeffersoninvup51cb), (jeffersoninv52daykwavg, jeffersoninvup52cb), (jeffersoninv53daykwavg, jeffersoninvup53cb), (jeffersoninv54daykwavg, jeffersoninvup54cb), (jeffersoninv55daykwavg, jeffersoninvup55cb), (jeffersoninv56daykwavg, jeffersoninvup56cb)]
-    marshalldaykwList = [(marshallinv1daykwavg, marshallinvup1cb), (marshallinv2daykwavg, marshallinvup2cb), (marshallinv3daykwavg, marshallinvup3cb), (marshallinv4daykwavg, marshallinvup4cb), (marshallinv5daykwavg, marshallinvup5cb), (marshallinv6daykwavg, marshallinvup6cb), (marshallinv7daykwavg, marshallinvup7cb), (marshallinv8daykwavg, marshallinvup8cb), (marshallinv9daykwavg, marshallinvup9cb), (marshallinv10daykwavg, marshallinvup10cb), (marshallinv11daykwavg, marshallinvup11cb), (marshallinv12daykwavg, marshallinvup12cb), (marshallinv13daykwavg, marshallinvup13cb), (marshallinv14daykwavg, marshallinvup14cb), (marshallinv15daykwavg, marshallinvup15cb), (marshallinv16daykwavg, marshallinvup16cb)]
-    ogburndaykwList = [(ogburninv1daykwavg, ogburninvup1cb), (ogburninv2daykwavg, ogburninvup2cb), (ogburninv3daykwavg, ogburninvup3cb), (ogburninv4daykwavg, ogburninvup4cb), (ogburninv5daykwavg, ogburninvup5cb), (ogburninv6daykwavg, ogburninvup6cb), (ogburninv7daykwavg, ogburninvup7cb), (ogburninv8daykwavg, ogburninvup8cb), (ogburninv9daykwavg, ogburninvup9cb), (ogburninv10daykwavg, ogburninvup10cb), (ogburninv11daykwavg, ogburninvup11cb), (ogburninv12daykwavg, ogburninvup12cb), (ogburninv13daykwavg, ogburninvup13cb), (ogburninv14daykwavg, ogburninvup14cb), (ogburninv15daykwavg, ogburninvup15cb), (ogburninv16daykwavg, ogburninvup16cb)]
-    tedderdaykwList = [(tedderinv5daykwavg, tedderinvup5cb), (tedderinv6daykwavg, tedderinvup6cb), (tedderinv7daykwavg, tedderinvup7cb), (tedderinv9daykwavg, tedderinvup9cb), (tedderinv10daykwavg, tedderinvup10cb), (tedderinv11daykwavg, tedderinvup11cb), (tedderinv12daykwavg, tedderinvup12cb), (tedderinv13daykwavg, tedderinvup13cb), (tedderinv14daykwavg, tedderinvup14cb)]
-    tedder15strdaykwList = [(tedderinv1daykwavg, tedderinvup1cb), (tedderinv2daykwavg, tedderinvup2cb), (tedderinv3daykwavg, tedderinvup3cb), (tedderinv4daykwavg, tedderinvup4cb), (tedderinv8daykwavg, tedderinvup8cb), (tedderinv15daykwavg, tedderinvup15cb), (tedderinv16daykwavg, tedderinvup16cb)]
-    thunderheaddaykwList = [(thunderheadinv1daykwavg, thunderheadinvup1cb), (thunderheadinv2daykwavg, thunderheadinvup2cb), (thunderheadinv3daykwavg, thunderheadinvup3cb), (thunderheadinv4daykwavg, thunderheadinvup4cb), (thunderheadinv5daykwavg, thunderheadinvup5cb), (thunderheadinv6daykwavg, thunderheadinvup6cb), (thunderheadinv7daykwavg, thunderheadinvup7cb), (thunderheadinv8daykwavg, thunderheadinvup8cb), (thunderheadinv9daykwavg, thunderheadinvup9cb), (thunderheadinv10daykwavg, thunderheadinvup10cb), (thunderheadinv11daykwavg, thunderheadinvup11cb), (thunderheadinv12daykwavg, thunderheadinvup12cb), (thunderheadinv14daykwavg, thunderheadinvup14cb), (thunderheadinv16daykwavg, thunderheadinvup16cb)]
-    thunderhead14strdaykwList = [(thunderheadinv15daykwavg, thunderheadinvup15cb), (thunderheadinv13daykwavg, thunderheadinvup13cb)]
-    bulloch1adaykwList = [(bulloch1ainv7daykwavg, bulloch1ainvup7cb), (bulloch1ainv8daykwavg, bulloch1ainvup8cb), (bulloch1ainv9daykwavg, bulloch1ainvup9cb), (bulloch1ainv10daykwavg, bulloch1ainvup10cb), (bulloch1ainv11daykwavg, bulloch1ainvup11cb), (bulloch1ainv12daykwavg, bulloch1ainvup12cb), (bulloch1ainv13daykwavg, bulloch1ainvup13cb), (bulloch1ainv14daykwavg, bulloch1ainvup14cb), (bulloch1ainv15daykwavg, bulloch1ainvup15cb), (bulloch1ainv16daykwavg, bulloch1ainvup16cb), (bulloch1ainv17daykwavg, bulloch1ainvup17cb), (bulloch1ainv18daykwavg, bulloch1ainvup18cb), (bulloch1ainv19daykwavg, bulloch1ainvup19cb), (bulloch1ainv20daykwavg, bulloch1ainvup20cb), (bulloch1ainv21daykwavg, bulloch1ainvup21cb), (bulloch1ainv22daykwavg, bulloch1ainvup22cb), (bulloch1ainv23daykwavg, bulloch1ainvup23cb), (bulloch1ainv24daykwavg, bulloch1ainvup24cb)]
-    bulloch1a10strdaykwList = [(bulloch1ainv1daykwavg, bulloch1ainvup1cb), (bulloch1ainv2daykwavg, bulloch1ainvup2cb), (bulloch1ainv3daykwavg, bulloch1ainvup3cb), (bulloch1ainv4daykwavg, bulloch1ainvup4cb), (bulloch1ainv5daykwavg, bulloch1ainvup5cb), (bulloch1ainv6daykwavg, bulloch1ainvup6cb)]
-    bulloch1bdaykwList = [(bulloch1binv2daykwavg, bulloch1binvup2cb), (bulloch1binv3daykwavg, bulloch1binvup3cb), (bulloch1binv4daykwavg, bulloch1binvup4cb), (bulloch1binv5daykwavg, bulloch1binvup5cb), (bulloch1binv6daykwavg, bulloch1binvup6cb), (bulloch1binv7daykwavg, bulloch1binvup7cb), (bulloch1binv8daykwavg, bulloch1binvup8cb), (bulloch1binv13daykwavg, bulloch1binvup13cb), (bulloch1binv14daykwavg, bulloch1binvup14cb), (bulloch1binv15daykwavg, bulloch1binvup15cb), (bulloch1binv16daykwavg, bulloch1binvup16cb), (bulloch1binv18daykwavg, bulloch1binvup18cb), (bulloch1binv19daykwavg, bulloch1binvup19cb), (bulloch1binv20daykwavg, bulloch1binvup20cb), (bulloch1binv21daykwavg, bulloch1binvup21cb), (bulloch1binv22daykwavg, bulloch1binvup22cb), (bulloch1binv23daykwavg, bulloch1binvup23cb), (bulloch1binv24daykwavg, bulloch1binvup24cb)]
-    bulloch1b10strdaykwList = [(bulloch1binv1daykwavg, bulloch1binvup1cb), (bulloch1binv9daykwavg, bulloch1binvup9cb), (bulloch1binv10daykwavg, bulloch1binvup10cb), (bulloch1binv11daykwavg, bulloch1binvup11cb), (bulloch1binv12daykwavg, bulloch1binvup12cb), (bulloch1binv17daykwavg, bulloch1binvup17cb)]
-    grayfoxdaykwList = [(grayfoxinv1daykwavg, grayfoxinvup1cb), (grayfoxinv2daykwavg, grayfoxinvup2cb), (grayfoxinv3daykwavg, grayfoxinvup3cb), (grayfoxinv4daykwavg, grayfoxinvup4cb), (grayfoxinv5daykwavg, grayfoxinvup5cb), (grayfoxinv6daykwavg, grayfoxinvup6cb), (grayfoxinv7daykwavg, grayfoxinvup7cb), (grayfoxinv8daykwavg, grayfoxinvup8cb), (grayfoxinv9daykwavg, grayfoxinvup9cb), (grayfoxinv10daykwavg, grayfoxinvup10cb), (grayfoxinv11daykwavg, grayfoxinvup11cb), (grayfoxinv12daykwavg, grayfoxinvup12cb), (grayfoxinv13daykwavg, grayfoxinvup13cb), (grayfoxinv14daykwavg, grayfoxinvup14cb), (grayfoxinv15daykwavg, grayfoxinvup15cb), (grayfoxinv16daykwavg, grayfoxinvup16cb), (grayfoxinv17daykwavg, grayfoxinvup17cb), (grayfoxinv18daykwavg, grayfoxinvup18cb), (grayfoxinv19daykwavg, grayfoxinvup19cb), (grayfoxinv20daykwavg, grayfoxinvup20cb), (grayfoxinv21daykwavg, grayfoxinvup21cb), (grayfoxinv22daykwavg, grayfoxinvup22cb), (grayfoxinv23daykwavg, grayfoxinvup23cb), (grayfoxinv24daykwavg, grayfoxinvup24cb), (grayfoxinv25daykwavg, grayfoxinvup25cb), (grayfoxinv26daykwavg, grayfoxinvup26cb), (grayfoxinv27daykwavg, grayfoxinvup27cb), (grayfoxinv28daykwavg, grayfoxinvup28cb), (grayfoxinv29daykwavg, grayfoxinvup29cb), (grayfoxinv30daykwavg, grayfoxinvup30cb), (grayfoxinv31daykwavg, grayfoxinvup31cb), (grayfoxinv32daykwavg, grayfoxinvup32cb), (grayfoxinv33daykwavg, grayfoxinvup33cb), (grayfoxinv34daykwavg, grayfoxinvup34cb), (grayfoxinv35daykwavg, grayfoxinvup35cb), (grayfoxinv36daykwavg, grayfoxinvup36cb), (grayfoxinv37daykwavg, grayfoxinvup37cb), (grayfoxinv38daykwavg, grayfoxinvup38cb), (grayfoxinv39daykwavg, grayfoxinvup39cb), (grayfoxinv40daykwavg, grayfoxinvup40cb)]
-    hardingdaykwList = [(hardinginv4daykwavg, hardinginvup4cb), (hardinginv5daykwavg, hardinginvup5cb), (hardinginv6daykwavg, hardinginvup6cb),  (hardinginv10daykwavg, hardinginvup10cb), (hardinginv11daykwavg, hardinginvup11cb), (hardinginv12daykwavg, hardinginvup12cb), (hardinginv13daykwavg, hardinginvup13cb), (hardinginv14daykwavg, hardinginvup14cb), (hardinginv15daykwavg, hardinginvup15cb),  (hardinginv17daykwavg, hardinginvup17cb), (hardinginv18daykwavg, hardinginvup18cb), (hardinginv19daykwavg, hardinginvup19cb)]
-    harding12strdaykwList = [(hardinginv1daykwavg, hardinginvup1cb), (hardinginv2daykwavg, hardinginvup2cb), (hardinginv3daykwavg, hardinginvup3cb), (hardinginv7daykwavg, hardinginvup7cb), (hardinginv8daykwavg, hardinginvup8cb), (hardinginv9daykwavg, hardinginvup9cb), (hardinginv16daykwavg, hardinginvup16cb), (hardinginv20daykwavg, hardinginvup20cb), (hardinginv21daykwavg, hardinginvup21cb), (hardinginv22daykwavg, hardinginvup22cb), (hardinginv23daykwavg, hardinginvup23cb), (hardinginv24daykwavg, hardinginvup24cb)]
-    mcleandaykwList = [ (mcleaninv2daykwavg, mcleaninvup2cb), (mcleaninv3daykwavg, mcleaninvup3cb), (mcleaninv4daykwavg, mcleaninvup4cb), (mcleaninv5daykwavg, mcleaninvup5cb), (mcleaninv6daykwavg, mcleaninvup6cb), (mcleaninv7daykwavg, mcleaninvup7cb), (mcleaninv8daykwavg, mcleaninvup8cb), (mcleaninv9daykwavg, mcleaninvup9cb), (mcleaninv10daykwavg, mcleaninvup10cb), (mcleaninv11daykwavg, mcleaninvup11cb), (mcleaninv12daykwavg, mcleaninvup12cb), (mcleaninv13daykwavg, mcleaninvup13cb), (mcleaninv14daykwavg, mcleaninvup14cb), (mcleaninv15daykwavg, mcleaninvup15cb), (mcleaninv16daykwavg, mcleaninvup16cb), (mcleaninv18daykwavg, mcleaninvup18cb), (mcleaninv20daykwavg, mcleaninvup20cb),  (mcleaninv22daykwavg, mcleaninvup22cb),  (mcleaninv24daykwavg, mcleaninvup24cb), (mcleaninv25daykwavg, mcleaninvup25cb), (mcleaninv26daykwavg, mcleaninvup26cb), (mcleaninv30daykwavg, mcleaninvup30cb)]
-    mclean10strdaykwList = [(mcleaninv1daykwavg, mcleaninvup1cb), (mcleaninv17daykwavg, mcleaninvup17cb), (mcleaninv19daykwavg, mcleaninvup19cb), (mcleaninv21daykwavg, mcleaninvup21cb), (mcleaninv23daykwavg, mcleaninvup23cb), (mcleaninv27daykwavg, mcleaninvup27cb), (mcleaninv28daykwavg, mcleaninvup28cb), (mcleaninv29daykwavg, mcleaninvup29cb), (mcleaninv31daykwavg, mcleaninvup31cb), (mcleaninv32daykwavg, mcleaninvup32cb), (mcleaninv33daykwavg, mcleaninvup33cb), (mcleaninv34daykwavg, mcleaninvup34cb), (mcleaninv35daykwavg, mcleaninvup35cb), (mcleaninv36daykwavg, mcleaninvup36cb), (mcleaninv37daykwavg, mcleaninvup37cb), (mcleaninv38daykwavg, mcleaninvup38cb), (mcleaninv39daykwavg, mcleaninvup39cb), (mcleaninv40daykwavg, mcleaninvup40cb)]
-    richmonddaykwList = [(richmondinv1daykwavg, richmondinvup1cb), (richmondinv2daykwavg, richmondinvup2cb), (richmondinv3daykwavg, richmondinvup3cb), (richmondinv4daykwavg, richmondinvup4cb), (richmondinv5daykwavg, richmondinvup5cb), (richmondinv6daykwavg, richmondinvup6cb), (richmondinv7daykwavg, richmondinvup7cb), (richmondinv11daykwavg, richmondinvup11cb), (richmondinv12daykwavg, richmondinvup12cb), (richmondinv13daykwavg, richmondinvup13cb), (richmondinv14daykwavg, richmondinvup14cb), (richmondinv15daykwavg, richmondinvup15cb), (richmondinv16daykwavg, richmondinvup16cb), (richmondinv17daykwavg, richmondinvup17cb), (richmondinv18daykwavg, richmondinvup18cb), (richmondinv19daykwavg, richmondinvup19cb), (richmondinv20daykwavg, richmondinvup20cb), (richmondinv21daykwavg, richmondinvup21cb)]
-    richmond10strdaykwList = [(richmondinv8daykwavg, richmondinvup8cb), (richmondinv9daykwavg, richmondinvup9cb), (richmondinv10daykwavg, richmondinvup10cb), (richmondinv22daykwavg, richmondinvup22cb), (richmondinv23daykwavg, richmondinvup23cb), (richmondinv24daykwavg, richmondinvup24cb)]
-    shorthorndaykwList = [(shorthorninv1daykwavg, shorthorninvup1cb), (shorthorninv2daykwavg, shorthorninvup2cb), (shorthorninv3daykwavg, shorthorninvup3cb), (shorthorninv4daykwavg, shorthorninvup4cb), (shorthorninv5daykwavg, shorthorninvup5cb), (shorthorninv6daykwavg, shorthorninvup6cb), (shorthorninv7daykwavg, shorthorninvup7cb), (shorthorninv8daykwavg, shorthorninvup8cb), (shorthorninv9daykwavg, shorthorninvup9cb), (shorthorninv10daykwavg, shorthorninvup10cb), (shorthorninv11daykwavg, shorthorninvup11cb), (shorthorninv12daykwavg, shorthorninvup12cb), (shorthorninv13daykwavg, shorthorninvup13cb), (shorthorninv14daykwavg, shorthorninvup14cb), (shorthorninv15daykwavg, shorthorninvup15cb), (shorthorninv16daykwavg, shorthorninvup16cb), (shorthorninv17daykwavg, shorthorninvup17cb), (shorthorninv18daykwavg, shorthorninvup18cb), (shorthorninv19daykwavg, shorthorninvup19cb), (shorthorninv20daykwavg, shorthorninvup20cb), (shorthorninv22daykwavg, shorthorninvup22cb), (shorthorninv23daykwavg, shorthorninvup23cb), (shorthorninv24daykwavg, shorthorninvup24cb),  (shorthorninv26daykwavg, shorthorninvup26cb), (shorthorninv27daykwavg, shorthorninvup27cb), (shorthorninv28daykwavg, shorthorninvup28cb),  (shorthorninv32daykwavg, shorthorninvup32cb), (shorthorninv33daykwavg, shorthorninvup33cb),  (shorthorninv37daykwavg, shorthorninvup37cb), (shorthorninv38daykwavg, shorthorninvup38cb), (shorthorninv39daykwavg, shorthorninvup39cb), (shorthorninv40daykwavg, shorthorninvup40cb), (shorthorninv41daykwavg, shorthorninvup41cb), (shorthorninv42daykwavg, shorthorninvup42cb), (shorthorninv43daykwavg, shorthorninvup43cb), (shorthorninv45daykwavg, shorthorninvup45cb), (shorthorninv46daykwavg, shorthorninvup46cb), (shorthorninv47daykwavg, shorthorninvup47cb), (shorthorninv48daykwavg, shorthorninvup48cb), (shorthorninv52daykwavg, shorthorninvup52cb), (shorthorninv53daykwavg, shorthorninvup53cb), (shorthorninv57daykwavg, shorthorninvup57cb), (shorthorninv58daykwavg, shorthorninvup58cb), (shorthorninv59daykwavg, shorthorninvup59cb), (shorthorninv60daykwavg, shorthorninvup60cb), (shorthorninv61daykwavg, shorthorninvup61cb), (shorthorninv62daykwavg, shorthorninvup62cb), (shorthorninv63daykwavg, shorthorninvup63cb), (shorthorninv64daykwavg, shorthorninvup64cb), (shorthorninv65daykwavg, shorthorninvup65cb), (shorthorninv66daykwavg, shorthorninvup66cb)]
-    shorthorn13strdaykwList = [(shorthorninv21daykwavg, shorthorninvup21cb), (shorthorninv25daykwavg, shorthorninvup25cb), (shorthorninv29daykwavg, shorthorninvup29cb), (shorthorninv30daykwavg, shorthorninvup30cb), (shorthorninv31daykwavg, shorthorninvup31cb), (shorthorninv34daykwavg, shorthorninvup34cb), (shorthorninv35daykwavg, shorthorninvup35cb), (shorthorninv36daykwavg, shorthorninvup36cb),  (shorthorninv44daykwavg, shorthorninvup44cb), (shorthorninv49daykwavg, shorthorninvup49cb), (shorthorninv50daykwavg, shorthorninvup50cb), (shorthorninv51daykwavg, shorthorninvup51cb), (shorthorninv54daykwavg, shorthorninvup54cb), (shorthorninv55daykwavg, shorthorninvup55cb), (shorthorninv56daykwavg, shorthorninvup56cb), (shorthorninv67daykwavg, shorthorninvup67cb), (shorthorninv68daykwavg, shorthorninvup68cb), (shorthorninv69daykwavg, shorthorninvup69cb), (shorthorninv70daykwavg, shorthorninvup70cb), (shorthorninv71daykwavg, shorthorninvup71cb), (shorthorninv72daykwavg, shorthorninvup72cb)]
-    sunflowerdaykwList = [(sunflowerinv3daykwavg, sunflowerinvup3cb), (sunflowerinv4daykwavg, sunflowerinvup4cb), (sunflowerinv5daykwavg, sunflowerinvup5cb), (sunflowerinv6daykwavg, sunflowerinvup6cb), (sunflowerinv7daykwavg, sunflowerinvup7cb), (sunflowerinv8daykwavg, sunflowerinvup8cb), (sunflowerinv9daykwavg, sunflowerinvup9cb), (sunflowerinv10daykwavg, sunflowerinvup10cb), (sunflowerinv11daykwavg, sunflowerinvup11cb), (sunflowerinv12daykwavg, sunflowerinvup12cb), (sunflowerinv13daykwavg, sunflowerinvup13cb), (sunflowerinv14daykwavg, sunflowerinvup14cb), (sunflowerinv15daykwavg, sunflowerinvup15cb), (sunflowerinv16daykwavg, sunflowerinvup16cb), (sunflowerinv17daykwavg, sunflowerinvup17cb), (sunflowerinv18daykwavg, sunflowerinvup18cb), (sunflowerinv19daykwavg, sunflowerinvup19cb), (sunflowerinv20daykwavg, sunflowerinvup20cb),  (sunflowerinv34daykwavg, sunflowerinvup34cb),  (sunflowerinv62daykwavg, sunflowerinvup62cb), (sunflowerinv63daykwavg, sunflowerinvup63cb), (sunflowerinv64daykwavg, sunflowerinvup64cb), (sunflowerinv65daykwavg, sunflowerinvup65cb), (sunflowerinv66daykwavg, sunflowerinvup66cb), (sunflowerinv67daykwavg, sunflowerinvup67cb), (sunflowerinv68daykwavg, sunflowerinvup68cb), (sunflowerinv69daykwavg, sunflowerinvup69cb), (sunflowerinv70daykwavg, sunflowerinvup70cb), (sunflowerinv71daykwavg, sunflowerinvup71cb), (sunflowerinv72daykwavg, sunflowerinvup72cb), (sunflowerinv73daykwavg, sunflowerinvup73cb), (sunflowerinv74daykwavg, sunflowerinvup74cb), (sunflowerinv75daykwavg, sunflowerinvup75cb), (sunflowerinv76daykwavg, sunflowerinvup76cb), (sunflowerinv77daykwavg, sunflowerinvup77cb)]
-    sunflower12strdaykwList = [(sunflowerinv1daykwavg, sunflowerinvup1cb), (sunflowerinv2daykwavg, sunflowerinvup2cb), (sunflowerinv21daykwavg, sunflowerinvup21cb), (sunflowerinv22daykwavg, sunflowerinvup22cb), (sunflowerinv23daykwavg, sunflowerinvup23cb), (sunflowerinv24daykwavg, sunflowerinvup24cb), (sunflowerinv25daykwavg, sunflowerinvup25cb), (sunflowerinv26daykwavg, sunflowerinvup26cb),  (sunflowerinv27daykwavg, sunflowerinvup27cb), (sunflowerinv28daykwavg, sunflowerinvup28cb), (sunflowerinv29daykwavg, sunflowerinvup29cb), (sunflowerinv30daykwavg, sunflowerinvup30cb), (sunflowerinv31daykwavg, sunflowerinvup31cb), (sunflowerinv32daykwavg, sunflowerinvup32cb),  (sunflowerinv33daykwavg, sunflowerinvup33cb), (sunflowerinv35daykwavg, sunflowerinvup35cb), (sunflowerinv36daykwavg, sunflowerinvup36cb), (sunflowerinv37daykwavg, sunflowerinvup37cb), (sunflowerinv38daykwavg, sunflowerinvup38cb), (sunflowerinv39daykwavg, sunflowerinvup39cb), (sunflowerinv40daykwavg, sunflowerinvup40cb), (sunflowerinv41daykwavg, sunflowerinvup41cb), (sunflowerinv42daykwavg, sunflowerinvup42cb), (sunflowerinv43daykwavg, sunflowerinvup43cb), (sunflowerinv44daykwavg, sunflowerinvup44cb), (sunflowerinv45daykwavg, sunflowerinvup45cb), (sunflowerinv46daykwavg, sunflowerinvup46cb), (sunflowerinv47daykwavg, sunflowerinvup47cb), (sunflowerinv48daykwavg, sunflowerinvup48cb), (sunflowerinv49daykwavg, sunflowerinvup49cb), (sunflowerinv50daykwavg, sunflowerinvup50cb), (sunflowerinv51daykwavg, sunflowerinvup51cb), (sunflowerinv52daykwavg, sunflowerinvup52cb), (sunflowerinv53daykwavg, sunflowerinvup53cb), (sunflowerinv54daykwavg, sunflowerinvup54cb),(sunflowerinv55daykwavg, sunflowerinvup55cb), (sunflowerinv56daykwavg, sunflowerinvup56cb), (sunflowerinv57daykwavg, sunflowerinvup57cb), (sunflowerinv58daykwavg, sunflowerinvup58cb), (sunflowerinv59daykwavg, sunflowerinvup59cb), (sunflowerinv60daykwavg, sunflowerinvup60cb),(sunflowerinv61daykwavg, sunflowerinvup61cb), (sunflowerinv78daykwavg, sunflowerinvup78cb), (sunflowerinv79daykwavg, sunflowerinvup79cb), (sunflowerinv80daykwavg, sunflowerinvup80cb) ]
-    upsondaykwList = [(upsoninv1daykwavg, upsoninvup1cb), (upsoninv2daykwavg, upsoninvup2cb), (upsoninv3daykwavg, upsoninvup3cb), (upsoninv4daykwavg, upsoninvup4cb), (upsoninv5daykwavg, upsoninvup5cb), (upsoninv9daykwavg, upsoninvup9cb), (upsoninv10daykwavg, upsoninvup10cb), (upsoninv11daykwavg, upsoninvup11cb), (upsoninv12daykwavg, upsoninvup12cb), (upsoninv13daykwavg, upsoninvup13cb), (upsoninv14daykwavg, upsoninvup14cb), (upsoninv15daykwavg, upsoninvup15cb), (upsoninv16daykwavg, upsoninvup16cb), (upsoninv17daykwavg, upsoninvup17cb), (upsoninv21daykwavg, upsoninvup21cb), (upsoninv22daykwavg, upsoninvup22cb), (upsoninv23daykwavg, upsoninvup23cb), (upsoninv24daykwavg, upsoninvup24cb)]
-    upson10strdaykwList = [(upsoninv6daykwavg, upsoninvup6cb), (upsoninv7daykwavg, upsoninvup7cb), (upsoninv8daykwavg, upsoninvup8cb), (upsoninv18daykwavg, upsoninvup18cb), (upsoninv19daykwavg, upsoninvup19cb), (upsoninv20daykwavg, upsoninvup20cb)]
-    warblerdaykwList = [(warblerinv1daykwavg, warblerinvup1cb), (warblerinv2daykwavg, warblerinvup2cb), (warblerinv3daykwavg, warblerinvup3cb), (warblerinv4daykwavg, warblerinvup4cb), (warblerinv5daykwavg, warblerinvup5cb), (warblerinv6daykwavg, warblerinvup6cb), (warblerinv7daykwavg, warblerinvup7cb), (warblerinv8daykwavg, warblerinvup8cb), (warblerinv9daykwavg, warblerinvup9cb), (warblerinv10daykwavg, warblerinvup10cb), (warblerinv11daykwavg, warblerinvup11cb), (warblerinv12daykwavg, warblerinvup12cb), (warblerinv13daykwavg, warblerinvup13cb), (warblerinv14daykwavg, warblerinvup14cb), (warblerinv15daykwavg, warblerinvup15cb), (warblerinv16daykwavg, warblerinvup16cb), (warblerinv17daykwavg, warblerinvup17cb), (warblerinv18daykwavg, warblerinvup18cb), (warblerinv19daykwavg, warblerinvup19cb), (warblerinv20daykwavg, warblerinvup20cb), (warblerinv21daykwavg, warblerinvup21cb), (warblerinv22daykwavg, warblerinvup22cb), (warblerinv23daykwavg, warblerinvup23cb), (warblerinv24daykwavg, warblerinvup24cb), (warblerinv25daykwavg, warblerinvup25cb), (warblerinv26daykwavg, warblerinvup26cb), (warblerinv27daykwavg, warblerinvup27cb), (warblerinv28daykwavg, warblerinvup28cb), (warblerinv29daykwavg, warblerinvup29cb), (warblerinv30daykwavg, warblerinvup30cb), (warblerinv31daykwavg, warblerinvup31cb), (warblerinv32daykwavg, warblerinvup32cb)]
-    washingtondaykwList = [(washingtoninv4daykwavg, washingtoninvup4cb), (washingtoninv5daykwavg, washingtoninvup5cb), (washingtoninv6daykwavg, washingtoninvup6cb), (washingtoninv7daykwavg, washingtoninvup7cb), (washingtoninv8daykwavg, washingtoninvup8cb), (washingtoninv9daykwavg, washingtoninvup9cb), (washingtoninv10daykwavg, washingtoninvup10cb), (washingtoninv11daykwavg, washingtoninvup11cb), (washingtoninv12daykwavg, washingtoninvup12cb), (washingtoninv15daykwavg, washingtoninvup15cb), (washingtoninv16daykwavg, washingtoninvup16cb), (washingtoninv17daykwavg, washingtoninvup17cb), (washingtoninv18daykwavg, washingtoninvup18cb), (washingtoninv19daykwavg, washingtoninvup19cb),  (washingtoninv21daykwavg, washingtoninvup21cb), (washingtoninv22daykwavg, washingtoninvup22cb), (washingtoninv23daykwavg, washingtoninvup23cb), (washingtoninv24daykwavg, washingtoninvup24cb), (washingtoninv40daykwavg, washingtoninvup40cb)]
-    washington12strdaykwList = [(washingtoninv1daykwavg, washingtoninvup1cb), (washingtoninv2daykwavg, washingtoninvup2cb), (washingtoninv3daykwavg, washingtoninvup3cb), (washingtoninv13daykwavg, washingtoninvup13cb), (washingtoninv14daykwavg, washingtoninvup14cb), (washingtoninv20daykwavg, washingtoninvup20cb), (washingtoninv25daykwavg, washingtoninvup25cb), (washingtoninv26daykwavg, washingtoninvup26cb), (washingtoninv27daykwavg, washingtoninvup27cb), (washingtoninv28daykwavg, washingtoninvup28cb), (washingtoninv29daykwavg, washingtoninvup29cb), (washingtoninv30daykwavg, washingtoninvup30cb), (washingtoninv31daykwavg, washingtoninvup31cb), (washingtoninv32daykwavg, washingtoninvup32cb), (washingtoninv33daykwavg, washingtoninvup33cb), (washingtoninv34daykwavg, washingtoninvup34cb), (washingtoninv35daykwavg, washingtoninvup35cb), (washingtoninv36daykwavg, washingtoninvup36cb), (washingtoninv37daykwavg, washingtoninvup37cb), (washingtoninv38daykwavg, washingtoninvup38cb), (washingtoninv39daykwavg, washingtoninvup39cb)]
-    whitehalldaykwList = [(whitehallinv1daykwavg, whitehallinvup1cb), (whitehallinv3daykwavg, whitehallinvup3cb), (whitehallinv4daykwavg, whitehallinvup4cb), (whitehallinv5daykwavg, whitehallinvup5cb),  (whitehallinv13daykwavg, whitehallinvup13cb), (whitehallinv14daykwavg, whitehallinvup14cb), (whitehallinv15daykwavg, whitehallinvup15cb), (whitehallinv16daykwavg, whitehallinvup16cb)]
-    whitehall13strdaykwList = [(whitehallinv2daykwavg, whitehallinvup2cb), (whitehallinv6daykwavg, whitehallinvup6cb), (whitehallinv7daykwavg, whitehallinvup7cb), (whitehallinv8daykwavg, whitehallinvup8cb), (whitehallinv9daykwavg, whitehallinvup9cb), (whitehallinv10daykwavg, whitehallinvup10cb), (whitehallinv11daykwavg, whitehallinvup11cb), (whitehallinv12daykwavg, whitehallinvup12cb)]
-    whitetaildaykwList = [(whitetailinv1daykwavg, whitetailinvup1cb), (whitetailinv2daykwavg, whitetailinvup2cb), (whitetailinv3daykwavg, whitetailinvup3cb), (whitetailinv5daykwavg, whitetailinvup5cb), (whitetailinv6daykwavg, whitetailinvup6cb), (whitetailinv7daykwavg, whitetailinvup7cb), (whitetailinv8daykwavg, whitetailinvup8cb), (whitetailinv9daykwavg, whitetailinvup9cb), (whitetailinv10daykwavg, whitetailinvup10cb), (whitetailinv11daykwavg, whitetailinvup11cb), (whitetailinv12daykwavg, whitetailinvup12cb),  (whitetailinv22daykwavg, whitetailinvup22cb), (whitetailinv23daykwavg, whitetailinvup23cb), (whitetailinv24daykwavg, whitetailinvup24cb), (whitetailinv25daykwavg, whitetailinvup25cb),  (whitetailinv32daykwavg, whitetailinvup32cb), (whitetailinv33daykwavg, whitetailinvup33cb),  (whitetailinv35daykwavg, whitetailinvup35cb), (whitetailinv36daykwavg, whitetailinvup36cb), (whitetailinv37daykwavg, whitetailinvup37cb), (whitetailinv38daykwavg, whitetailinvup38cb), (whitetailinv39daykwavg, whitetailinvup39cb), (whitetailinv40daykwavg, whitetailinvup40cb), (whitetailinv41daykwavg, whitetailinvup41cb), (whitetailinv42daykwavg, whitetailinvup42cb),  (whitetailinv49daykwavg, whitetailinvup49cb), (whitetailinv50daykwavg, whitetailinvup50cb), (whitetailinv51daykwavg, whitetailinvup51cb),  (whitetailinv57daykwavg, whitetailinvup57cb),  (whitetailinv61daykwavg, whitetailinvup61cb), (whitetailinv62daykwavg, whitetailinvup62cb), (whitetailinv63daykwavg, whitetailinvup63cb), (whitetailinv65daykwavg, whitetailinvup65cb), (whitetailinv66daykwavg, whitetailinvup66cb), (whitetailinv67daykwavg, whitetailinvup67cb), (whitetailinv68daykwavg, whitetailinvup68cb), (whitetailinv69daykwavg, whitetailinvup69cb), (whitetailinv70daykwavg, whitetailinvup70cb), (whitetailinv71daykwavg, whitetailinvup71cb), (whitetailinv72daykwavg, whitetailinvup72cb), (whitetailinv73daykwavg, whitetailinvup73cb), (whitetailinv74daykwavg, whitetailinvup74cb), (whitetailinv75daykwavg, whitetailinvup75cb), (whitetailinv76daykwavg, whitetailinvup76cb), (whitetailinv77daykwavg, whitetailinvup77cb), (whitetailinv78daykwavg, whitetailinvup78cb), (whitetailinv79daykwavg, whitetailinvup79cb), (whitetailinv80daykwavg, whitetailinvup80cb)]
-    whitetail17strdaykwList = [(whitetailinv4daykwavg, whitetailinvup4cb), (whitetailinv13daykwavg, whitetailinvup13cb), (whitetailinv14daykwavg, whitetailinvup14cb), (whitetailinv15daykwavg, whitetailinvup15cb), (whitetailinv16daykwavg, whitetailinvup16cb), (whitetailinv17daykwavg, whitetailinvup17cb), (whitetailinv18daykwavg, whitetailinvup18cb), (whitetailinv19daykwavg, whitetailinvup19cb), (whitetailinv20daykwavg, whitetailinvup20cb), (whitetailinv21daykwavg, whitetailinvup21cb), (whitetailinv26daykwavg, whitetailinvup26cb), (whitetailinv27daykwavg, whitetailinvup27cb), (whitetailinv28daykwavg, whitetailinvup28cb), (whitetailinv29daykwavg, whitetailinvup29cb), (whitetailinv30daykwavg, whitetailinvup30cb), (whitetailinv31daykwavg, whitetailinvup31cb), (whitetailinv34daykwavg, whitetailinvup34cb), (whitetailinv43daykwavg, whitetailinvup43cb), (whitetailinv44daykwavg, whitetailinvup44cb), (whitetailinv45daykwavg, whitetailinvup45cb), (whitetailinv46daykwavg, whitetailinvup46cb), (whitetailinv47daykwavg, whitetailinvup47cb), (whitetailinv48daykwavg, whitetailinvup48cb), (whitetailinv52daykwavg, whitetailinvup52cb), (whitetailinv53daykwavg, whitetailinvup53cb), (whitetailinv54daykwavg, whitetailinvup54cb), (whitetailinv55daykwavg, whitetailinvup55cb), (whitetailinv56daykwavg, whitetailinvup56cb), (whitetailinv58daykwavg, whitetailinvup58cb), (whitetailinv59daykwavg, whitetailinvup59cb), (whitetailinv60daykwavg, whitetailinvup60cb), (whitetailinv64daykwavg, whitetailinvup64cb)]
-    conetoe1daykwList = [(conetoe1inv1daykwavg, conetoe1invup1cb), (conetoe1inv2daykwavg, conetoe1invup2cb), (conetoe1inv3daykwavg, conetoe1invup3cb), (conetoe1inv4daykwavg, conetoe1invup4cb), (conetoe1inv5daykwavg, conetoe1invup5cb), (conetoe1inv6daykwavg, conetoe1invup6cb), (conetoe1inv7daykwavg, conetoe1invup7cb), (conetoe1inv8daykwavg, conetoe1invup8cb), (conetoe1inv9daykwavg, conetoe1invup9cb), (conetoe1inv10daykwavg, conetoe1invup10cb), (conetoe1inv11daykwavg, conetoe1invup11cb), (conetoe1inv12daykwavg, conetoe1invup12cb), (conetoe1inv13daykwavg, conetoe1invup13cb), (conetoe1inv14daykwavg, conetoe1invup14cb), (conetoe1inv15daykwavg, conetoe1invup15cb), (conetoe1inv16daykwavg, conetoe1invup16cb)]
-    duplindaykwList = [(duplinsinv1daykwavg, duplininvup4cb), (duplinsinv2daykwavg, duplininvup5cb), (duplinsinv3daykwavg, duplininvup6cb), (duplinsinv4daykwavg, duplininvup7cb), (duplinsinv5daykwavg, duplininvup8cb), (duplinsinv6daykwavg, duplininvup9cb), (duplinsinv7daykwavg, duplininvup10cb), (duplinsinv8daykwavg, duplininvup11cb), (duplinsinv9daykwavg, duplininvup12cb), (duplinsinv10daykwavg, duplininvup13cb), (duplinsinv11daykwavg, duplininvup14cb), (duplinsinv12daykwavg, duplininvup15cb), (duplinsinv13daykwavg, duplininvup16cb), (duplinsinv14daykwavg, duplininvup17cb), (duplinsinv15daykwavg, duplininvup18cb), (duplinsinv16daykwavg, duplininvup19cb), (duplinsinv17daykwavg, duplininvup20cb), (duplinsinv18daykwavg, duplininvup21cb)]
-    duplinCentraldaykwList = [(duplininv1daykwavg, duplininvup1cb), (duplininv2daykwavg, duplininvup2cb), (duplininv3daykwavg, duplininvup3cb)]
-    wayne11000daykwList = [(wayne1inv1daykwavg, wayne1invup1cb), (wayne1inv4daykwavg, wayne1invup4cb)]
-    wayne1daykwList = [(wayne1inv2daykwavg, wayne1invup2cb), (wayne1inv3daykwavg, wayne1invup3cb)]
-    wayne21000daykwList = [(wayne2inv3daykwavg, wayne2invup3cb), (wayne2inv4daykwavg, wayne2invup4cb)]
-    wayne2daykwList = [(wayne2inv1daykwavg, wayne2invup1cb), (wayne2inv2daykwavg, wayne2invup2cb)]
-    wayne31000daykwList = [(wayne3inv1daykwavg, wayne3invup1cb), (wayne3inv2daykwavg, wayne3invup2cb)]
-    wayne3daykwList = [(wayne3inv3daykwavg, wayne3invup3cb), (wayne3inv4daykwavg, wayne3invup4cb)]
-    freightlinedaykwList = [(freightlinerinv1daykwavg, freightlinerinvup1cb), (freightlinerinv3daykwavg, freightlinerinvup3cb), (freightlinerinv4daykwavg, freightlinerinvup4cb), (freightlinerinv5daykwavg, freightlinerinvup5cb), (freightlinerinv8daykwavg, freightlinerinvup8cb), (freightlinerinv9daykwavg, freightlinerinvup9cb), (freightlinerinv10daykwavg, freightlinerinvup10cb), (freightlinerinv11daykwavg, freightlinerinvup11cb), (freightlinerinv12daykwavg, freightlinerinvup12cb), (freightlinerinv15daykwavg, freightlinerinvup15cb), (freightlinerinv16daykwavg, freightlinerinvup16cb), (freightlinerinv17daykwavg, freightlinerinvup17cb), (freightlinerinv18daykwavg, freightlinerinvup18cb)]
-    freightline66daykwList = [(freightlinerinv2daykwavg, freightlinerinvup2cb), (freightlinerinv6daykwavg, freightlinerinvup6cb), (freightlinerinv7daykwavg, freightlinerinvup7cb), (freightlinerinv13daykwavg, freightlinerinvup13cb), (freightlinerinv14daykwavg, freightlinerinvup14cb)]
-    hollyswampdaykwList = [(hollyswampinv1daykwavg, hollyswampinvup1cb), (hollyswampinv2daykwavg, hollyswampinvup2cb), (hollyswampinv3daykwavg, hollyswampinvup3cb), (hollyswampinv4daykwavg, hollyswampinvup4cb), (hollyswampinv5daykwavg, hollyswampinvup5cb), (hollyswampinv6daykwavg, hollyswampinvup6cb), (hollyswampinv7daykwavg, hollyswampinvup7cb), (hollyswampinv8daykwavg, hollyswampinvup8cb), (hollyswampinv9daykwavg, hollyswampinvup9cb), (hollyswampinv10daykwavg, hollyswampinvup10cb), (hollyswampinv11daykwavg, hollyswampinvup11cb), (hollyswampinv12daykwavg, hollyswampinvup12cb), (hollyswampinv14daykwavg, hollyswampinvup14cb), (hollyswampinv16daykwavg, hollyswampinvup16cb)]
-    hollyswamp18strdaykwList = [(hollyswampinv15daykwavg, hollyswampinvup15cb), (hollyswampinv13daykwavg, hollyswampinvup13cb)]
-    pgdaykwList = [(pginv7daykwavg, pginvup7cb), (pginv8daykwavg, pginvup8cb), (pginv9daykwavg, pginvup9cb), (pginv10daykwavg, pginvup10cb), (pginv11daykwavg, pginvup11cb), (pginv12daykwavg, pginvup12cb), (pginv13daykwavg, pginvup13cb), (pginv14daykwavg, pginvup14cb), (pginv15daykwavg, pginvup15cb), (pginv16daykwavg, pginvup16cb), (pginv17daykwavg, pginvup17cb), (pginv18daykwavg, pginvup18cb)]
-    pg66daykwList = [(pginv1daykwavg, pginvup1cb), (pginv2daykwavg, pginvup2cb), (pginv3daykwavg, pginvup3cb), (pginv4daykwavg, pginvup4cb), (pginv5daykwavg, pginvup5cb), (pginv6daykwavg, pginvup6cb)]
-
+        
+    bluebirddaykwList = [(bluebirdinv1daykwavg, bluebirdinv1daykw, bluebirdinvup1cb), (bluebirdinv2daykwavg, bluebirdinv2daykw, bluebirdinvup2cb), (bluebirdinv3daykwavg, bluebirdinv3daykw, bluebirdinvup3cb), (bluebirdinv4daykwavg, bluebirdinv4daykw, bluebirdinvup4cb), (bluebirdinv5daykwavg, bluebirdinv5daykw, bluebirdinvup5cb), (bluebirdinv6daykwavg, bluebirdinv6daykw, bluebirdinvup6cb), (bluebirdinv7daykwavg, bluebirdinv7daykw, bluebirdinvup7cb), (bluebirdinv8daykwavg, bluebirdinv8daykw, bluebirdinvup8cb), (bluebirdinv9daykwavg, bluebirdinv9daykw, bluebirdinvup9cb), (bluebirdinv10daykwavg, bluebirdinv10daykw, bluebirdinvup10cb), (bluebirdinv11daykwavg, bluebirdinv11daykw, bluebirdinvup11cb), (bluebirdinv12daykwavg, bluebirdinv12daykw, bluebirdinvup12cb), (bluebirdinv13daykwavg, bluebirdinv13daykw, bluebirdinvup13cb), (bluebirdinv14daykwavg, bluebirdinv14daykw, bluebirdinvup14cb), (bluebirdinv15daykwavg, bluebirdinv15daykw, bluebirdinvup15cb), (bluebirdinv16daykwavg, bluebirdinv16daykw, bluebirdinvup16cb), (bluebirdinv17daykwavg, bluebirdinv17daykw, bluebirdinvup17cb), (bluebirdinv18daykwavg, bluebirdinv18daykw, bluebirdinvup18cb), (bluebirdinv19daykwavg, bluebirdinv19daykw, bluebirdinvup19cb), (bluebirdinv20daykwavg, bluebirdinv20daykw, bluebirdinvup20cb), (bluebirdinv21daykwavg, bluebirdinv21daykw, bluebirdinvup21cb), (bluebirdinv22daykwavg, bluebirdinv22daykw, bluebirdinvup22cb), (bluebirdinv23daykwavg, bluebirdinv23daykw, bluebirdinvup23cb), (bluebirdinv24daykwavg, bluebirdinv24daykw, bluebirdinvup24cb)]
+    cardinal96daykwList = [(cardinalinv1daykwavg, cardinalinv1daykw, cardinalinvup1cb), (cardinalinv2daykwavg, cardinalinv2daykw, cardinalinvup2cb), (cardinalinv3daykwavg, cardinalinv3daykw, cardinalinvup3cb), (cardinalinv4daykwavg, cardinalinv4daykw, cardinalinvup4cb), (cardinalinv5daykwavg, cardinalinv5daykw, cardinalinvup5cb), (cardinalinv6daykwavg, cardinalinv6daykw, cardinalinvup6cb), (cardinalinv7daykwavg, cardinalinv7daykw, cardinalinvup7cb), (cardinalinv22daykwavg, cardinalinv22daykw, cardinalinvup22cb), (cardinalinv23daykwavg, cardinalinv23daykw, cardinalinvup23cb), (cardinalinv24daykwavg, cardinalinv24daykw, cardinalinvup24cb), (cardinalinv25daykwavg, cardinalinv25daykw, cardinalinvup25cb), (cardinalinv26daykwavg, cardinalinv26daykw, cardinalinvup26cb), (cardinalinv27daykwavg, cardinalinv27daykw, cardinalinvup27cb), (cardinalinv28daykwavg, cardinalinv28daykw, cardinalinvup28cb), (cardinalinv43daykwavg, cardinalinv43daykw, cardinalinvup43cb), (cardinalinv44daykwavg, cardinalinv44daykw, cardinalinvup44cb), (cardinalinv45daykwavg, cardinalinv45daykw, cardinalinvup45cb), (cardinalinv46daykwavg, cardinalinv46daykw, cardinalinvup46cb), (cardinalinv47daykwavg, cardinalinv47daykw, cardinalinvup47cb)]
+    cardinal952daykwList = [(cardinalinv8daykwavg, cardinalinv8daykw, cardinalinvup8cb), (cardinalinv9daykwavg, cardinalinv9daykw, cardinalinvup9cb), (cardinalinv10daykwavg, cardinalinv10daykw, cardinalinvup10cb), (cardinalinv11daykwavg, cardinalinv11daykw, cardinalinvup11cb), (cardinalinv12daykwavg, cardinalinv12daykw, cardinalinvup12cb), (cardinalinv13daykwavg, cardinalinv13daykw, cardinalinvup13cb), (cardinalinv14daykwavg, cardinalinv14daykw, cardinalinvup14cb), (cardinalinv29daykwavg, cardinalinv29daykw, cardinalinvup29cb), (cardinalinv30daykwavg, cardinalinv30daykw, cardinalinvup30cb), (cardinalinv31daykwavg, cardinalinv31daykw, cardinalinvup31cb), (cardinalinv32daykwavg, cardinalinv32daykw, cardinalinvup32cb), (cardinalinv33daykwavg, cardinalinv33daykw, cardinalinvup33cb), (cardinalinv34daykwavg, cardinalinv34daykw, cardinalinvup34cb), (cardinalinv35daykwavg, cardinalinv35daykw, cardinalinvup35cb), (cardinalinv48daykwavg, cardinalinv48daykw, cardinalinvup48cb), (cardinalinv49daykwavg, cardinalinv49daykw, cardinalinvup49cb), (cardinalinv50daykwavg, cardinalinv50daykw, cardinalinvup50cb), (cardinalinv51daykwavg, cardinalinv51daykw, cardinalinvup51cb), (cardinalinv52daykwavg, cardinalinv52daykw, cardinalinvup52cb), (cardinalinv53daykwavg, cardinalinv53daykw, cardinalinvup53cb)]
+    cardinal944daykwList = [(cardinalinv15daykwavg, cardinalinv15daykw, cardinalinvup15cb), (cardinalinv16daykwavg, cardinalinv16daykw, cardinalinvup16cb), (cardinalinv17daykwavg, cardinalinv17daykw, cardinalinvup17cb), (cardinalinv18daykwavg, cardinalinv18daykw, cardinalinvup18cb), (cardinalinv19daykwavg, cardinalinv19daykw, cardinalinvup19cb), (cardinalinv20daykwavg, cardinalinv20daykw, cardinalinvup20cb), (cardinalinv21daykwavg, cardinalinv21daykw, cardinalinvup21cb), (cardinalinv36daykwavg, cardinalinv36daykw, cardinalinvup36cb), (cardinalinv37daykwavg, cardinalinv37daykw, cardinalinvup37cb), (cardinalinv38daykwavg, cardinalinv38daykw, cardinalinvup38cb), (cardinalinv39daykwavg, cardinalinv39daykw, cardinalinvup39cb), (cardinalinv40daykwavg, cardinalinv40daykw, cardinalinvup40cb), (cardinalinv41daykwavg, cardinalinv41daykw, cardinalinvup41cb), (cardinalinv42daykwavg, cardinalinv42daykw, cardinalinvup42cb), (cardinalinv54daykwavg, cardinalinv54daykw, cardinalinvup54cb), (cardinalinv55daykwavg, cardinalinv55daykw, cardinalinvup55cb), (cardinalinv56daykwavg, cardinalinv56daykw, cardinalinvup56cb), (cardinalinv57daykwavg, cardinalinv57daykw, cardinalinvup57cb), (cardinalinv58daykwavg, cardinalinv58daykw, cardinalinvup58cb), (cardinalinv59daykwavg, cardinalinv59daykw, cardinalinvup59cb)]
+    cherryblossomdaykwList = [(cherryblossominv1daykwavg, cherryblossominv1daykw, cherryblossominvup1cb), (cherryblossominv2daykwavg, cherryblossominv2daykw, cherryblossominvup2cb), (cherryblossominv3daykwavg, cherryblossominv3daykw, cherryblossominvup3cb), (cherryblossominv4daykwavg, cherryblossominv4daykw, cherryblossominvup4cb)]
+    harrisondaykwList = [(harrisoninv2daykwavg, harrisoninv2daykw, harrisoninvup2cb), (harrisoninv3daykwavg, harrisoninv3daykw, harrisoninvup3cb), (harrisoninv4daykwavg, harrisoninv4daykw, harrisoninvup4cb), (harrisoninv5daykwavg, harrisoninv5daykw, harrisoninvup5cb), (harrisoninv6daykwavg, harrisoninv6daykw, harrisoninvup6cb), (harrisoninv7daykwavg, harrisoninv7daykw, harrisoninvup7cb), (harrisoninv9daykwavg, harrisoninv9daykw, harrisoninvup9cb), (harrisoninv11daykwavg, harrisoninv11daykw, harrisoninvup11cb), (harrisoninv12daykwavg, harrisoninv12daykw, harrisoninvup12cb), (harrisoninv13daykwavg, harrisoninv13daykw, harrisoninvup13cb), (harrisoninv14daykwavg, harrisoninv14daykw, harrisoninvup14cb), (harrisoninv15daykwavg, harrisoninv15daykw, harrisoninvup15cb), (harrisoninv16daykwavg, harrisoninv16daykw, harrisoninvup16cb), (harrisoninv18daykwavg, harrisoninv18daykw, harrisoninvup18cb), (harrisoninv19daykwavg, harrisoninv19daykw, harrisoninvup19cb), (harrisoninv20daykwavg, harrisoninv20daykw, harrisoninvup20cb), (harrisoninv22daykwavg, harrisoninv22daykw, harrisoninvup22cb), (harrisoninv23daykwavg, harrisoninv23daykw, harrisoninvup23cb), (harrisoninv24daykwavg, harrisoninv24daykw, harrisoninvup24cb), (harrisoninv25daykwavg, harrisoninv25daykw, harrisoninvup25cb), (harrisoninv26daykwavg, harrisoninv26daykw, harrisoninvup26cb), (harrisoninv27daykwavg, harrisoninv27daykw, harrisoninvup27cb), (harrisoninv28daykwavg, harrisoninv28daykw, harrisoninvup28cb), (harrisoninv31daykwavg, harrisoninv31daykw, harrisoninvup31cb), (harrisoninv32daykwavg, harrisoninv32daykw, harrisoninvup32cb), (harrisoninv33daykwavg, harrisoninv33daykw, harrisoninvup33cb), (harrisoninv34daykwavg, harrisoninv34daykw, harrisoninvup34cb), (harrisoninv35daykwavg, harrisoninv35daykw, harrisoninvup35cb), (harrisoninv36daykwavg, harrisoninv36daykw, harrisoninvup36cb), (harrisoninv37daykwavg, harrisoninv37daykw, harrisoninvup37cb), (harrisoninv38daykwavg, harrisoninv38daykw, harrisoninvup38cb), (harrisoninv39daykwavg, harrisoninv39daykw, harrisoninvup39cb), (harrisoninv42daykwavg, harrisoninv42daykw, harrisoninvup42cb), (harrisoninv43daykwavg, harrisoninv43daykw, harrisoninvup43cb)]
+    harrison92daykwList = [(harrisoninv1daykwavg, harrisoninv1daykw, harrisoninvup1cb), (harrisoninv8daykwavg, harrisoninv8daykw, harrisoninvup8cb), (harrisoninv10daykwavg, harrisoninv10daykw, harrisoninvup10cb), (harrisoninv17daykwavg, harrisoninv17daykw, harrisoninvup17cb), (harrisoninv21daykwavg, harrisoninv21daykw, harrisoninvup21cb), (harrisoninv29daykwavg, harrisoninv29daykw, harrisoninvup29cb), (harrisoninv30daykwavg, harrisoninv30daykw, harrisoninvup30cb), (harrisoninv40daykwavg, harrisoninv40daykw, harrisoninvup40cb), (harrisoninv41daykwavg, harrisoninv41daykw, harrisoninvup41cb)]
+    hayesdaykwList = [(hayesinv1daykwavg, hayesinv1daykw, hayesinvup1cb), (hayesinv2daykwavg, hayesinv2daykw, hayesinvup2cb), (hayesinv3daykwavg, hayesinv3daykw, hayesinvup3cb), (hayesinv4daykwavg, hayesinv4daykw, hayesinvup4cb), (hayesinv5daykwavg, hayesinv5daykw, hayesinvup5cb), (hayesinv6daykwavg, hayesinv6daykw, hayesinvup6cb), (hayesinv7daykwavg, hayesinv7daykw, hayesinvup7cb), (hayesinv8daykwavg, hayesinv8daykw, hayesinvup8cb), (hayesinv9daykwavg, hayesinv9daykw, hayesinvup9cb), (hayesinv10daykwavg, hayesinv10daykw, hayesinvup10cb), (hayesinv11daykwavg, hayesinv11daykw, hayesinvup11cb), (hayesinv12daykwavg, hayesinv12daykw, hayesinvup12cb), (hayesinv13daykwavg, hayesinv13daykw, hayesinvup13cb), (hayesinv14daykwavg, hayesinv14daykw, hayesinvup14cb), (hayesinv15daykwavg, hayesinv15daykw, hayesinvup15cb), (hayesinv16daykwavg, hayesinv16daykw, hayesinvup16cb), (hayesinv17daykwavg, hayesinv17daykw, hayesinvup17cb), (hayesinv19daykwavg, hayesinv19daykw, hayesinvup19cb), (hayesinv20daykwavg, hayesinv20daykw, hayesinvup20cb), (hayesinv21daykwavg, hayesinv21daykw, hayesinvup21cb), (hayesinv23daykwavg, hayesinv23daykw, hayesinvup23cb), (hayesinv24daykwavg, hayesinv24daykw, hayesinvup24cb), (hayesinv25daykwavg, hayesinv25daykw, hayesinvup25cb), (hayesinv26daykwavg, hayesinv26daykw, hayesinvup26cb)]
+    hayes96daykwList = [(hayesinv22daykwavg, hayesinv22daykw, hayesinvup22cb), (hayesinv18daykwavg, hayesinv18daykw, hayesinvup18cb)]
+    hickorydaykwList = [(hickoryinv1daykwavg, hickoryinv1daykw, hickoryinvup1cb), (hickoryinv2daykwavg, hickoryinv2daykw, hickoryinvup2cb)]
+    vanburendaykwList = [(vanbureninv7daykwavg, vanbureninv7daykw, vanbureninvup7cb), (vanbureninv8daykwavg, vanbureninv8daykw, vanbureninvup8cb), (vanbureninv9daykwavg, vanbureninv9daykw, vanbureninvup9cb), (vanbureninv10daykwavg, vanbureninv10daykw, vanbureninvup10cb), (vanbureninv11daykwavg, vanbureninv11daykw, vanbureninvup11cb), (vanbureninv12daykwavg, vanbureninv12daykw, vanbureninvup12cb), (vanbureninv13daykwavg, vanbureninv13daykw, vanbureninvup13cb), (vanbureninv14daykwavg, vanbureninv14daykw, vanbureninvup14cb), (vanbureninv15daykwavg, vanbureninv15daykw, vanbureninvup15cb), (vanbureninv16daykwavg, vanbureninv16daykw, vanbureninvup16cb), (vanbureninv17daykwavg, vanbureninv17daykw, vanbureninvup17cb)]
+    vanburen93daykwList = [(vanbureninv1daykwavg, vanbureninv1daykw, vanbureninvup1cb), (vanbureninv2daykwavg, vanbureninv2daykw, vanbureninvup2cb), (vanbureninv3daykwavg, vanbureninv3daykw, vanbureninvup3cb), (vanbureninv4daykwavg, vanbureninv4daykw, vanbureninvup4cb), (vanbureninv5daykwavg, vanbureninv5daykw, vanbureninvup5cb), (vanbureninv6daykwavg, vanbureninv6daykw, vanbureninvup6cb)]
+    violetdaykwList = [(violetinv1daykwavg, violetinv1daykw, violetinvup1cb), (violetinv2daykwavg, violetinv2daykw, violetinvup2cb)]
+    wellonsdaykwList = [(wellonsinv1daykwavg, wellonsinv1daykw, wellonsinvup1cb), (wellonsinv2daykwavg, wellonsinv2daykw, wellonsinvup2cb), (wellonsinv3daykwavg, wellonsinv3daykw, wellonsinvup3cb), (wellonsinv4daykwavg, wellonsinv4daykw, wellonsinvup4cb), (wellonsinv5daykwavg, wellonsinv5daykw, wellonsinvup5cb), (wellonsinv6daykwavg, wellonsinv6daykw, wellonsinvup6cb)]
+    bishopvilleIIdaykwList = [(bishopvilleIIinv6daykwavg, bishopvilleIIinv6daykw, bishopvilleIIinvup6cb), (bishopvilleIIinv7daykwavg, bishopvilleIIinv7daykw, bishopvilleIIinvup7cb), (bishopvilleIIinv8daykwavg, bishopvilleIIinv8daykw, bishopvilleIIinvup8cb), (bishopvilleIIinv9daykwavg, bishopvilleIIinv9daykw, bishopvilleIIinvup9cb), (bishopvilleIIinv10daykwavg, bishopvilleIIinv10daykw, bishopvilleIIinvup10cb), (bishopvilleIIinv13daykwavg, bishopvilleIIinv13daykw, bishopvilleIIinvup13cb), (bishopvilleIIinv15daykwavg, bishopvilleIIinv15daykw, bishopvilleIIinvup15cb), (bishopvilleIIinv19daykwavg, bishopvilleIIinv19daykw, bishopvilleIIinvup19cb), (bishopvilleIIinv20daykwavg, bishopvilleIIinv20daykw, bishopvilleIIinvup20cb), (bishopvilleIIinv21daykwavg, bishopvilleIIinv21daykw, bishopvilleIIinvup21cb), (bishopvilleIIinv22daykwavg, bishopvilleIIinv22daykw, bishopvilleIIinvup22cb), (bishopvilleIIinv23daykwavg, bishopvilleIIinv23daykw, bishopvilleIIinvup23cb), (bishopvilleIIinv26daykwavg, bishopvilleIIinv26daykw, bishopvilleIIinvup26cb), (bishopvilleIIinv27daykwavg, bishopvilleIIinv27daykw, bishopvilleIIinvup27cb), (bishopvilleIIinv28daykwavg, bishopvilleIIinv28daykw, bishopvilleIIinvup28cb), (bishopvilleIIinv29daykwavg, bishopvilleIIinv29daykw, bishopvilleIIinvup29cb), (bishopvilleIIinv30daykwavg, bishopvilleIIinv30daykw, bishopvilleIIinvup30cb), (bishopvilleIIinv32daykwavg, bishopvilleIIinv32daykw, bishopvilleIIinvup32cb), (bishopvilleIIinv34daykwavg, bishopvilleIIinv34daykw, bishopvilleIIinvup34cb)]
+    bishopvilleII34strdaykwList = [(bishopvilleIIinv1daykwavg, bishopvilleIIinv1daykw, bishopvilleIIinvup1cb), (bishopvilleIIinv2daykwavg, bishopvilleIIinv2daykw, bishopvilleIIinvup2cb), (bishopvilleIIinv3daykwavg, bishopvilleIIinv3daykw, bishopvilleIIinvup3cb), (bishopvilleIIinv4daykwavg, bishopvilleIIinv4daykw, bishopvilleIIinvup4cb), (bishopvilleIIinv5daykwavg, bishopvilleIIinv5daykw, bishopvilleIIinvup5cb), (bishopvilleIIinv11daykwavg, bishopvilleIIinv11daykw, bishopvilleIIinvup11cb), (bishopvilleIIinv12daykwavg, bishopvilleIIinv12daykw, bishopvilleIIinvup12cb), (bishopvilleIIinv14daykwavg, bishopvilleIIinv14daykw, bishopvilleIIinvup14cb), (bishopvilleIIinv16daykwavg, bishopvilleIIinv16daykw, bishopvilleIIinvup16cb), (bishopvilleIIinv17daykwavg, bishopvilleIIinv17daykw, bishopvilleIIinvup17cb), (bishopvilleIIinv18daykwavg, bishopvilleIIinv18daykw, bishopvilleIIinvup18cb), (bishopvilleIIinv31daykwavg, bishopvilleIIinv31daykw, bishopvilleIIinvup31cb), (bishopvilleIIinv33daykwavg, bishopvilleIIinv33daykw, bishopvilleIIinvup33cb), (bishopvilleIIinv35daykwavg, bishopvilleIIinv35daykw, bishopvilleIIinvup35cb), (bishopvilleIIinv36daykwavg, bishopvilleIIinv36daykw, bishopvilleIIinvup36cb)]
+    bishopvilleII36strdaykwList = [(bishopvilleIIinv24daykwavg, bishopvilleIIinv24daykw, bishopvilleIIinvup24cb), (bishopvilleIIinv25daykwavg, bishopvilleIIinv25daykw, bishopvilleIIinvup25cb)]
+    hicksondaykwList = [(hicksoninv7daykwavg, hicksoninv7daykw, hicksoninvup7cb), (hicksoninv8daykwavg, hicksoninv8daykw, hicksoninvup8cb), (hicksoninv9daykwavg, hicksoninv9daykw, hicksoninvup9cb), (hicksoninv12daykwavg, hicksoninv12daykw, hicksoninvup12cb), (hicksoninv13daykwavg, hicksoninv13daykw, hicksoninvup13cb), (hicksoninv14daykwavg, hicksoninv14daykw, hicksoninvup14cb), (hicksoninv15daykwavg, hicksoninv15daykw, hicksoninvup15cb), (hicksoninv16daykwavg, hicksoninv16daykw, hicksoninvup16cb)]
+    hickson17strdaykwList = [(hicksoninv1daykwavg, hicksoninv1daykw, hicksoninvup1cb), (hicksoninv2daykwavg, hicksoninv2daykw, hicksoninvup2cb), (hicksoninv3daykwavg, hicksoninv3daykw, hicksoninvup3cb), (hicksoninv4daykwavg, hicksoninv4daykw, hicksoninvup4cb), (hicksoninv5daykwavg, hicksoninv5daykw, hicksoninvup5cb), (hicksoninv6daykwavg, hicksoninv6daykw, hicksoninvup6cb), (hicksoninv10daykwavg, hicksoninv10daykw, hicksoninvup10cb), (hicksoninv11daykwavg, hicksoninv11daykw, hicksoninvup11cb)]
+    jeffersondaykwList = [(jeffersoninv5daykwavg, jeffersoninv5daykw, jeffersoninvup5cb), (jeffersoninv7daykwavg, jeffersoninv7daykw, jeffersoninvup7cb), (jeffersoninv8daykwavg, jeffersoninv8daykw, jeffersoninvup8cb), (jeffersoninv9daykwavg, jeffersoninv9daykw, jeffersoninvup9cb), (jeffersoninv10daykwavg, jeffersoninv10daykw, jeffersoninvup10cb), (jeffersoninv11daykwavg, jeffersoninv11daykw, jeffersoninvup11cb), (jeffersoninv12daykwavg, jeffersoninv12daykw, jeffersoninvup12cb), (jeffersoninv15daykwavg, jeffersoninv15daykw, jeffersoninvup15cb), (jeffersoninv16daykwavg, jeffersoninv16daykw, jeffersoninvup16cb), (jeffersoninv19daykwavg, jeffersoninv19daykw, jeffersoninvup19cb), (jeffersoninv24daykwavg, jeffersoninv24daykw, jeffersoninvup24cb), (jeffersoninv26daykwavg, jeffersoninv26daykw, jeffersoninvup26cb), (jeffersoninv27daykwavg, jeffersoninv27daykw, jeffersoninvup27cb), (jeffersoninv28daykwavg, jeffersoninv28daykw, jeffersoninvup28cb), (jeffersoninv29daykwavg, jeffersoninv29daykw, jeffersoninvup29cb), (jeffersoninv30daykwavg, jeffersoninv30daykw, jeffersoninvup30cb), (jeffersoninv31daykwavg, jeffersoninv31daykw, jeffersoninvup31cb), (jeffersoninv32daykwavg, jeffersoninv32daykw, jeffersoninvup32cb), (jeffersoninv33daykwavg, jeffersoninv33daykw, jeffersoninvup33cb), (jeffersoninv34daykwavg, jeffersoninv34daykw, jeffersoninvup34cb), (jeffersoninv35daykwavg, jeffersoninv35daykw, jeffersoninvup35cb), (jeffersoninv36daykwavg, jeffersoninv36daykw, jeffersoninvup36cb), (jeffersoninv37daykwavg, jeffersoninv37daykw, jeffersoninvup37cb), (jeffersoninv38daykwavg, jeffersoninv38daykw, jeffersoninvup38cb), (jeffersoninv39daykwavg, jeffersoninv39daykw, jeffersoninvup39cb), (jeffersoninv48daykwavg, jeffersoninv48daykw, jeffersoninvup48cb), (jeffersoninv57daykwavg, jeffersoninv57daykw, jeffersoninvup57cb), (jeffersoninv58daykwavg, jeffersoninv58daykw, jeffersoninvup58cb), (jeffersoninv59daykwavg, jeffersoninv59daykw, jeffersoninvup59cb), (jeffersoninv60daykwavg, jeffersoninv60daykw, jeffersoninvup60cb), (jeffersoninv61daykwavg, jeffersoninv61daykw, jeffersoninvup61cb), (jeffersoninv62daykwavg, jeffersoninv62daykw, jeffersoninvup62cb), (jeffersoninv63daykwavg, jeffersoninv63daykw, jeffersoninvup63cb), (jeffersoninv64daykwavg, jeffersoninv64daykw, jeffersoninvup64cb)]
+    jefferson18strdaykwList = [(jeffersoninv1daykwavg, jeffersoninv1daykw, jeffersoninvup1cb), (jeffersoninv2daykwavg, jeffersoninv2daykw, jeffersoninvup2cb), (jeffersoninv3daykwavg, jeffersoninv3daykw, jeffersoninvup3cb), (jeffersoninv4daykwavg, jeffersoninv4daykw, jeffersoninvup4cb), (jeffersoninv6daykwavg, jeffersoninv6daykw, jeffersoninvup6cb), (jeffersoninv13daykwavg, jeffersoninv13daykw, jeffersoninvup13cb), (jeffersoninv14daykwavg, jeffersoninv14daykw, jeffersoninvup14cb), (jeffersoninv17daykwavg, jeffersoninv17daykw, jeffersoninvup17cb), (jeffersoninv18daykwavg, jeffersoninv18daykw, jeffersoninvup18cb), (jeffersoninv20daykwavg, jeffersoninv20daykw, jeffersoninvup20cb), (jeffersoninv21daykwavg, jeffersoninv21daykw, jeffersoninvup21cb), (jeffersoninv22daykwavg, jeffersoninv22daykw, jeffersoninvup22cb), (jeffersoninv23daykwavg, jeffersoninv23daykw, jeffersoninvup23cb), (jeffersoninv25daykwavg, jeffersoninv25daykw, jeffersoninvup25cb), (jeffersoninv40daykwavg, jeffersoninv40daykw, jeffersoninvup40cb), (jeffersoninv41daykwavg, jeffersoninv41daykw, jeffersoninvup41cb), (jeffersoninv42daykwavg, jeffersoninv42daykw, jeffersoninvup42cb), (jeffersoninv43daykwavg, jeffersoninv43daykw, jeffersoninvup43cb), (jeffersoninv44daykwavg, jeffersoninv44daykw, jeffersoninvup44cb), (jeffersoninv45daykwavg, jeffersoninv45daykw, jeffersoninvup45cb), (jeffersoninv46daykwavg, jeffersoninv46daykw, jeffersoninvup46cb), (jeffersoninv47daykwavg, jeffersoninv47daykw, jeffersoninvup47cb), (jeffersoninv49daykwavg, jeffersoninv49daykw, jeffersoninvup49cb), (jeffersoninv50daykwavg, jeffersoninv50daykw, jeffersoninvup50cb), (jeffersoninv51daykwavg, jeffersoninv51daykw, jeffersoninvup51cb), (jeffersoninv52daykwavg, jeffersoninv52daykw, jeffersoninvup52cb), (jeffersoninv53daykwavg, jeffersoninv53daykw, jeffersoninvup53cb), (jeffersoninv54daykwavg, jeffersoninv54daykw, jeffersoninvup54cb), (jeffersoninv55daykwavg, jeffersoninv55daykw, jeffersoninvup55cb), (jeffersoninv56daykwavg, jeffersoninv56daykw, jeffersoninvup56cb)]
+    marshalldaykwList = [(marshallinv1daykwavg, marshallinv1daykw, marshallinvup1cb), (marshallinv2daykwavg, marshallinv2daykw, marshallinvup2cb), (marshallinv3daykwavg, marshallinv3daykw, marshallinvup3cb), (marshallinv4daykwavg, marshallinv4daykw, marshallinvup4cb), (marshallinv5daykwavg, marshallinv5daykw, marshallinvup5cb), (marshallinv6daykwavg, marshallinv6daykw, marshallinvup6cb), (marshallinv7daykwavg, marshallinv7daykw, marshallinvup7cb), (marshallinv8daykwavg, marshallinv8daykw, marshallinvup8cb), (marshallinv9daykwavg, marshallinv9daykw, marshallinvup9cb), (marshallinv10daykwavg, marshallinv10daykw, marshallinvup10cb), (marshallinv11daykwavg, marshallinv11daykw, marshallinvup11cb), (marshallinv12daykwavg, marshallinv12daykw, marshallinvup12cb), (marshallinv13daykwavg, marshallinv13daykw, marshallinvup13cb), (marshallinv14daykwavg, marshallinv14daykw, marshallinvup14cb), (marshallinv15daykwavg, marshallinv15daykw, marshallinvup15cb), (marshallinv16daykwavg, marshallinv16daykw, marshallinvup16cb)]
+    ogburndaykwList = [(ogburninv1daykwavg, ogburninv1daykw, ogburninvup1cb), (ogburninv2daykwavg, ogburninv2daykw, ogburninvup2cb), (ogburninv3daykwavg, ogburninv3daykw, ogburninvup3cb), (ogburninv4daykwavg, ogburninv4daykw, ogburninvup4cb), (ogburninv5daykwavg, ogburninv5daykw, ogburninvup5cb), (ogburninv6daykwavg, ogburninv6daykw, ogburninvup6cb), (ogburninv7daykwavg, ogburninv7daykw, ogburninvup7cb), (ogburninv8daykwavg, ogburninv8daykw, ogburninvup8cb), (ogburninv9daykwavg, ogburninv9daykw, ogburninvup9cb), (ogburninv10daykwavg, ogburninv10daykw, ogburninvup10cb), (ogburninv11daykwavg, ogburninv11daykw, ogburninvup11cb), (ogburninv12daykwavg, ogburninv12daykw, ogburninvup12cb), (ogburninv13daykwavg, ogburninv13daykw, ogburninvup13cb), (ogburninv14daykwavg, ogburninv14daykw, ogburninvup14cb), (ogburninv15daykwavg, ogburninv15daykw, ogburninvup15cb), (ogburninv16daykwavg, ogburninv16daykw, ogburninvup16cb)]
+    tedderdaykwList = [(tedderinv5daykwavg, tedderinv5daykw, tedderinvup5cb), (tedderinv6daykwavg, tedderinv6daykw, tedderinvup6cb), (tedderinv7daykwavg, tedderinv7daykw, tedderinvup7cb), (tedderinv9daykwavg, tedderinv9daykw, tedderinvup9cb), (tedderinv10daykwavg, tedderinv10daykw, tedderinvup10cb), (tedderinv11daykwavg, tedderinv11daykw, tedderinvup11cb), (tedderinv12daykwavg, tedderinv12daykw, tedderinvup12cb), (tedderinv13daykwavg, tedderinv13daykw, tedderinvup13cb), (tedderinv14daykwavg, tedderinv14daykw, tedderinvup14cb)]
+    tedder15strdaykwList = [(tedderinv1daykwavg, tedderinv1daykw, tedderinvup1cb), (tedderinv2daykwavg, tedderinv2daykw, tedderinvup2cb), (tedderinv3daykwavg, tedderinv3daykw, tedderinvup3cb), (tedderinv4daykwavg, tedderinv4daykw, tedderinvup4cb), (tedderinv8daykwavg, tedderinv8daykw, tedderinvup8cb), (tedderinv15daykwavg, tedderinv15daykw, tedderinvup15cb), (tedderinv16daykwavg, tedderinv16daykw, tedderinvup16cb)]
+    thunderheaddaykwList = [(thunderheadinv1daykwavg, thunderheadinv1daykw, thunderheadinvup1cb), (thunderheadinv2daykwavg, thunderheadinv2daykw, thunderheadinvup2cb), (thunderheadinv3daykwavg, thunderheadinv3daykw, thunderheadinvup3cb), (thunderheadinv4daykwavg, thunderheadinv4daykw, thunderheadinvup4cb), (thunderheadinv5daykwavg, thunderheadinv5daykw, thunderheadinvup5cb), (thunderheadinv6daykwavg, thunderheadinv6daykw, thunderheadinvup6cb), (thunderheadinv7daykwavg, thunderheadinv7daykw, thunderheadinvup7cb), (thunderheadinv8daykwavg, thunderheadinv8daykw, thunderheadinvup8cb), (thunderheadinv9daykwavg, thunderheadinv9daykw, thunderheadinvup9cb), (thunderheadinv10daykwavg, thunderheadinv10daykw, thunderheadinvup10cb), (thunderheadinv11daykwavg, thunderheadinv11daykw, thunderheadinvup11cb), (thunderheadinv12daykwavg, thunderheadinv12daykw, thunderheadinvup12cb), (thunderheadinv14daykwavg, thunderheadinv14daykw, thunderheadinvup14cb), (thunderheadinv16daykwavg, thunderheadinv16daykw, thunderheadinvup16cb)]
+    thunderhead14strdaykwList = [(thunderheadinv15daykwavg, thunderheadinv15daykw, thunderheadinvup15cb), (thunderheadinv13daykwavg, thunderheadinv13daykw, thunderheadinvup13cb)]
+    bulloch1adaykwList = [(bulloch1ainv7daykwavg, bulloch1ainv7daykw, bulloch1ainvup7cb), (bulloch1ainv8daykwavg, bulloch1ainv8daykw, bulloch1ainvup8cb), (bulloch1ainv9daykwavg, bulloch1ainv9daykw, bulloch1ainvup9cb), (bulloch1ainv10daykwavg, bulloch1ainv10daykw, bulloch1ainvup10cb), (bulloch1ainv11daykwavg, bulloch1ainv11daykw, bulloch1ainvup11cb), (bulloch1ainv12daykwavg, bulloch1ainv12daykw, bulloch1ainvup12cb), (bulloch1ainv13daykwavg, bulloch1ainv13daykw, bulloch1ainvup13cb), (bulloch1ainv14daykwavg, bulloch1ainv14daykw, bulloch1ainvup14cb), (bulloch1ainv15daykwavg, bulloch1ainv15daykw, bulloch1ainvup15cb), (bulloch1ainv16daykwavg, bulloch1ainv16daykw, bulloch1ainvup16cb), (bulloch1ainv17daykwavg, bulloch1ainv17daykw, bulloch1ainvup17cb), (bulloch1ainv18daykwavg, bulloch1ainv18daykw, bulloch1ainvup18cb), (bulloch1ainv19daykwavg, bulloch1ainv19daykw, bulloch1ainvup19cb), (bulloch1ainv20daykwavg, bulloch1ainv20daykw, bulloch1ainvup20cb), (bulloch1ainv21daykwavg, bulloch1ainv21daykw, bulloch1ainvup21cb), (bulloch1ainv22daykwavg, bulloch1ainv22daykw, bulloch1ainvup22cb), (bulloch1ainv23daykwavg, bulloch1ainv23daykw, bulloch1ainvup23cb), (bulloch1ainv24daykwavg, bulloch1ainv24daykw, bulloch1ainvup24cb)]
+    bulloch1a10strdaykwList = [(bulloch1ainv1daykwavg, bulloch1ainv1daykw, bulloch1ainvup1cb), (bulloch1ainv2daykwavg, bulloch1ainv2daykw, bulloch1ainvup2cb), (bulloch1ainv3daykwavg, bulloch1ainv3daykw, bulloch1ainvup3cb), (bulloch1ainv4daykwavg, bulloch1ainv4daykw, bulloch1ainvup4cb), (bulloch1ainv5daykwavg, bulloch1ainv5daykw, bulloch1ainvup5cb), (bulloch1ainv6daykwavg, bulloch1ainv6daykw, bulloch1ainvup6cb)]
+    bulloch1bdaykwList = [(bulloch1binv2daykwavg, bulloch1binv2daykw, bulloch1binvup2cb), (bulloch1binv3daykwavg, bulloch1binv3daykw, bulloch1binvup3cb), (bulloch1binv4daykwavg, bulloch1binv4daykw, bulloch1binvup4cb), (bulloch1binv5daykwavg, bulloch1binv5daykw, bulloch1binvup5cb), (bulloch1binv6daykwavg, bulloch1binv6daykw, bulloch1binvup6cb), (bulloch1binv7daykwavg, bulloch1binv7daykw, bulloch1binvup7cb), (bulloch1binv8daykwavg, bulloch1binv8daykw, bulloch1binvup8cb), (bulloch1binv13daykwavg, bulloch1binv13daykw, bulloch1binvup13cb), (bulloch1binv14daykwavg, bulloch1binv14daykw, bulloch1binvup14cb), (bulloch1binv15daykwavg, bulloch1binv15daykw, bulloch1binvup15cb), (bulloch1binv16daykwavg, bulloch1binv16daykw, bulloch1binvup16cb), (bulloch1binv18daykwavg, bulloch1binv18daykw, bulloch1binvup18cb), (bulloch1binv19daykwavg, bulloch1binv19daykw, bulloch1binvup19cb), (bulloch1binv20daykwavg, bulloch1binv20daykw, bulloch1binvup20cb), (bulloch1binv21daykwavg, bulloch1binv21daykw, bulloch1binvup21cb), (bulloch1binv22daykwavg, bulloch1binv22daykw, bulloch1binvup22cb), (bulloch1binv23daykwavg, bulloch1binv23daykw, bulloch1binvup23cb), (bulloch1binv24daykwavg, bulloch1binv24daykw, bulloch1binvup24cb)]
+    bulloch1b10strdaykwList = [(bulloch1binv1daykwavg, bulloch1binv1daykw, bulloch1binvup1cb), (bulloch1binv9daykwavg, bulloch1binv9daykw, bulloch1binvup9cb), (bulloch1binv10daykwavg, bulloch1binv10daykw, bulloch1binvup10cb), (bulloch1binv11daykwavg, bulloch1binv11daykw, bulloch1binvup11cb), (bulloch1binv12daykwavg, bulloch1binv12daykw, bulloch1binvup12cb), (bulloch1binv17daykwavg, bulloch1binv17daykw, bulloch1binvup17cb)]
+    grayfoxdaykwList = [(grayfoxinv1daykwavg, grayfoxinv1daykw, grayfoxinvup1cb), (grayfoxinv2daykwavg, grayfoxinv2daykw, grayfoxinvup2cb), (grayfoxinv3daykwavg, grayfoxinv3daykw, grayfoxinvup3cb), (grayfoxinv4daykwavg, grayfoxinv4daykw, grayfoxinvup4cb), (grayfoxinv5daykwavg, grayfoxinv5daykw, grayfoxinvup5cb), (grayfoxinv6daykwavg, grayfoxinv6daykw, grayfoxinvup6cb), (grayfoxinv7daykwavg, grayfoxinv7daykw, grayfoxinvup7cb), (grayfoxinv8daykwavg, grayfoxinv8daykw, grayfoxinvup8cb), (grayfoxinv9daykwavg, grayfoxinv9daykw, grayfoxinvup9cb), (grayfoxinv10daykwavg, grayfoxinv10daykw, grayfoxinvup10cb), (grayfoxinv11daykwavg, grayfoxinv11daykw, grayfoxinvup11cb), (grayfoxinv12daykwavg, grayfoxinv12daykw, grayfoxinvup12cb), (grayfoxinv13daykwavg, grayfoxinv13daykw, grayfoxinvup13cb), (grayfoxinv14daykwavg, grayfoxinv14daykw, grayfoxinvup14cb), (grayfoxinv15daykwavg, grayfoxinv15daykw, grayfoxinvup15cb), (grayfoxinv16daykwavg, grayfoxinv16daykw, grayfoxinvup16cb), (grayfoxinv17daykwavg, grayfoxinv17daykw, grayfoxinvup17cb), (grayfoxinv18daykwavg, grayfoxinv18daykw, grayfoxinvup18cb), (grayfoxinv19daykwavg, grayfoxinv19daykw, grayfoxinvup19cb), (grayfoxinv20daykwavg, grayfoxinv20daykw, grayfoxinvup20cb), (grayfoxinv21daykwavg, grayfoxinv21daykw, grayfoxinvup21cb), (grayfoxinv22daykwavg, grayfoxinv22daykw, grayfoxinvup22cb), (grayfoxinv23daykwavg, grayfoxinv23daykw, grayfoxinvup23cb), (grayfoxinv24daykwavg, grayfoxinv24daykw, grayfoxinvup24cb), (grayfoxinv25daykwavg, grayfoxinv25daykw, grayfoxinvup25cb), (grayfoxinv26daykwavg, grayfoxinv26daykw, grayfoxinvup26cb), (grayfoxinv27daykwavg, grayfoxinv27daykw, grayfoxinvup27cb), (grayfoxinv28daykwavg, grayfoxinv28daykw, grayfoxinvup28cb), (grayfoxinv29daykwavg, grayfoxinv29daykw, grayfoxinvup29cb), (grayfoxinv30daykwavg, grayfoxinv30daykw, grayfoxinvup30cb), (grayfoxinv31daykwavg, grayfoxinv31daykw, grayfoxinvup31cb), (grayfoxinv32daykwavg, grayfoxinv32daykw, grayfoxinvup32cb), (grayfoxinv33daykwavg, grayfoxinv33daykw, grayfoxinvup33cb), (grayfoxinv34daykwavg, grayfoxinv34daykw, grayfoxinvup34cb), (grayfoxinv35daykwavg, grayfoxinv35daykw, grayfoxinvup35cb), (grayfoxinv36daykwavg, grayfoxinv36daykw, grayfoxinvup36cb), (grayfoxinv37daykwavg, grayfoxinv37daykw, grayfoxinvup37cb), (grayfoxinv38daykwavg, grayfoxinv38daykw, grayfoxinvup38cb), (grayfoxinv39daykwavg, grayfoxinv39daykw, grayfoxinvup39cb), (grayfoxinv40daykwavg, grayfoxinv40daykw, grayfoxinvup40cb)]
+    hardingdaykwList = [(hardinginv4daykwavg, hardinginv4daykw, hardinginvup4cb), (hardinginv5daykwavg, hardinginv5daykw, hardinginvup5cb), (hardinginv6daykwavg, hardinginv6daykw, hardinginvup6cb), (hardinginv10daykwavg, hardinginv10daykw, hardinginvup10cb), (hardinginv11daykwavg, hardinginv11daykw, hardinginvup11cb), (hardinginv12daykwavg, hardinginv12daykw, hardinginvup12cb), (hardinginv13daykwavg, hardinginv13daykw, hardinginvup13cb), (hardinginv14daykwavg, hardinginv14daykw, hardinginvup14cb), (hardinginv15daykwavg, hardinginv15daykw, hardinginvup15cb), (hardinginv17daykwavg, hardinginv17daykw, hardinginvup17cb), (hardinginv18daykwavg, hardinginv18daykw, hardinginvup18cb), (hardinginv19daykwavg, hardinginv19daykw, hardinginvup19cb)]
+    harding12strdaykwList = [(hardinginv1daykwavg, hardinginv1daykw, hardinginvup1cb), (hardinginv2daykwavg, hardinginv2daykw, hardinginvup2cb), (hardinginv3daykwavg, hardinginv3daykw, hardinginvup3cb), (hardinginv7daykwavg, hardinginv7daykw, hardinginvup7cb), (hardinginv8daykwavg, hardinginv8daykw, hardinginvup8cb), (hardinginv9daykwavg, hardinginv9daykw, hardinginvup9cb), (hardinginv16daykwavg, hardinginv16daykw, hardinginvup16cb), (hardinginv20daykwavg, hardinginv20daykw, hardinginvup20cb), (hardinginv21daykwavg, hardinginv21daykw, hardinginvup21cb), (hardinginv22daykwavg, hardinginv22daykw, hardinginvup22cb), (hardinginv23daykwavg, hardinginv23daykw, hardinginvup23cb), (hardinginv24daykwavg, hardinginv24daykw, hardinginvup24cb)]
+    mcleandaykwList = [(mcleaninv2daykwavg, mcleaninv2daykw, mcleaninvup2cb), (mcleaninv3daykwavg, mcleaninv3daykw, mcleaninvup3cb), (mcleaninv4daykwavg, mcleaninv4daykw, mcleaninvup4cb), (mcleaninv5daykwavg, mcleaninv5daykw, mcleaninvup5cb), (mcleaninv6daykwavg, mcleaninv6daykw, mcleaninvup6cb), (mcleaninv7daykwavg, mcleaninv7daykw, mcleaninvup7cb), (mcleaninv8daykwavg, mcleaninv8daykw, mcleaninvup8cb), (mcleaninv9daykwavg, mcleaninv9daykw, mcleaninvup9cb), (mcleaninv10daykwavg, mcleaninv10daykw, mcleaninvup10cb), (mcleaninv11daykwavg, mcleaninv11daykw, mcleaninvup11cb), (mcleaninv12daykwavg, mcleaninv12daykw, mcleaninvup12cb), (mcleaninv13daykwavg, mcleaninv13daykw, mcleaninvup13cb), (mcleaninv14daykwavg, mcleaninv14daykw, mcleaninvup14cb), (mcleaninv15daykwavg, mcleaninv15daykw, mcleaninvup15cb), (mcleaninv16daykwavg, mcleaninv16daykw, mcleaninvup16cb), (mcleaninv18daykwavg, mcleaninv18daykw, mcleaninvup18cb), (mcleaninv20daykwavg, mcleaninv20daykw, mcleaninvup20cb), (mcleaninv22daykwavg, mcleaninv22daykw, mcleaninvup22cb), (mcleaninv24daykwavg, mcleaninv24daykw, mcleaninvup24cb), (mcleaninv25daykwavg, mcleaninv25daykw, mcleaninvup25cb), (mcleaninv26daykwavg, mcleaninv26daykw, mcleaninvup26cb), (mcleaninv30daykwavg, mcleaninv30daykw, mcleaninvup30cb)]
+    mclean10strdaykwList = [(mcleaninv1daykwavg, mcleaninv1daykw, mcleaninvup1cb), (mcleaninv17daykwavg, mcleaninv17daykw, mcleaninvup17cb), (mcleaninv19daykwavg, mcleaninv19daykw, mcleaninvup19cb), (mcleaninv21daykwavg, mcleaninv21daykw, mcleaninvup21cb), (mcleaninv23daykwavg, mcleaninv23daykw, mcleaninvup23cb), (mcleaninv27daykwavg, mcleaninv27daykw, mcleaninvup27cb), (mcleaninv28daykwavg, mcleaninv28daykw, mcleaninvup28cb), (mcleaninv29daykwavg, mcleaninv29daykw, mcleaninvup29cb), (mcleaninv31daykwavg, mcleaninv31daykw, mcleaninvup31cb), (mcleaninv32daykwavg, mcleaninv32daykw, mcleaninvup32cb), (mcleaninv33daykwavg, mcleaninv33daykw, mcleaninvup33cb), (mcleaninv34daykwavg, mcleaninv34daykw, mcleaninvup34cb), (mcleaninv35daykwavg, mcleaninv35daykw, mcleaninvup35cb), (mcleaninv36daykwavg, mcleaninv36daykw, mcleaninvup36cb), (mcleaninv37daykwavg, mcleaninv37daykw, mcleaninvup37cb), (mcleaninv38daykwavg, mcleaninv38daykw, mcleaninvup38cb), (mcleaninv39daykwavg, mcleaninv39daykw, mcleaninvup39cb), (mcleaninv40daykwavg, mcleaninv40daykw, mcleaninvup40cb)]
+    richmonddaykwList = [(richmondinv1daykwavg, richmondinv1daykw, richmondinvup1cb), (richmondinv2daykwavg, richmondinv2daykw, richmondinvup2cb), (richmondinv3daykwavg, richmondinv3daykw, richmondinvup3cb), (richmondinv4daykwavg, richmondinv4daykw, richmondinvup4cb), (richmondinv5daykwavg, richmondinv5daykw, richmondinvup5cb), (richmondinv6daykwavg, richmondinv6daykw, richmondinvup6cb), (richmondinv7daykwavg, richmondinv7daykw, richmondinvup7cb), (richmondinv11daykwavg, richmondinv11daykw, richmondinvup11cb), (richmondinv12daykwavg, richmondinv12daykw, richmondinvup12cb), (richmondinv13daykwavg, richmondinv13daykw, richmondinvup13cb), (richmondinv14daykwavg, richmondinv14daykw, richmondinvup14cb), (richmondinv15daykwavg, richmondinv15daykw, richmondinvup15cb), (richmondinv16daykwavg, richmondinv16daykw, richmondinvup16cb), (richmondinv17daykwavg, richmondinv17daykw, richmondinvup17cb), (richmondinv18daykwavg, richmondinv18daykw, richmondinvup18cb), (richmondinv19daykwavg, richmondinv19daykw, richmondinvup19cb), (richmondinv20daykwavg, richmondinv20daykw, richmondinvup20cb), (richmondinv21daykwavg, richmondinv21daykw, richmondinvup21cb)]
+    richmond10strdaykwList = [(richmondinv8daykwavg, richmondinv8daykw, richmondinvup8cb), (richmondinv9daykwavg, richmondinv9daykw, richmondinvup9cb), (richmondinv10daykwavg, richmondinv10daykw, richmondinvup10cb), (richmondinv22daykwavg, richmondinv22daykw, richmondinvup22cb), (richmondinv23daykwavg, richmondinv23daykw, richmondinvup23cb), (richmondinv24daykwavg, richmondinv24daykw, richmondinvup24cb)]
+    shorthorndaykwList = [(shorthorninv1daykwavg, shorthorninv1daykw, shorthorninvup1cb), (shorthorninv2daykwavg, shorthorninv2daykw, shorthorninvup2cb), (shorthorninv3daykwavg, shorthorninv3daykw, shorthorninvup3cb), (shorthorninv4daykwavg, shorthorninv4daykw, shorthorninvup4cb), (shorthorninv5daykwavg, shorthorninv5daykw, shorthorninvup5cb), (shorthorninv6daykwavg, shorthorninv6daykw, shorthorninvup6cb), (shorthorninv7daykwavg, shorthorninv7daykw, shorthorninvup7cb), (shorthorninv8daykwavg, shorthorninv8daykw, shorthorninvup8cb), (shorthorninv9daykwavg, shorthorninv9daykw, shorthorninvup9cb), (shorthorninv10daykwavg, shorthorninv10daykw, shorthorninvup10cb), (shorthorninv11daykwavg, shorthorninv11daykw, shorthorninvup11cb), (shorthorninv12daykwavg, shorthorninv12daykw, shorthorninvup12cb), (shorthorninv13daykwavg, shorthorninv13daykw, shorthorninvup13cb), (shorthorninv14daykwavg, shorthorninv14daykw, shorthorninvup14cb), (shorthorninv15daykwavg, shorthorninv15daykw, shorthorninvup15cb), (shorthorninv16daykwavg, shorthorninv16daykw, shorthorninvup16cb), (shorthorninv17daykwavg, shorthorninv17daykw, shorthorninvup17cb), (shorthorninv18daykwavg, shorthorninv18daykw, shorthorninvup18cb), (shorthorninv19daykwavg, shorthorninv19daykw, shorthorninvup19cb), (shorthorninv20daykwavg, shorthorninv20daykw, shorthorninvup20cb), (shorthorninv22daykwavg, shorthorninv22daykw, shorthorninvup22cb), (shorthorninv23daykwavg, shorthorninv23daykw, shorthorninvup23cb), (shorthorninv24daykwavg, shorthorninv24daykw, shorthorninvup24cb), (shorthorninv26daykwavg, shorthorninv26daykw, shorthorninvup26cb), (shorthorninv27daykwavg, shorthorninv27daykw, shorthorninvup27cb), (shorthorninv28daykwavg, shorthorninv28daykw, shorthorninvup28cb), (shorthorninv32daykwavg, shorthorninv32daykw, shorthorninvup32cb), (shorthorninv33daykwavg, shorthorninv33daykw, shorthorninvup33cb), (shorthorninv37daykwavg, shorthorninv37daykw, shorthorninvup37cb), (shorthorninv38daykwavg, shorthorninv38daykw, shorthorninvup38cb), (shorthorninv39daykwavg, shorthorninv39daykw, shorthorninvup39cb), (shorthorninv40daykwavg, shorthorninv40daykw, shorthorninvup40cb), (shorthorninv41daykwavg, shorthorninv41daykw, shorthorninvup41cb), (shorthorninv42daykwavg, shorthorninv42daykw, shorthorninvup42cb), (shorthorninv43daykwavg, shorthorninv43daykw, shorthorninvup43cb), (shorthorninv45daykwavg, shorthorninv45daykw, shorthorninvup45cb), (shorthorninv46daykwavg, shorthorninv46daykw, shorthorninvup46cb), (shorthorninv47daykwavg, shorthorninv47daykw, shorthorninvup47cb), (shorthorninv48daykwavg, shorthorninv48daykw, shorthorninvup48cb), (shorthorninv52daykwavg, shorthorninv52daykw, shorthorninvup52cb), (shorthorninv53daykwavg, shorthorninv53daykw, shorthorninvup53cb), (shorthorninv57daykwavg, shorthorninv57daykw, shorthorninvup57cb), (shorthorninv58daykwavg, shorthorninv58daykw, shorthorninvup58cb), (shorthorninv59daykwavg, shorthorninv59daykw, shorthorninvup59cb), (shorthorninv60daykwavg, shorthorninv60daykw, shorthorninvup60cb), (shorthorninv61daykwavg, shorthorninv61daykw, shorthorninvup61cb), (shorthorninv62daykwavg, shorthorninv62daykw, shorthorninvup62cb), (shorthorninv63daykwavg, shorthorninv63daykw, shorthorninvup63cb), (shorthorninv64daykwavg, shorthorninv64daykw, shorthorninvup64cb), (shorthorninv65daykwavg, shorthorninv65daykw, shorthorninvup65cb), (shorthorninv66daykwavg, shorthorninv66daykw, shorthorninvup66cb)]
+    shorthorn13strdaykwList = [(shorthorninv21daykwavg, shorthorninv21daykw, shorthorninvup21cb), (shorthorninv25daykwavg, shorthorninv25daykw, shorthorninvup25cb), (shorthorninv29daykwavg, shorthorninv29daykw, shorthorninvup29cb), (shorthorninv30daykwavg, shorthorninv30daykw, shorthorninvup30cb), (shorthorninv31daykwavg, shorthorninv31daykw, shorthorninvup31cb), (shorthorninv34daykwavg, shorthorninv34daykw, shorthorninvup34cb), (shorthorninv35daykwavg, shorthorninv35daykw, shorthorninvup35cb), (shorthorninv36daykwavg, shorthorninv36daykw, shorthorninvup36cb), (shorthorninv44daykwavg, shorthorninv44daykw, shorthorninvup44cb), (shorthorninv49daykwavg, shorthorninv49daykw, shorthorninvup49cb), (shorthorninv50daykwavg, shorthorninv50daykw, shorthorninvup50cb), (shorthorninv51daykwavg, shorthorninv51daykw, shorthorninvup51cb), (shorthorninv54daykwavg, shorthorninv54daykw, shorthorninvup54cb), (shorthorninv55daykwavg, shorthorninv55daykw, shorthorninvup55cb), (shorthorninv56daykwavg, shorthorninv56daykw, shorthorninvup56cb), (shorthorninv67daykwavg, shorthorninv67daykw, shorthorninvup67cb), (shorthorninv68daykwavg, shorthorninv68daykw, shorthorninvup68cb), (shorthorninv69daykwavg, shorthorninv69daykw, shorthorninvup69cb), (shorthorninv70daykwavg, shorthorninv70daykw, shorthorninvup70cb), (shorthorninv71daykwavg, shorthorninv71daykw, shorthorninvup71cb), (shorthorninv72daykwavg, shorthorninv72daykw, shorthorninvup72cb)]
+    sunflowerdaykwList = [(sunflowerinv3daykwavg, sunflowerinv3daykw, sunflowerinvup3cb), (sunflowerinv4daykwavg, sunflowerinv4daykw, sunflowerinvup4cb), (sunflowerinv5daykwavg, sunflowerinv5daykw, sunflowerinvup5cb), (sunflowerinv6daykwavg, sunflowerinv6daykw, sunflowerinvup6cb), (sunflowerinv7daykwavg, sunflowerinv7daykw, sunflowerinvup7cb), (sunflowerinv8daykwavg, sunflowerinv8daykw, sunflowerinvup8cb), (sunflowerinv9daykwavg, sunflowerinv9daykw, sunflowerinvup9cb), (sunflowerinv10daykwavg, sunflowerinv10daykw, sunflowerinvup10cb), (sunflowerinv11daykwavg, sunflowerinv11daykw, sunflowerinvup11cb), (sunflowerinv12daykwavg, sunflowerinv12daykw, sunflowerinvup12cb), (sunflowerinv13daykwavg, sunflowerinv13daykw, sunflowerinvup13cb), (sunflowerinv14daykwavg, sunflowerinv14daykw, sunflowerinvup14cb), (sunflowerinv15daykwavg, sunflowerinv15daykw, sunflowerinvup15cb), (sunflowerinv16daykwavg, sunflowerinv16daykw, sunflowerinvup16cb), (sunflowerinv17daykwavg, sunflowerinv17daykw, sunflowerinvup17cb), (sunflowerinv18daykwavg, sunflowerinv18daykw, sunflowerinvup18cb), (sunflowerinv19daykwavg, sunflowerinv19daykw, sunflowerinvup19cb), (sunflowerinv20daykwavg, sunflowerinv20daykw, sunflowerinvup20cb), (sunflowerinv34daykwavg, sunflowerinv34daykw, sunflowerinvup34cb), (sunflowerinv62daykwavg, sunflowerinv62daykw, sunflowerinvup62cb), (sunflowerinv63daykwavg, sunflowerinv63daykw, sunflowerinvup63cb), (sunflowerinv64daykwavg, sunflowerinv64daykw, sunflowerinvup64cb), (sunflowerinv65daykwavg, sunflowerinv65daykw, sunflowerinvup65cb), (sunflowerinv66daykwavg, sunflowerinv66daykw, sunflowerinvup66cb), (sunflowerinv67daykwavg, sunflowerinv67daykw, sunflowerinvup67cb), (sunflowerinv68daykwavg, sunflowerinv68daykw, sunflowerinvup68cb), (sunflowerinv69daykwavg, sunflowerinv69daykw, sunflowerinvup69cb), (sunflowerinv70daykwavg, sunflowerinv70daykw, sunflowerinvup70cb), (sunflowerinv71daykwavg, sunflowerinv71daykw, sunflowerinvup71cb), (sunflowerinv72daykwavg, sunflowerinv72daykw, sunflowerinvup72cb), (sunflowerinv73daykwavg, sunflowerinv73daykw, sunflowerinvup73cb), (sunflowerinv74daykwavg, sunflowerinv74daykw, sunflowerinvup74cb), (sunflowerinv75daykwavg, sunflowerinv75daykw, sunflowerinvup75cb), (sunflowerinv76daykwavg, sunflowerinv76daykw, sunflowerinvup76cb), (sunflowerinv77daykwavg, sunflowerinv77daykw, sunflowerinvup77cb)]
+    sunflower12strdaykwList = [(sunflowerinv1daykwavg, sunflowerinv1daykw, sunflowerinvup1cb), (sunflowerinv2daykwavg, sunflowerinv2daykw, sunflowerinvup2cb), (sunflowerinv21daykwavg, sunflowerinv21daykw, sunflowerinvup21cb), (sunflowerinv22daykwavg, sunflowerinv22daykw, sunflowerinvup22cb), (sunflowerinv23daykwavg, sunflowerinv23daykw, sunflowerinvup23cb), (sunflowerinv24daykwavg, sunflowerinv24daykw, sunflowerinvup24cb), (sunflowerinv25daykwavg, sunflowerinv25daykw, sunflowerinvup25cb), (sunflowerinv26daykwavg, sunflowerinv26daykw, sunflowerinvup26cb), (sunflowerinv27daykwavg, sunflowerinv27daykw, sunflowerinvup27cb), (sunflowerinv28daykwavg, sunflowerinv28daykw, sunflowerinvup28cb), (sunflowerinv29daykwavg, sunflowerinv29daykw, sunflowerinvup29cb), (sunflowerinv30daykwavg, sunflowerinv30daykw, sunflowerinvup30cb), (sunflowerinv31daykwavg, sunflowerinv31daykw, sunflowerinvup31cb), (sunflowerinv32daykwavg, sunflowerinv32daykw, sunflowerinvup32cb), (sunflowerinv33daykwavg, sunflowerinv33daykw, sunflowerinvup33cb), (sunflowerinv35daykwavg, sunflowerinv35daykw, sunflowerinvup35cb), (sunflowerinv36daykwavg, sunflowerinv36daykw, sunflowerinvup36cb), (sunflowerinv37daykwavg, sunflowerinv37daykw, sunflowerinvup37cb), (sunflowerinv38daykwavg, sunflowerinv38daykw, sunflowerinvup38cb), (sunflowerinv39daykwavg, sunflowerinv39daykw, sunflowerinvup39cb), (sunflowerinv40daykwavg, sunflowerinv40daykw, sunflowerinvup40cb), (sunflowerinv41daykwavg, sunflowerinv41daykw, sunflowerinvup41cb), (sunflowerinv42daykwavg, sunflowerinv42daykw, sunflowerinvup42cb), (sunflowerinv43daykwavg, sunflowerinv43daykw, sunflowerinvup43cb), (sunflowerinv44daykwavg, sunflowerinv44daykw, sunflowerinvup44cb), (sunflowerinv45daykwavg, sunflowerinv45daykw, sunflowerinvup45cb), (sunflowerinv46daykwavg, sunflowerinv46daykw, sunflowerinvup46cb), (sunflowerinv47daykwavg, sunflowerinv47daykw, sunflowerinvup47cb), (sunflowerinv48daykwavg, sunflowerinv48daykw, sunflowerinvup48cb), (sunflowerinv49daykwavg, sunflowerinv49daykw, sunflowerinvup49cb), (sunflowerinv50daykwavg, sunflowerinv50daykw, sunflowerinvup50cb), (sunflowerinv51daykwavg, sunflowerinv51daykw, sunflowerinvup51cb), (sunflowerinv52daykwavg, sunflowerinv52daykw, sunflowerinvup52cb), (sunflowerinv53daykwavg, sunflowerinv53daykw, sunflowerinvup53cb), (sunflowerinv54daykwavg, sunflowerinv54daykw, sunflowerinvup54cb), (sunflowerinv55daykwavg, sunflowerinv55daykw, sunflowerinvup55cb), (sunflowerinv56daykwavg, sunflowerinv56daykw, sunflowerinvup56cb), (sunflowerinv57daykwavg, sunflowerinv57daykw, sunflowerinvup57cb), (sunflowerinv58daykwavg, sunflowerinv58daykw, sunflowerinvup58cb), (sunflowerinv59daykwavg, sunflowerinv59daykw, sunflowerinvup59cb), (sunflowerinv60daykwavg, sunflowerinv60daykw, sunflowerinvup60cb), (sunflowerinv61daykwavg, sunflowerinv61daykw, sunflowerinvup61cb), (sunflowerinv78daykwavg, sunflowerinv78daykw, sunflowerinvup78cb), (sunflowerinv79daykwavg, sunflowerinv79daykw, sunflowerinvup79cb), (sunflowerinv80daykwavg, sunflowerinv80daykw, sunflowerinvup80cb)]
+    upsondaykwList = [(upsoninv1daykwavg, upsoninv1daykw, upsoninvup1cb), (upsoninv2daykwavg, upsoninv2daykw, upsoninvup2cb), (upsoninv3daykwavg, upsoninv3daykw, upsoninvup3cb), (upsoninv4daykwavg, upsoninv4daykw, upsoninvup4cb), (upsoninv5daykwavg, upsoninv5daykw, upsoninvup5cb), (upsoninv9daykwavg, upsoninv9daykw, upsoninvup9cb), (upsoninv10daykwavg, upsoninv10daykw, upsoninvup10cb), (upsoninv11daykwavg, upsoninv11daykw, upsoninvup11cb), (upsoninv12daykwavg, upsoninv12daykw, upsoninvup12cb), (upsoninv13daykwavg, upsoninv13daykw, upsoninvup13cb), (upsoninv14daykwavg, upsoninv14daykw, upsoninvup14cb), (upsoninv15daykwavg, upsoninv15daykw, upsoninvup15cb), (upsoninv16daykwavg, upsoninv16daykw, upsoninvup16cb), (upsoninv17daykwavg, upsoninv17daykw, upsoninvup17cb), (upsoninv21daykwavg, upsoninv21daykw, upsoninvup21cb), (upsoninv22daykwavg, upsoninv22daykw, upsoninvup22cb), (upsoninv23daykwavg, upsoninv23daykw, upsoninvup23cb), (upsoninv24daykwavg, upsoninv24daykw, upsoninvup24cb)]
+    upson10strdaykwList = [(upsoninv6daykwavg, upsoninv6daykw, upsoninvup6cb), (upsoninv7daykwavg, upsoninv7daykw, upsoninvup7cb), (upsoninv8daykwavg, upsoninv8daykw, upsoninvup8cb), (upsoninv18daykwavg, upsoninv18daykw, upsoninvup18cb), (upsoninv19daykwavg, upsoninv19daykw, upsoninvup19cb), (upsoninv20daykwavg, upsoninv20daykw, upsoninvup20cb)]
+    warblerdaykwList = [(warblerinv1daykwavg, warblerinv1daykw, warblerinvup1cb), (warblerinv2daykwavg, warblerinv2daykw, warblerinvup2cb), (warblerinv3daykwavg, warblerinv3daykw, warblerinvup3cb), (warblerinv4daykwavg, warblerinv4daykw, warblerinvup4cb), (warblerinv5daykwavg, warblerinv5daykw, warblerinvup5cb), (warblerinv6daykwavg, warblerinv6daykw, warblerinvup6cb), (warblerinv7daykwavg, warblerinv7daykw, warblerinvup7cb), (warblerinv8daykwavg, warblerinv8daykw, warblerinvup8cb), (warblerinv9daykwavg, warblerinv9daykw, warblerinvup9cb), (warblerinv10daykwavg, warblerinv10daykw, warblerinvup10cb), (warblerinv11daykwavg, warblerinv11daykw, warblerinvup11cb), (warblerinv12daykwavg, warblerinv12daykw, warblerinvup12cb), (warblerinv13daykwavg, warblerinv13daykw, warblerinvup13cb), (warblerinv14daykwavg, warblerinv14daykw, warblerinvup14cb), (warblerinv15daykwavg, warblerinv15daykw, warblerinvup15cb), (warblerinv16daykwavg, warblerinv16daykw, warblerinvup16cb), (warblerinv17daykwavg, warblerinv17daykw, warblerinvup17cb), (warblerinv18daykwavg, warblerinv18daykw, warblerinvup18cb), (warblerinv19daykwavg, warblerinv19daykw, warblerinvup19cb), (warblerinv20daykwavg, warblerinv20daykw, warblerinvup20cb), (warblerinv21daykwavg, warblerinv21daykw, warblerinvup21cb), (warblerinv22daykwavg, warblerinv22daykw, warblerinvup22cb), (warblerinv23daykwavg, warblerinv23daykw, warblerinvup23cb), (warblerinv24daykwavg, warblerinv24daykw, warblerinvup24cb), (warblerinv25daykwavg, warblerinv25daykw, warblerinvup25cb), (warblerinv26daykwavg, warblerinv26daykw, warblerinvup26cb), (warblerinv27daykwavg, warblerinv27daykw, warblerinvup27cb), (warblerinv28daykwavg, warblerinv28daykw, warblerinvup28cb), (warblerinv29daykwavg, warblerinv29daykw, warblerinvup29cb), (warblerinv30daykwavg, warblerinv30daykw, warblerinvup30cb), (warblerinv31daykwavg, warblerinv31daykw, warblerinvup31cb), (warblerinv32daykwavg, warblerinv32daykw, warblerinvup32cb)]
+    washingtondaykwList = [(washingtoninv4daykwavg, washingtoninv4daykw, washingtoninvup4cb), (washingtoninv5daykwavg, washingtoninv5daykw, washingtoninvup5cb), (washingtoninv6daykwavg, washingtoninv6daykw, washingtoninvup6cb), (washingtoninv7daykwavg, washingtoninv7daykw, washingtoninvup7cb), (washingtoninv8daykwavg, washingtoninv8daykw, washingtoninvup8cb), (washingtoninv9daykwavg, washingtoninv9daykw, washingtoninvup9cb), (washingtoninv10daykwavg, washingtoninv10daykw, washingtoninvup10cb), (washingtoninv11daykwavg, washingtoninv11daykw, washingtoninvup11cb), (washingtoninv12daykwavg, washingtoninv12daykw, washingtoninvup12cb), (washingtoninv15daykwavg, washingtoninv15daykw, washingtoninvup15cb), (washingtoninv16daykwavg, washingtoninv16daykw, washingtoninvup16cb), (washingtoninv17daykwavg, washingtoninv17daykw, washingtoninvup17cb), (washingtoninv18daykwavg, washingtoninv18daykw, washingtoninvup18cb), (washingtoninv19daykwavg, washingtoninv19daykw, washingtoninvup19cb), (washingtoninv21daykwavg, washingtoninv21daykw, washingtoninvup21cb), (washingtoninv22daykwavg, washingtoninv22daykw, washingtoninvup22cb), (washingtoninv23daykwavg, washingtoninv23daykw, washingtoninvup23cb), (washingtoninv24daykwavg, washingtoninv24daykw, washingtoninvup24cb), (washingtoninv40daykwavg, washingtoninv40daykw, washingtoninvup40cb)]
+    washington12strdaykwList = [(washingtoninv1daykwavg, washingtoninv1daykw, washingtoninvup1cb), (washingtoninv2daykwavg, washingtoninv2daykw, washingtoninvup2cb), (washingtoninv3daykwavg, washingtoninv3daykw, washingtoninvup3cb), (washingtoninv13daykwavg, washingtoninv13daykw, washingtoninvup13cb), (washingtoninv14daykwavg, washingtoninv14daykw, washingtoninvup14cb), (washingtoninv20daykwavg, washingtoninv20daykw, washingtoninvup20cb), (washingtoninv25daykwavg, washingtoninv25daykw, washingtoninvup25cb), (washingtoninv26daykwavg, washingtoninv26daykw, washingtoninvup26cb), (washingtoninv27daykwavg, washingtoninv27daykw, washingtoninvup27cb), (washingtoninv28daykwavg, washingtoninv28daykw, washingtoninvup28cb), (washingtoninv29daykwavg, washingtoninv29daykw, washingtoninvup29cb), (washingtoninv30daykwavg, washingtoninv30daykw, washingtoninvup30cb), (washingtoninv31daykwavg, washingtoninv31daykw, washingtoninvup31cb), (washingtoninv32daykwavg, washingtoninv32daykw, washingtoninvup32cb), (washingtoninv33daykwavg, washingtoninv33daykw, washingtoninvup33cb), (washingtoninv34daykwavg, washingtoninv34daykw, washingtoninvup34cb), (washingtoninv35daykwavg, washingtoninv35daykw, washingtoninvup35cb), (washingtoninv36daykwavg, washingtoninv36daykw, washingtoninvup36cb), (washingtoninv37daykwavg, washingtoninv37daykw, washingtoninvup37cb), (washingtoninv38daykwavg, washingtoninv38daykw, washingtoninvup38cb), (washingtoninv39daykwavg, washingtoninv39daykw, washingtoninvup39cb)]
+    whitehalldaykwList = [(whitehallinv1daykwavg, whitehallinv1daykw, whitehallinvup1cb), (whitehallinv3daykwavg, whitehallinv3daykw, whitehallinvup3cb), (whitehallinv4daykwavg, whitehallinv4daykw, whitehallinvup4cb), (whitehallinv5daykwavg, whitehallinv5daykw, whitehallinvup5cb), (whitehallinv13daykwavg, whitehallinv13daykw, whitehallinvup13cb), (whitehallinv14daykwavg, whitehallinv14daykw, whitehallinvup14cb), (whitehallinv15daykwavg, whitehallinv15daykw, whitehallinvup15cb), (whitehallinv16daykwavg, whitehallinv16daykw, whitehallinvup16cb)]
+    whitehall13strdaykwList = [(whitehallinv2daykwavg, whitehallinv2daykw, whitehallinvup2cb), (whitehallinv6daykwavg, whitehallinv6daykw, whitehallinvup6cb), (whitehallinv7daykwavg, whitehallinv7daykw, whitehallinvup7cb), (whitehallinv8daykwavg, whitehallinv8daykw, whitehallinvup8cb), (whitehallinv9daykwavg, whitehallinv9daykw, whitehallinvup9cb), (whitehallinv10daykwavg, whitehallinv10daykw, whitehallinvup10cb), (whitehallinv11daykwavg, whitehallinv11daykw, whitehallinvup11cb), (whitehallinv12daykwavg, whitehallinv12daykw, whitehallinvup12cb)]
+    whitetaildaykwList = [(whitetailinv1daykwavg, whitetailinv1daykw, whitetailinvup1cb), (whitetailinv2daykwavg, whitetailinv2daykw, whitetailinvup2cb), (whitetailinv3daykwavg, whitetailinv3daykw, whitetailinvup3cb), (whitetailinv5daykwavg, whitetailinv5daykw, whitetailinvup5cb), (whitetailinv6daykwavg, whitetailinv6daykw, whitetailinvup6cb), (whitetailinv7daykwavg, whitetailinv7daykw, whitetailinvup7cb), (whitetailinv8daykwavg, whitetailinv8daykw, whitetailinvup8cb), (whitetailinv9daykwavg, whitetailinv9daykw, whitetailinvup9cb), (whitetailinv10daykwavg, whitetailinv10daykw, whitetailinvup10cb), (whitetailinv11daykwavg, whitetailinv11daykw, whitetailinvup11cb), (whitetailinv12daykwavg, whitetailinv12daykw, whitetailinvup12cb), (whitetailinv22daykwavg, whitetailinv22daykw, whitetailinvup22cb), (whitetailinv23daykwavg, whitetailinv23daykw, whitetailinvup23cb), (whitetailinv24daykwavg, whitetailinv24daykw, whitetailinvup24cb), (whitetailinv25daykwavg, whitetailinv25daykw, whitetailinvup25cb), (whitetailinv32daykwavg, whitetailinv32daykw, whitetailinvup32cb), (whitetailinv33daykwavg, whitetailinv33daykw, whitetailinvup33cb), (whitetailinv35daykwavg, whitetailinv35daykw, whitetailinvup35cb), (whitetailinv36daykwavg, whitetailinv36daykw, whitetailinvup36cb), (whitetailinv37daykwavg, whitetailinv37daykw, whitetailinvup37cb), (whitetailinv38daykwavg, whitetailinv38daykw, whitetailinvup38cb), (whitetailinv39daykwavg, whitetailinv39daykw, whitetailinvup39cb), (whitetailinv40daykwavg, whitetailinv40daykw, whitetailinvup40cb), (whitetailinv41daykwavg, whitetailinv41daykw, whitetailinvup41cb), (whitetailinv42daykwavg, whitetailinv42daykw, whitetailinvup42cb), (whitetailinv49daykwavg, whitetailinv49daykw, whitetailinvup49cb), (whitetailinv50daykwavg, whitetailinv50daykw, whitetailinvup50cb), (whitetailinv51daykwavg, whitetailinv51daykw, whitetailinvup51cb), (whitetailinv57daykwavg, whitetailinv57daykw, whitetailinvup57cb), (whitetailinv61daykwavg, whitetailinv61daykw, whitetailinvup61cb), (whitetailinv62daykwavg, whitetailinv62daykw, whitetailinvup62cb), (whitetailinv63daykwavg, whitetailinv63daykw, whitetailinvup63cb), (whitetailinv65daykwavg, whitetailinv65daykw, whitetailinvup65cb), (whitetailinv66daykwavg, whitetailinv66daykw, whitetailinvup66cb), (whitetailinv67daykwavg, whitetailinv67daykw, whitetailinvup67cb), (whitetailinv68daykwavg, whitetailinv68daykw, whitetailinvup68cb), (whitetailinv69daykwavg, whitetailinv69daykw, whitetailinvup69cb), (whitetailinv70daykwavg, whitetailinv70daykw, whitetailinvup70cb), (whitetailinv71daykwavg, whitetailinv71daykw, whitetailinvup71cb), (whitetailinv72daykwavg, whitetailinv72daykw, whitetailinvup72cb), (whitetailinv73daykwavg, whitetailinv73daykw, whitetailinvup73cb), (whitetailinv74daykwavg, whitetailinv74daykw, whitetailinvup74cb), (whitetailinv75daykwavg, whitetailinv75daykw, whitetailinvup75cb), (whitetailinv76daykwavg, whitetailinv76daykw, whitetailinvup76cb), (whitetailinv77daykwavg, whitetailinv77daykw, whitetailinvup77cb), (whitetailinv78daykwavg, whitetailinv78daykw, whitetailinvup78cb), (whitetailinv79daykwavg, whitetailinv79daykw, whitetailinvup79cb), (whitetailinv80daykwavg, whitetailinv80daykw, whitetailinvup80cb)]
+    whitetail17strdaykwList = [(whitetailinv4daykwavg, whitetailinv4daykw, whitetailinvup4cb), (whitetailinv13daykwavg, whitetailinv13daykw, whitetailinvup13cb), (whitetailinv14daykwavg, whitetailinv14daykw, whitetailinvup14cb), (whitetailinv15daykwavg, whitetailinv15daykw, whitetailinvup15cb), (whitetailinv16daykwavg, whitetailinv16daykw, whitetailinvup16cb), (whitetailinv17daykwavg, whitetailinv17daykw, whitetailinvup17cb), (whitetailinv18daykwavg, whitetailinv18daykw, whitetailinvup18cb), (whitetailinv19daykwavg, whitetailinv19daykw, whitetailinvup19cb), (whitetailinv20daykwavg, whitetailinv20daykw, whitetailinvup20cb), (whitetailinv21daykwavg, whitetailinv21daykw, whitetailinvup21cb), (whitetailinv26daykwavg, whitetailinv26daykw, whitetailinvup26cb), (whitetailinv27daykwavg, whitetailinv27daykw, whitetailinvup27cb), (whitetailinv28daykwavg, whitetailinv28daykw, whitetailinvup28cb), (whitetailinv29daykwavg, whitetailinv29daykw, whitetailinvup29cb), (whitetailinv30daykwavg, whitetailinv30daykw, whitetailinvup30cb), (whitetailinv31daykwavg, whitetailinv31daykw, whitetailinvup31cb), (whitetailinv34daykwavg, whitetailinv34daykw, whitetailinvup34cb), (whitetailinv43daykwavg, whitetailinv43daykw, whitetailinvup43cb), (whitetailinv44daykwavg, whitetailinv44daykw, whitetailinvup44cb), (whitetailinv45daykwavg, whitetailinv45daykw, whitetailinvup45cb), (whitetailinv46daykwavg, whitetailinv46daykw, whitetailinvup46cb), (whitetailinv47daykwavg, whitetailinv47daykw, whitetailinvup47cb), (whitetailinv48daykwavg, whitetailinv48daykw, whitetailinvup48cb), (whitetailinv52daykwavg, whitetailinv52daykw, whitetailinvup52cb), (whitetailinv53daykwavg, whitetailinv53daykw, whitetailinvup53cb), (whitetailinv54daykwavg, whitetailinv54daykw, whitetailinvup54cb), (whitetailinv55daykwavg, whitetailinv55daykw, whitetailinvup55cb), (whitetailinv56daykwavg, whitetailinv56daykw, whitetailinvup56cb), (whitetailinv58daykwavg, whitetailinv58daykw, whitetailinvup58cb), (whitetailinv59daykwavg, whitetailinv59daykw, whitetailinvup59cb), (whitetailinv60daykwavg, whitetailinv60daykw, whitetailinvup60cb), (whitetailinv64daykwavg, whitetailinv64daykw, whitetailinvup64cb)]
+    conetoe1daykwList = [(conetoe1inv1daykwavg, conetoe1inv1daykw, conetoe1invup1cb), (conetoe1inv2daykwavg, conetoe1inv2daykw, conetoe1invup2cb), (conetoe1inv3daykwavg, conetoe1inv3daykw, conetoe1invup3cb), (conetoe1inv4daykwavg, conetoe1inv4daykw, conetoe1invup4cb), (conetoe1inv5daykwavg, conetoe1inv5daykw, conetoe1invup5cb), (conetoe1inv6daykwavg, conetoe1inv6daykw, conetoe1invup6cb), (conetoe1inv7daykwavg, conetoe1inv7daykw, conetoe1invup7cb), (conetoe1inv8daykwavg, conetoe1inv8daykw, conetoe1invup8cb), (conetoe1inv9daykwavg, conetoe1inv9daykw, conetoe1invup9cb), (conetoe1inv10daykwavg, conetoe1inv10daykw, conetoe1invup10cb), (conetoe1inv11daykwavg, conetoe1inv11daykw, conetoe1invup11cb), (conetoe1inv12daykwavg, conetoe1inv12daykw, conetoe1invup12cb), (conetoe1inv13daykwavg, conetoe1inv13daykw, conetoe1invup13cb), (conetoe1inv14daykwavg, conetoe1inv14daykw, conetoe1invup14cb), (conetoe1inv15daykwavg, conetoe1inv15daykw, conetoe1invup15cb), (conetoe1inv16daykwavg, conetoe1inv16daykw, conetoe1invup16cb)]
+    duplindaykwList = [(duplinsinv1daykwavg, duplinsinv1daykw, duplininvup4cb), (duplinsinv2daykwavg, duplinsinv2daykw, duplininvup5cb), (duplinsinv3daykwavg, duplinsinv3daykw, duplininvup6cb), (duplinsinv4daykwavg, duplinsinv4daykw, duplininvup7cb), (duplinsinv5daykwavg, duplinsinv5daykw, duplininvup8cb), (duplinsinv6daykwavg, duplinsinv6daykw, duplininvup9cb), (duplinsinv7daykwavg, duplinsinv7daykw, duplininvup10cb), (duplinsinv8daykwavg, duplinsinv8daykw, duplininvup11cb), (duplinsinv9daykwavg, duplinsinv9daykw, duplininvup12cb), (duplinsinv10daykwavg, duplinsinv10daykw, duplininvup13cb), (duplinsinv11daykwavg, duplinsinv11daykw, duplininvup14cb), (duplinsinv12daykwavg, duplinsinv12daykw, duplininvup15cb), (duplinsinv13daykwavg, duplinsinv13daykw, duplininvup16cb), (duplinsinv14daykwavg, duplinsinv14daykw, duplininvup17cb), (duplinsinv15daykwavg, duplinsinv15daykw, duplininvup18cb), (duplinsinv16daykwavg, duplinsinv16daykw, duplininvup19cb), (duplinsinv17daykwavg, duplinsinv17daykw, duplininvup20cb), (duplinsinv18daykwavg, duplinsinv18daykw, duplininvup21cb)]
+    duplinCentraldaykwList = [(duplininv1daykwavg, duplininv1daykw, duplininvup1cb), (duplininv2daykwavg, duplininv2daykw, duplininvup2cb), (duplininv3daykwavg, duplininv3daykw, duplininvup3cb)]
+    wayne11000daykwList = [(wayne1inv1daykwavg, wayne1inv1daykw, wayne1invup1cb), (wayne1inv4daykwavg, wayne1inv4daykw, wayne1invup4cb)]
+    wayne1daykwList = [(wayne1inv2daykwavg, wayne1inv2daykw, wayne1invup2cb), (wayne1inv3daykwavg, wayne1inv3daykw, wayne1invup3cb)]
+    wayne21000daykwList = [(wayne2inv3daykwavg, wayne2inv3daykw, wayne2invup3cb), (wayne2inv4daykwavg, wayne2inv4daykw, wayne2invup4cb)]
+    wayne2daykwList = [(wayne2inv1daykwavg, wayne2inv1daykw, wayne2invup1cb), (wayne2inv2daykwavg, wayne2inv2daykw, wayne2invup2cb)]
+    wayne31000daykwList = [(wayne3inv1daykwavg, wayne3inv1daykw, wayne3invup1cb), (wayne3inv2daykwavg, wayne3inv2daykw, wayne3invup2cb)]
+    wayne3daykwList = [(wayne3inv3daykwavg, wayne3inv3daykw, wayne3invup3cb), (wayne3inv4daykwavg, wayne3inv4daykw, wayne3invup4cb)]
+    freightlinedaykwList = [(freightlinerinv1daykwavg, freightlinerinv1daykw, freightlinerinvup1cb), (freightlinerinv3daykwavg, freightlinerinv3daykw, freightlinerinvup3cb), (freightlinerinv4daykwavg, freightlinerinv4daykw, freightlinerinvup4cb), (freightlinerinv5daykwavg, freightlinerinv5daykw, freightlinerinvup5cb), (freightlinerinv8daykwavg, freightlinerinv8daykw, freightlinerinvup8cb), (freightlinerinv9daykwavg, freightlinerinv9daykw, freightlinerinvup9cb), (freightlinerinv10daykwavg, freightlinerinv10daykw, freightlinerinvup10cb), (freightlinerinv11daykwavg, freightlinerinv11daykw, freightlinerinvup11cb), (freightlinerinv12daykwavg, freightlinerinv12daykw, freightlinerinvup12cb), (freightlinerinv15daykwavg, freightlinerinv15daykw, freightlinerinvup15cb), (freightlinerinv16daykwavg, freightlinerinv16daykw, freightlinerinvup16cb), (freightlinerinv17daykwavg, freightlinerinv17daykw, freightlinerinvup17cb), (freightlinerinv18daykwavg, freightlinerinv18daykw, freightlinerinvup18cb)]
+    freightline66daykwList = [(freightlinerinv2daykwavg, freightlinerinv2daykw, freightlinerinvup2cb), (freightlinerinv6daykwavg, freightlinerinv6daykw, freightlinerinvup6cb), (freightlinerinv7daykwavg, freightlinerinv7daykw, freightlinerinvup7cb), (freightlinerinv13daykwavg, freightlinerinv13daykw, freightlinerinvup13cb), (freightlinerinv14daykwavg, freightlinerinv14daykw, freightlinerinvup14cb)]
+    hollyswampdaykwList = [(hollyswampinv1daykwavg, hollyswampinv1daykw, hollyswampinvup1cb), (hollyswampinv2daykwavg, hollyswampinv2daykw, hollyswampinvup2cb), (hollyswampinv3daykwavg, hollyswampinv3daykw, hollyswampinvup3cb), (hollyswampinv4daykwavg, hollyswampinv4daykw, hollyswampinvup4cb), (hollyswampinv5daykwavg, hollyswampinv5daykw, hollyswampinvup5cb), (hollyswampinv6daykwavg, hollyswampinv6daykw, hollyswampinvup6cb), (hollyswampinv7daykwavg, hollyswampinv7daykw, hollyswampinvup7cb), (hollyswampinv8daykwavg, hollyswampinv8daykw, hollyswampinvup8cb), (hollyswampinv9daykwavg, hollyswampinv9daykw, hollyswampinvup9cb), (hollyswampinv10daykwavg, hollyswampinv10daykw, hollyswampinvup10cb), (hollyswampinv11daykwavg, hollyswampinv11daykw, hollyswampinvup11cb), (hollyswampinv12daykwavg, hollyswampinv12daykw, hollyswampinvup12cb), (hollyswampinv14daykwavg, hollyswampinv14daykw, hollyswampinvup14cb), (hollyswampinv16daykwavg, hollyswampinv16daykw, hollyswampinvup16cb)]
+    hollyswamp18strdaykwList = [(hollyswampinv15daykwavg, hollyswampinv15daykw, hollyswampinvup15cb), (hollyswampinv13daykwavg, hollyswampinv13daykw, hollyswampinvup13cb)]
+    pgdaykwList = [(pginv7daykwavg, pginv7daykw, pginvup7cb), (pginv8daykwavg, pginv8daykw, pginvup8cb), (pginv9daykwavg, pginv9daykw, pginvup9cb), (pginv10daykwavg, pginv10daykw, pginvup10cb), (pginv11daykwavg, pginv11daykw, pginvup11cb), (pginv12daykwavg, pginv12daykw, pginvup12cb), (pginv13daykwavg, pginv13daykw, pginvup13cb), (pginv14daykwavg, pginv14daykw, pginvup14cb), (pginv15daykwavg, pginv15daykw, pginvup15cb), (pginv16daykwavg, pginv16daykw, pginvup16cb), (pginv17daykwavg, pginv17daykw, pginvup17cb), (pginv18daykwavg, pginv18daykw, pginvup18cb)]
+    pg66daykwList = [(pginv1daykwavg, pginv1daykw, pginvup1cb), (pginv2daykwavg, pginv2daykw, pginvup2cb), (pginv3daykwavg, pginv3daykw, pginvup3cb), (pginv4daykwavg, pginv4daykw, pginvup4cb), (pginv5daykwavg, pginv5daykw, pginvup5cb), (pginv6daykwavg, pginv6daykw, pginvup6cb)]
+        
     site_under_Lists = {
         "Duplin Central Inverters": duplinCentraldaykwList,
         "Bulloch 1A 11 String Inverters": bulloch1adaykwList,
@@ -2393,17 +2377,42 @@ def underperformance_data_update(): #Inv Comparison Function
 
 
     for inv_group_name, underperformance_list in site_under_Lists.items():
-        if inv_group_name == "Duplin String Inverters":
+        if inv_group_name in {"Duplin String Inverters", "Cardinal 96.6% Inverters", "Cardinal 95.2% Inverters", "Cardinal 94.4% Inverters"}:
             print(len(underperformance_list)) #WE need to further manipulate the DF's so that rows are defined by up to the minutes not the seconds
             print(underperformance_list)
-            values = [value for value, _ in underperformance_list]
-            max_val = max(values)
-            print([val/max_val * 100 for val in values])
+            avgvalues = [value for value, _, _ in underperformance_list]
+            totalvalues = [value for _, value, _ in underperformance_list]
+            max_val = max(avgvalues)
+            total_max_val = max(totalvalues)
+            print(inv_group_name, max_val, avgvalues)
+            print(inv_group_name, total_max_val, totalvalues)
 
         calculate_percentages(underperformance_list) #Updates GUI widgets with new percentages
     
 
 
+def get_color_for_percentage(percentage):
+    """Returns a color string based on a percentage value."""
+    if np.isnan(percentage) or percentage < 50:
+        return "red"
+    elif 50 <= percentage < 75:
+        return "orange"
+    elif 75 <= percentage < 85:
+        return "yellow"
+    elif 85 <= percentage < 95:
+        return "#FEEAA5"  # paleyellow
+    elif percentage >= 95:
+        return "#90EE90"  # lightgreen
+    else:
+        return "#EE82EE"  # violet
+
+def create_dual_color_image(c1, c2, width=60, height=15):
+    """Creates a PhotoImage with two background colors."""
+    img = Image.new('RGB', (width, height))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([0, 0, width // 2, height], fill=c1)
+    draw.rectangle([width // 2, 0, width, height], fill=c2)
+    return ImageTk.PhotoImage(img)
     
     
 
@@ -2415,79 +2424,80 @@ def calculate_percentages(data_list):
 
     Args:
         data_list: A list of tuples, where each tuple contains:
-            - The data value (float).
-            - The string identifier (e.g., inverter number). Unused feature deprecated, data retained
+            - avg kw (float).
+            - total kwh (float)
             - The Tkinter Checkbutton variable to update.
     """
     if not data_list:
         return  # Handle empty list case
-    values = [value for value, _ in data_list]
-    max_value = max(values)
-    if max_value == 0 or np.isnan(max_value):
-        for _, var in data_list:
+    avg_values = [value for value, _, _ in data_list]
+    total_values = [value for _, value, _ in data_list]
+    maxavg_value = max(avg_values)
+    maxtotal_value = max(total_values)
+    if (maxavg_value == 0 or np.isnan(maxavg_value)) and (maxtotal_value == 0 or np.isnan(maxtotal_value)):
+        for _, _, var in data_list:
             try:
-                var.config(text="0%", bg='red')  # Update the 'text' attribute
+                var.config(text="0% | 0%", bg='red')  # Update the 'text' attribute
             except AttributeError:
                 pass #  The variable does not have a text attribute.
         return
 
-    for value, var in data_list:
-        percentage = (value / max_value) * 100
-        if np.isnan(value):
-            var.config(text="0%", bg='red')
-            continue
-
-        if round(percentage, 0) == 100:
-            bg_color = "#90EE90"  
-        elif percentage < 50:
-            bg_color = "red"  
-        elif 50 <= percentage < 75:
-            bg_color = "orange"  
-        elif 75 <= percentage < 85:
-            bg_color = "yellow"  
-        elif 85 <= percentage < 95:
-            bg_color = "#FEEAA5"  # paleyellow
-        elif percentage >= 95:
-            bg_color = "SystemButtonFace"
-        else:
-            bg_color = "#EE82EE"  # violet
+    for avg, total_kwh, var in data_list:
+        avg_percentage = (avg / maxavg_value) * 100
+        total_percentage = (total_kwh / maxtotal_value) * 100
+        avg_color = get_color_for_percentage(avg_percentage)
+        total_color = get_color_for_percentage(total_percentage)
 
         try:
-            var.config(text=f"{percentage:.0f}%", bg=bg_color)  # Update the 'text' attribute
+            # Create the dual-color image
+            dual_color_image = create_dual_color_image(avg_color, total_color)
+            
+            # Configure the checkbutton
+            var.config(
+                text=f"{avg_percentage:.0f}% | {total_percentage:.0f}%",
+                image=dual_color_image,
+                compound="center",  # Place text on top of the image
+                fg="black" # Set a contrasting text color
+            )
+            # IMPORTANT: Keep a reference to the image to prevent it from being garbage collected
+            var.image = dual_color_image
         except AttributeError:
              pass #  The variable does not have a text attribute.
 
 
 def checkin():
-    for widget in checkIns.winfo_children():
-        widget.destroy()
+    try: 
+        for widget in checkIns.winfo_children():
+            widget.destroy()
 
-    connect_Logbook()
+        connect_Logbook()
 
-    cur.execute("SELECT Location, Company, Employee FROM [Checked In]")
-    checkedIn = cur.fetchall()
+        cur.execute("SELECT Location, Company, Employee FROM [Checked In]")
+        checkedIn = cur.fetchall()
 
-    for row_index, row in enumerate(checkedIn):
-        for col_index, value in enumerate(row):
-           # Check if the value is a datetime object and format it
-            if isinstance(value, datetime):
-                value = value.strftime('%m/%d/%y')
-            # Apply different formatting for specific columns
-            if row_index in range(1, 100, 2):
-                bg_color = '#90EE90'  # Pale Light Green
-            else:
-                bg_color = '#ADD8E6'  # Light Blue of Main Site Data Window
-            if col_index == 2:
-                wsize = 24
-            elif col_index == 1:
-                wsize = 32
-            else:
-                wsize = 23
-            label = Label(checkIns, text=value, font=("Calibri", 14), borderwidth=1, relief="solid", width=wsize, bg=bg_color)
-            label.grid(row=row_index, column=col_index)
+        for row_index, row in enumerate(checkedIn):
+            for col_index, value in enumerate(row):
+            # Check if the value is a datetime object and format it
+                if isinstance(value, datetime):
+                    value = value.strftime('%m/%d/%y')
+                # Apply different formatting for specific columns
+                if row_index in range(1, 100, 2):
+                    bg_color = '#90EE90'  # Pale Light Green
+                else:
+                    bg_color = '#ADD8E6'  # Light Blue of Main Site Data Window
+                if col_index == 2:
+                    wsize = 24
+                elif col_index == 1:
+                    wsize = 32
+                else:
+                    wsize = 23
+                label = Label(checkIns, text=value, font=("Calibri", 14), borderwidth=1, relief="solid", width=wsize, bg=bg_color)
+                label.grid(row=row_index, column=col_index)
+
+    except pyobdc.Error as err:
+        print("Logbook Error: ", err)
 
     lbconnection.close()
-
     update_data()
 
 
@@ -2528,12 +2538,12 @@ def time_window():
     hm_tenthtime = tenthtime.strftime('%H:%M')
     hm_lasttime = lasttime.strftime('%H:%M')
 
-    time1v.config(text=hm_firsttime, font=("Calibri", 20))
-    time2v.config(text=hm_secondtime, font=("Calibri", 20))
-    time3v.config(text=hm_thirdtime, font=("Calibri", 20))
-    time4v.config(text=hm_fourthtime, font=("Calibri", 20))
-    time10v.config(text=hm_tenthtime, font=("Calibri", 20))
-    timeLv.config(text=hm_lasttime, font=("Calibri", 20))
+    time1v.config(text=hm_firsttime, font=("Calibri", 16))
+    time2v.config(text=hm_secondtime, font=("Calibri", 16))
+    time3v.config(text=hm_thirdtime, font=("Calibri", 16))
+    time4v.config(text=hm_fourthtime, font=("Calibri", 16))
+    time10v.config(text=hm_tenthtime, font=("Calibri", 16))
+    timeLv.config(text=hm_lasttime, font=("Calibri", 16))
 
     pulls5TD = firsttime - fifthtime
     pulls5TDmins = round(pulls5TD.total_seconds() / 60, 2)

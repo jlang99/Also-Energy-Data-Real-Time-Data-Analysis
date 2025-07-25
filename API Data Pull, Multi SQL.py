@@ -63,7 +63,7 @@ def check_and_handle_sql_server():
     temp_root = tk.Tk()
     temp_root.withdraw()
 
-    sql_service_names = ['MSSQL$SQLEXPRESS01', 'MSSQL$SQLEXPRESS']
+    sql_service_names = ['MSSQL$SQLEXPRESS001', 'MSSQL$SQLEXPRESS']
     status = None
     for service_name in sql_service_names:
         status = check_sql_server_status(service_name)
@@ -1657,10 +1657,9 @@ def counting_fails(auth_file):
 
 def token_management():
     if 'access_token' in globals():
-        print(globals()['access_token'])
         pass
     else:
-        print("Calling Access Token")
+        print("Requesting Access Token")
         get_access_token()
 
 # Make the POST request to obtain an access token
@@ -1821,14 +1820,13 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
             with open(json_loop_exit_file, "w+") as outfile: 
                 json.dump(api_data_dict, outfile, indent=2)
             
-            print(api_data_dict)
+            #print(api_data_dict)
             hostname = socket.gethostname()
             if hostname == "NAR-OMOPSXPS":
                 server = "SQLEXPRESS01"
             else:
                 server = "SQLEXPRESS"
             # Create a connection to the Access database
-            global dbconnection, cursor
             connection_string = (
                 r'DRIVER={ODBC Driver 18 for SQL Server};'
                 fr'SERVER=localhost\{server};'
