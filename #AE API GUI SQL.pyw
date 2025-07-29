@@ -110,6 +110,7 @@ spread10.grid(row=5, column=2)
 underperf_Maincbvar = BooleanVar()
 underperf_Maincb = Checkbutton(timeW, text="Select to turn on the Inverter\nUnderperformance check\nBelow is the parameters\nfor the data", cursor='hand2', variable=underperf_Maincbvar)
 underperf_Maincb.grid(row=0, column=3)
+underperf_Maincb.select()
 
 underperf_range = IntVar()
 underperf_range.set(30)
@@ -170,9 +171,9 @@ style.configure("TNotebook.Tab", padding=[90, 2], font=('Tk_defaultFont', 12, 'b
 solrvr = ttk.Frame(solrvrnotebook)
 solrvr2 = ttk.Frame(solrvrnotebook)
 solrvr3 = ttk.Frame(solrvrnotebook)
-solrvrnotebook.add(solrvr, text="Bulloch 1A - Richmond")
-solrvrnotebook.add(solrvr2, text="Shorthorn - Washington")
-solrvrnotebook.add(solrvr3, text="Whitehall - Whitetail")
+solrvrnotebook.add(solrvr, text="Bulloch 1A - McLean")
+solrvrnotebook.add(solrvr2, text="Richmond - Warbler")
+solrvrnotebook.add(solrvr3, text="Washington - Whitetail")
 solrvrnotebook.pack(expand=True, fill='both')
 
 hst_win = Toplevel(root)
@@ -197,8 +198,8 @@ except Exception as e:
 narnotebook = ttk.Notebook(nar_win)
 nar = ttk.Frame(narnotebook)
 nar2 = ttk.Frame(narnotebook)
-narnotebook.add(nar, text="Bluebird - Hickory")
-narnotebook.add(nar2, text="Wellons - Violet")
+narnotebook.add(nar, text="Bluebird - Hayes")
+narnotebook.add(nar2, text="Hickory - Violet")
 narnotebook.pack(expand=True, fill='both')
 
 #Static Inv Windows
@@ -330,7 +331,7 @@ master_List_Sites = [('Bishopville II', {
     19: "19", 20: "20", 21: "21", 22: "22", 23: "23", 24: "24", 25: "25", 26: "26"},
                      3240000, 'hayes', nar, 'HAYES'),
 
-                    ('Hickory', {1:"1", 2:"2"}, 5000000, 'hickory', nar, 'HICKORY'),
+                    ('Hickory', {1:"1", 2:"2"}, 5000000, 'hickory', nar2, 'HICKORY'),
                     
                     ('Hickson', {
     1: "1-1", 2: "1-2", 3: "1-3", 4: "1-4", 5: "1-5", 6: "1-6",
@@ -385,7 +386,7 @@ master_List_Sites = [('Bishopville II', {
     7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
     13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18",
     19: "19", 20: "20", 21: "21", 22: "22", 23: "23", 24: "24"},
-                    3000000, 'richmond', solrvr, 'RICHMOND'),
+                    3000000, 'richmond', solrvr2, 'RICHMOND'),
                     
                     ('Shorthorn', {
     1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
@@ -447,7 +448,7 @@ master_List_Sites = [('Bishopville II', {
     11: "11", 12: "12", 13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18", 19: "19", 20: "20",
     21: "21", 22: "22", 23: "23", 24: "24", 25: "25", 26: "26", 27: "27", 28: "28", 29: "29", 30: "30",
     31: "31", 32: "32", 33: "33", 34: "34", 35: "35", 36: "36", 37: "37", 38: "38", 39: "39", 40: "40"},
-                    5000000, 'washington', solrvr2, None), 
+                    5000000, 'washington', solrvr3, None), 
                     
                     ('Wayne 1', {1: "1", 2: "2", 3: "3", 4: "4"}, 5000000, 'wayne1', soltage, None), 
                     
@@ -1185,10 +1186,17 @@ for ro, (name, invdict, metermax, varname, custid, pvsyst_name) in enumerate(mas
             globals()[f'{varname}inv{num}WOLabel'] = Label(custid, text='⬜') #intial Setup of WO Placeholder. 
             globals()[f'{varname}inv{num}WOLabel'].grid(row= row_offset, column= (ro*3)+1+column_offset)
 
-            globals()[f'{varname}invup{num}cbval'] = IntVar()
-            all_CBs.append(globals()[f'{varname}invup{num}cbval'])
-            globals()[f'{varname}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{varname}invup{num}cbval'], cursor='hand2')
-            globals()[f'{varname}invup{num}cb'].grid(row= row_offset, column= (ro*3)+2+column_offset, sticky=W)
+            if name != "Conetoe":
+                globals()[f'{varname}invup{num}cbval'] = IntVar()
+                all_CBs.append(globals()[f'{varname}invup{num}cbval'])
+                globals()[f'{varname}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{varname}invup{num}cbval'], cursor='hand2')
+                globals()[f'{varname}invup{num}cb'].grid(row= row_offset, column= (ro*3)+2+column_offset, sticky=W)
+            else:
+                if num < 5:
+                    globals()[f'{varname}invup{num}cbval'] = IntVar()
+                    all_CBs.append(globals()[f'{varname}invup{num}cbval'])
+                    globals()[f'{varname}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{varname}invup{num}cbval'], cursor='hand2')
+                    globals()[f'{varname}invup{num}cb'].grid(row= (4*row_offset-3), rowspan= 4, column= (ro*3)+2+column_offset, sticky=W)
 
 
 ##########
@@ -2199,12 +2207,15 @@ def underperformance_data_update(): #Inv Comparison Function
     
 
 
-    
+    coentoe_inv1 = []
+    coentoe_inv2 = []
+    coentoe_inv3 = []
+    coentoe_inv4 = []
+
     for site, invdict, metermax, var, custid, pvsyst_name in master_List_Sites:
         inv_count = len(invdict)
         if site == "CDIA":
             continue
-        # Initialize a dictionary to store dataframes for each group for the current site
         for i in range(1, inv_count + 1):
             if site == "Duplin":
                 if i <= 3:
@@ -2224,6 +2235,41 @@ def underperformance_data_update(): #Inv Comparison Function
                 df_resampled['kWh'] = df_resampled['Watts'] * (2 / 60) / 1000
                 globals()[f'{var}{alt}inv{num}daykw'] = df_resampled['kWh'].sum()
                 globals()[f'{var}{alt}inv{num}daykwavg'] = df_resampled['Watts'].mean()
+            elif site == "Conetoe":
+                table_name = f'{site} INV {i} Data'
+                df = underperformance_data.get(table_name, pd.DataFrame(columns=['Timestamp', 'Watts']))
+                df_filtered = df[df['Watts'] >= 1].copy()
+                df_filtered['Timestamp'] = pd.to_datetime(df_filtered['Timestamp'])
+                df_grouped = df_filtered.groupby('Timestamp').mean().reset_index()
+                df_resampled = df_grouped.set_index('Timestamp').resample('5min').ffill()
+                df_resampled['kWh'] = df_resampled['Watts'] * (2 / 60) / 1000
+                daily_kw = df_resampled['kWh'].sum()
+                avg_w = df_resampled['Watts'].mean()
+                if i < 5:
+                    coentoe_inv1.append((avg_w, daily_kw))
+                    if i == 4:
+                        globals()[f'{var}inv1daykwavg'] = np.mean([item[0] for item in coentoe_inv1])
+                        globals()[f'{var}inv1daykw'] = np.mean([item[1] for item in coentoe_inv1])
+
+                elif 4 < i < 9:
+                    coentoe_inv2.append((avg_w, daily_kw))
+                    if i == 8:
+                        globals()[f'{var}inv2daykwavg'] = np.mean([item[0] for item in coentoe_inv2])
+                        globals()[f'{var}inv2daykw'] = np.mean([item[1] for item in coentoe_inv2])
+
+                elif 8 < i < 13:
+                    coentoe_inv3.append((avg_w, daily_kw))
+                    if i == 12:
+                        globals()[f'{var}inv3daykwavg'] = np.mean([item[0] for item in coentoe_inv3])
+                        globals()[f'{var}inv3daykw'] = np.mean([item[1] for item in coentoe_inv3])
+
+                else:
+                    coentoe_inv4.append((avg_w, daily_kw))
+                    if i == 16:
+                        globals()[f'{var}inv4daykwavg'] = np.mean([item[0] for item in coentoe_inv4])
+                        globals()[f'{var}inv4daykw'] = np.mean([item[1] for item in coentoe_inv4])
+
+                
             else:
                 table_name = f'{site} INV {i} Data'
                 df = underperformance_data.get(table_name, pd.DataFrame(columns=['Timestamp', 'Watts']))
@@ -2288,7 +2334,7 @@ def underperformance_data_update(): #Inv Comparison Function
     whitehall13strdaykwList = [(whitehallinv2daykwavg, whitehallinv2daykw, whitehallinvup2cb), (whitehallinv6daykwavg, whitehallinv6daykw, whitehallinvup6cb), (whitehallinv7daykwavg, whitehallinv7daykw, whitehallinvup7cb), (whitehallinv8daykwavg, whitehallinv8daykw, whitehallinvup8cb), (whitehallinv9daykwavg, whitehallinv9daykw, whitehallinvup9cb), (whitehallinv10daykwavg, whitehallinv10daykw, whitehallinvup10cb), (whitehallinv11daykwavg, whitehallinv11daykw, whitehallinvup11cb), (whitehallinv12daykwavg, whitehallinv12daykw, whitehallinvup12cb)]
     whitetaildaykwList = [(whitetailinv1daykwavg, whitetailinv1daykw, whitetailinvup1cb), (whitetailinv2daykwavg, whitetailinv2daykw, whitetailinvup2cb), (whitetailinv3daykwavg, whitetailinv3daykw, whitetailinvup3cb), (whitetailinv5daykwavg, whitetailinv5daykw, whitetailinvup5cb), (whitetailinv6daykwavg, whitetailinv6daykw, whitetailinvup6cb), (whitetailinv7daykwavg, whitetailinv7daykw, whitetailinvup7cb), (whitetailinv8daykwavg, whitetailinv8daykw, whitetailinvup8cb), (whitetailinv9daykwavg, whitetailinv9daykw, whitetailinvup9cb), (whitetailinv10daykwavg, whitetailinv10daykw, whitetailinvup10cb), (whitetailinv11daykwavg, whitetailinv11daykw, whitetailinvup11cb), (whitetailinv12daykwavg, whitetailinv12daykw, whitetailinvup12cb), (whitetailinv22daykwavg, whitetailinv22daykw, whitetailinvup22cb), (whitetailinv23daykwavg, whitetailinv23daykw, whitetailinvup23cb), (whitetailinv24daykwavg, whitetailinv24daykw, whitetailinvup24cb), (whitetailinv25daykwavg, whitetailinv25daykw, whitetailinvup25cb), (whitetailinv32daykwavg, whitetailinv32daykw, whitetailinvup32cb), (whitetailinv33daykwavg, whitetailinv33daykw, whitetailinvup33cb), (whitetailinv35daykwavg, whitetailinv35daykw, whitetailinvup35cb), (whitetailinv36daykwavg, whitetailinv36daykw, whitetailinvup36cb), (whitetailinv37daykwavg, whitetailinv37daykw, whitetailinvup37cb), (whitetailinv38daykwavg, whitetailinv38daykw, whitetailinvup38cb), (whitetailinv39daykwavg, whitetailinv39daykw, whitetailinvup39cb), (whitetailinv40daykwavg, whitetailinv40daykw, whitetailinvup40cb), (whitetailinv41daykwavg, whitetailinv41daykw, whitetailinvup41cb), (whitetailinv42daykwavg, whitetailinv42daykw, whitetailinvup42cb), (whitetailinv49daykwavg, whitetailinv49daykw, whitetailinvup49cb), (whitetailinv50daykwavg, whitetailinv50daykw, whitetailinvup50cb), (whitetailinv51daykwavg, whitetailinv51daykw, whitetailinvup51cb), (whitetailinv57daykwavg, whitetailinv57daykw, whitetailinvup57cb), (whitetailinv61daykwavg, whitetailinv61daykw, whitetailinvup61cb), (whitetailinv62daykwavg, whitetailinv62daykw, whitetailinvup62cb), (whitetailinv63daykwavg, whitetailinv63daykw, whitetailinvup63cb), (whitetailinv65daykwavg, whitetailinv65daykw, whitetailinvup65cb), (whitetailinv66daykwavg, whitetailinv66daykw, whitetailinvup66cb), (whitetailinv67daykwavg, whitetailinv67daykw, whitetailinvup67cb), (whitetailinv68daykwavg, whitetailinv68daykw, whitetailinvup68cb), (whitetailinv69daykwavg, whitetailinv69daykw, whitetailinvup69cb), (whitetailinv70daykwavg, whitetailinv70daykw, whitetailinvup70cb), (whitetailinv71daykwavg, whitetailinv71daykw, whitetailinvup71cb), (whitetailinv72daykwavg, whitetailinv72daykw, whitetailinvup72cb), (whitetailinv73daykwavg, whitetailinv73daykw, whitetailinvup73cb), (whitetailinv74daykwavg, whitetailinv74daykw, whitetailinvup74cb), (whitetailinv75daykwavg, whitetailinv75daykw, whitetailinvup75cb), (whitetailinv76daykwavg, whitetailinv76daykw, whitetailinvup76cb), (whitetailinv77daykwavg, whitetailinv77daykw, whitetailinvup77cb), (whitetailinv78daykwavg, whitetailinv78daykw, whitetailinvup78cb), (whitetailinv79daykwavg, whitetailinv79daykw, whitetailinvup79cb), (whitetailinv80daykwavg, whitetailinv80daykw, whitetailinvup80cb)]
     whitetail17strdaykwList = [(whitetailinv4daykwavg, whitetailinv4daykw, whitetailinvup4cb), (whitetailinv13daykwavg, whitetailinv13daykw, whitetailinvup13cb), (whitetailinv14daykwavg, whitetailinv14daykw, whitetailinvup14cb), (whitetailinv15daykwavg, whitetailinv15daykw, whitetailinvup15cb), (whitetailinv16daykwavg, whitetailinv16daykw, whitetailinvup16cb), (whitetailinv17daykwavg, whitetailinv17daykw, whitetailinvup17cb), (whitetailinv18daykwavg, whitetailinv18daykw, whitetailinvup18cb), (whitetailinv19daykwavg, whitetailinv19daykw, whitetailinvup19cb), (whitetailinv20daykwavg, whitetailinv20daykw, whitetailinvup20cb), (whitetailinv21daykwavg, whitetailinv21daykw, whitetailinvup21cb), (whitetailinv26daykwavg, whitetailinv26daykw, whitetailinvup26cb), (whitetailinv27daykwavg, whitetailinv27daykw, whitetailinvup27cb), (whitetailinv28daykwavg, whitetailinv28daykw, whitetailinvup28cb), (whitetailinv29daykwavg, whitetailinv29daykw, whitetailinvup29cb), (whitetailinv30daykwavg, whitetailinv30daykw, whitetailinvup30cb), (whitetailinv31daykwavg, whitetailinv31daykw, whitetailinvup31cb), (whitetailinv34daykwavg, whitetailinv34daykw, whitetailinvup34cb), (whitetailinv43daykwavg, whitetailinv43daykw, whitetailinvup43cb), (whitetailinv44daykwavg, whitetailinv44daykw, whitetailinvup44cb), (whitetailinv45daykwavg, whitetailinv45daykw, whitetailinvup45cb), (whitetailinv46daykwavg, whitetailinv46daykw, whitetailinvup46cb), (whitetailinv47daykwavg, whitetailinv47daykw, whitetailinvup47cb), (whitetailinv48daykwavg, whitetailinv48daykw, whitetailinvup48cb), (whitetailinv52daykwavg, whitetailinv52daykw, whitetailinvup52cb), (whitetailinv53daykwavg, whitetailinv53daykw, whitetailinvup53cb), (whitetailinv54daykwavg, whitetailinv54daykw, whitetailinvup54cb), (whitetailinv55daykwavg, whitetailinv55daykw, whitetailinvup55cb), (whitetailinv56daykwavg, whitetailinv56daykw, whitetailinvup56cb), (whitetailinv58daykwavg, whitetailinv58daykw, whitetailinvup58cb), (whitetailinv59daykwavg, whitetailinv59daykw, whitetailinvup59cb), (whitetailinv60daykwavg, whitetailinv60daykw, whitetailinvup60cb), (whitetailinv64daykwavg, whitetailinv64daykw, whitetailinvup64cb)]
-    conetoe1daykwList = [(conetoe1inv1daykwavg, conetoe1inv1daykw, conetoe1invup1cb), (conetoe1inv2daykwavg, conetoe1inv2daykw, conetoe1invup2cb), (conetoe1inv3daykwavg, conetoe1inv3daykw, conetoe1invup3cb), (conetoe1inv4daykwavg, conetoe1inv4daykw, conetoe1invup4cb), (conetoe1inv5daykwavg, conetoe1inv5daykw, conetoe1invup5cb), (conetoe1inv6daykwavg, conetoe1inv6daykw, conetoe1invup6cb), (conetoe1inv7daykwavg, conetoe1inv7daykw, conetoe1invup7cb), (conetoe1inv8daykwavg, conetoe1inv8daykw, conetoe1invup8cb), (conetoe1inv9daykwavg, conetoe1inv9daykw, conetoe1invup9cb), (conetoe1inv10daykwavg, conetoe1inv10daykw, conetoe1invup10cb), (conetoe1inv11daykwavg, conetoe1inv11daykw, conetoe1invup11cb), (conetoe1inv12daykwavg, conetoe1inv12daykw, conetoe1invup12cb), (conetoe1inv13daykwavg, conetoe1inv13daykw, conetoe1invup13cb), (conetoe1inv14daykwavg, conetoe1inv14daykw, conetoe1invup14cb), (conetoe1inv15daykwavg, conetoe1inv15daykw, conetoe1invup15cb), (conetoe1inv16daykwavg, conetoe1inv16daykw, conetoe1invup16cb)]
+    conetoe1daykwList = [(conetoe1inv1daykwavg, conetoe1inv1daykw, conetoe1invup1cb), (conetoe1inv2daykwavg, conetoe1inv2daykw, conetoe1invup2cb), (conetoe1inv3daykwavg, conetoe1inv3daykw, conetoe1invup3cb), (conetoe1inv4daykwavg, conetoe1inv4daykw, conetoe1invup4cb)]
     duplindaykwList = [(duplinsinv1daykwavg, duplinsinv1daykw, duplininvup4cb), (duplinsinv2daykwavg, duplinsinv2daykw, duplininvup5cb), (duplinsinv3daykwavg, duplinsinv3daykw, duplininvup6cb), (duplinsinv4daykwavg, duplinsinv4daykw, duplininvup7cb), (duplinsinv5daykwavg, duplinsinv5daykw, duplininvup8cb), (duplinsinv6daykwavg, duplinsinv6daykw, duplininvup9cb), (duplinsinv7daykwavg, duplinsinv7daykw, duplininvup10cb), (duplinsinv8daykwavg, duplinsinv8daykw, duplininvup11cb), (duplinsinv9daykwavg, duplinsinv9daykw, duplininvup12cb), (duplinsinv10daykwavg, duplinsinv10daykw, duplininvup13cb), (duplinsinv11daykwavg, duplinsinv11daykw, duplininvup14cb), (duplinsinv12daykwavg, duplinsinv12daykw, duplininvup15cb), (duplinsinv13daykwavg, duplinsinv13daykw, duplininvup16cb), (duplinsinv14daykwavg, duplinsinv14daykw, duplininvup17cb), (duplinsinv15daykwavg, duplinsinv15daykw, duplininvup18cb), (duplinsinv16daykwavg, duplinsinv16daykw, duplininvup19cb), (duplinsinv17daykwavg, duplinsinv17daykw, duplininvup20cb), (duplinsinv18daykwavg, duplinsinv18daykw, duplininvup21cb)]
     duplinCentraldaykwList = [(duplininv1daykwavg, duplininv1daykw, duplininvup1cb), (duplininv2daykwavg, duplininv2daykw, duplininvup2cb), (duplininv3daykwavg, duplininv3daykw, duplininvup3cb)]
     wayne11000daykwList = [(wayne1inv1daykwavg, wayne1inv1daykw, wayne1invup1cb), (wayne1inv4daykwavg, wayne1inv4daykw, wayne1invup4cb)]
@@ -2303,13 +2349,22 @@ def underperformance_data_update(): #Inv Comparison Function
     hollyswamp18strdaykwList = [(hollyswampinv15daykwavg, hollyswampinv15daykw, hollyswampinvup15cb), (hollyswampinv13daykwavg, hollyswampinv13daykw, hollyswampinvup13cb)]
     pgdaykwList = [(pginv7daykwavg, pginv7daykw, pginvup7cb), (pginv8daykwavg, pginv8daykw, pginvup8cb), (pginv9daykwavg, pginv9daykw, pginvup9cb), (pginv10daykwavg, pginv10daykw, pginvup10cb), (pginv11daykwavg, pginv11daykw, pginvup11cb), (pginv12daykwavg, pginv12daykw, pginvup12cb), (pginv13daykwavg, pginv13daykw, pginvup13cb), (pginv14daykwavg, pginv14daykw, pginvup14cb), (pginv15daykwavg, pginv15daykw, pginvup15cb), (pginv16daykwavg, pginv16daykw, pginvup16cb), (pginv17daykwavg, pginv17daykw, pginvup17cb), (pginv18daykwavg, pginv18daykw, pginvup18cb)]
     pg66daykwList = [(pginv1daykwavg, pginv1daykw, pginvup1cb), (pginv2daykwavg, pginv2daykw, pginvup2cb), (pginv3daykwavg, pginv3daykw, pginvup3cb), (pginv4daykwavg, pginv4daykw, pginvup4cb), (pginv5daykwavg, pginv5daykw, pginvup5cb), (pginv6daykwavg, pginv6daykw, pginvup6cb)]
-        
+    cougar14strList = [(cougarinv1daykwavg, cougarinv1daykw, cougarinvup1cb), (cougarinv2daykwavg, cougarinv2daykw, cougarinvup2cb), (cougarinv3daykwavg, cougarinv3daykw, cougarinvup3cb), (cougarinv4daykwavg, cougarinv4daykw, cougarinvup4cb), (cougarinv5daykwavg, cougarinv5daykw, cougarinvup5cb), (cougarinv6daykwavg, cougarinv6daykw, cougarinvup6cb), (cougarinv7daykwavg, cougarinv7daykw, cougarinvup7cb), (cougarinv8daykwavg, cougarinv8daykw, cougarinvup8cb), (cougarinv9daykwavg, cougarinv9daykw, cougarinvup9cb), (cougarinv10daykwavg, cougarinv10daykw, cougarinvup10cb), (cougarinv11daykwavg, cougarinv11daykw, cougarinvup11cb), (cougarinv12daykwavg, cougarinv12daykw, cougarinvup12cb), (cougarinv13daykwavg, cougarinv13daykw, cougarinvup13cb), (cougarinv14daykwavg, cougarinv14daykw, cougarinvup14cb), (cougarinv15daykwavg, cougarinv15daykw, cougarinvup15cb), (cougarinv16daykwavg, cougarinv16daykw, cougarinvup16cb), (cougarinv17daykwavg, cougarinv17daykw, cougarinvup17cb), (cougarinv18daykwavg, cougarinv18daykw, cougarinvup18cb), (cougarinv19daykwavg, cougarinv19daykw, cougarinvup19cb), (cougarinv20daykwavg, cougarinv20daykw, cougarinvup20cb), (cougarinv21daykwavg, cougarinv21daykw, cougarinvup21cb), (cougarinv22daykwavg, cougarinv22daykw, cougarinvup22cb), (cougarinv25daykwavg, cougarinv25daykw, cougarinvup25cb), (cougarinv26daykwavg, cougarinv26daykw, cougarinvup26cb), (cougarinv27daykwavg, cougarinv27daykw, cougarinvup27cb), (cougarinv28daykwavg, cougarinv28daykw, cougarinvup28cb), (cougarinv29daykwavg, cougarinv29daykw, cougarinvup29cb), (cougarinv30daykwavg, cougarinv30daykw, cougarinvup30cb), (cougarinv31daykwavg, cougarinv31daykw, cougarinvup31cb)]
+    cougar13strList = [(cougarinv23daykwavg, cougarinv23daykw, cougarinvup23cb), (cougarinv24daykwavg, cougarinv24daykw, cougarinvup24cb)]
+    elk10strList = [(elkinv9daykwavg, elkinv9daykw, elkinvup9cb), (elkinv10daykwavg, elkinv10daykw, elkinvup10cb), (elkinv11daykwavg, elkinv11daykw, elkinvup11cb), (elkinv12daykwavg, elkinv12daykw, elkinvup12cb), (elkinv13daykwavg, elkinv13daykw, elkinvup13cb), (elkinv21daykwavg, elkinv21daykw, elkinvup21cb), (elkinv22daykwavg, elkinv22daykw, elkinvup22cb), (elkinv25daykwavg, elkinv25daykw, elkinvup25cb), (elkinv26daykwavg, elkinv26daykw, elkinvup26cb), (elkinv27daykwavg, elkinv27daykw, elkinvup27cb), (elkinv28daykwavg, elkinv28daykw, elkinvup28cb), (elkinv29daykwavg, elkinv29daykw, elkinvup29cb)]
+    elk11strList = [(elkinv1daykwavg, elkinv1daykw, elkinvup1cb), (elkinv2daykwavg, elkinv2daykw, elkinvup2cb), (elkinv3daykwavg, elkinv3daykw, elkinvup3cb), (elkinv4daykwavg, elkinv4daykw, elkinvup4cb), (elkinv5daykwavg, elkinv5daykw, elkinvup5cb), (elkinv6daykwavg, elkinv6daykw, elkinvup6cb), (elkinv7daykwavg, elkinv7daykw, elkinvup7cb), (elkinv8daykwavg, elkinv8daykw, elkinvup8cb), (elkinv14daykwavg, elkinv14daykw, elkinvup14cb), (elkinv15daykwavg, elkinv15daykw, elkinvup15cb), (elkinv16daykwavg, elkinv16daykw, elkinvup16cb), (elkinv17daykwavg, elkinv17daykw, elkinvup17cb), (elkinv18daykwavg, elkinv18daykw, elkinvup18cb), (elkinv19daykwavg, elkinv19daykw, elkinvup19cb), (elkinv20daykwavg, elkinv20daykw, elkinvup20cb), (elkinv23daykwavg, elkinv23daykw, elkinvup23cb), (elkinv24daykwavg, elkinv24daykw, elkinvup24cb), (elkinv30daykwavg, elkinv30daykw, elkinvup30cb), (elkinv31daykwavg, elkinv31daykw, elkinvup31cb), (elkinv32daykwavg, elkinv32daykw, elkinvup32cb), (elkinv33daykwavg, elkinv33daykw, elkinvup33cb), (elkinv34daykwavg, elkinv34daykw, elkinvup34cb), (elkinv35daykwavg, elkinv35daykw, elkinvup35cb), (elkinv36daykwavg, elkinv36daykw, elkinvup36cb), (elkinv37daykwavg, elkinv37daykw, elkinvup37cb), (elkinv38daykwavg, elkinv38daykw, elkinvup38cb), (elkinv39daykwavg, elkinv39daykw, elkinvup39cb), (elkinv40daykwavg, elkinv40daykw, elkinvup40cb), (elkinv41daykwavg, elkinv41daykw, elkinvup41cb), (elkinv42daykwavg, elkinv42daykw, elkinvup42cb), (elkinv43daykwavg, elkinv43daykw, elkinvup43cb)]
+
     site_under_Lists = {
         "Duplin Central Inverters": duplinCentraldaykwList,
         "Bulloch 1A 11 String Inverters": bulloch1adaykwList,
         "Bulloch 1A 10 String Inverters": bulloch1a10strdaykwList,
         "Bulloch 1B 11 String Inverters": bulloch1bdaykwList,
         "Bulloch 1B 10 String Inverters": bulloch1b10strdaykwList,
+        "Cougar 13 String Inverters": cougar13strList,
+        "Cougar 14 String Inverters": cougar14strList,
+        "Elk 10 String Inverters": elk10strList,
+        "Elk 11 String Inverters": elk11strList,
+
         "Gray Fox Inverters": grayfoxdaykwList,
         #Is seperate groups but I don't know how to split them based on As Builts
 
@@ -2333,7 +2388,7 @@ def underperformance_data_update(): #Inv Comparison Function
         "Whitetail 16 String Inverters": whitetaildaykwList,
         "Whitetail 17 String Inverters": whitetail17strdaykwList,
         "Conetoe Inverters": conetoe1daykwList,
-        "Duplin String Inverters": duplindaykwList, #WE need to further manipulate the DF's so that rows are defined by up to the minutes not the seconds
+        "Duplin String Inverters": duplindaykwList, 
         "Wayne 1 Inverters": wayne1daykwList,
         "Wayne 1 1000's": wayne11000daykwList, 
         "Wayne 2 Inverters": wayne2daykwList,
@@ -2378,8 +2433,6 @@ def underperformance_data_update(): #Inv Comparison Function
 
     for inv_group_name, underperformance_list in site_under_Lists.items():
         if inv_group_name in {"Duplin String Inverters", "Cardinal 96.6% Inverters", "Cardinal 95.2% Inverters", "Cardinal 94.4% Inverters"}:
-            print(len(underperformance_list)) #WE need to further manipulate the DF's so that rows are defined by up to the minutes not the seconds
-            print(underperformance_list)
             avgvalues = [value for value, _, _ in underperformance_list]
             totalvalues = [value for _, value, _ in underperformance_list]
             max_val = max(avgvalues)
