@@ -28,6 +28,37 @@ import pandas as pd
 from sklearn.linear_model import LinearRegression
 from PIL import Image, ImageDraw, ImageTk
 
+def date_validation(dvalue):
+    """Validates that the input is in mm/dd/yyyy format."""
+    # An empty entry is a valid state
+    if not dvalue:
+        return True
+    # The final format is 10 characters long
+    if len(dvalue) > 10:
+        return False
+
+    # Check the characters as they are typed
+    for i, char in enumerate(dvalue):
+        if i in [0, 1, 3, 4, 6, 7, 8, 9]:  # Positions for digits
+            if not char.isdigit():
+                return False
+        if i in [2, 5]:  # Positions for slashes
+            if char != '/':
+                return False
+
+    # Check the semantic value of the month and day
+    if len(dvalue) >= 2:
+        # Month must be between 01 and 12
+        month = int(dvalue[0:2])
+        if month < 1 or month > 12:
+            return False
+    if len(dvalue) >= 5:
+        # Day must be between 01 and 31
+        day = int(dvalue[3:5])
+        if day < 1 or day > 31:
+            return False
+        
+
 breaker_pulls = 6
 meter_pulls = 8
 
@@ -45,6 +76,9 @@ except Exception as e:
 root.wm_attributes("-topmost", True)
 root.configure(bg="#ADD8E6") 
 
+#Date Validation Registration
+vcmd_date = (root.register(date_validation), '%P')
+
 checkIns= Toplevel(root)
 try:
     checkIns.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
@@ -55,13 +89,15 @@ checkIns.title("Personnel On-Site")
 checkIns.wm_attributes("-topmost", True)
 
 
-timeW= Toplevel(root)
+timeWin= Toplevel(root)
 try:
-    timeW.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
+    timeWin.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
 except Exception as e:
     print(f"Error loading icon: {e}")
-timeW.title("Timestamps")
-timeW.wm_attributes("-topmost", True)
+timeWin.title("Timestamps")
+timeWin.wm_attributes("-topmost", True)
+timeW = Frame(timeWin)
+timeW.pack(side=LEFT)
 timeW_notes= Label(timeW, text= "Data Pull Timestamps", font= ("Calibiri", 14))
 timeW_notes.grid(row=0, column= 0, columnspan= 3)
 
@@ -106,33 +142,40 @@ spread10 = Label(timeW, text= "Time")
 spread10.grid(row=5, column=2)
 
 
-
+underperf_frame = Frame(timeWin)
+underperf_frame.pack(side=RIGHT)
+#Underperformance Settings
 underperf_Maincbvar = BooleanVar()
-underperf_Maincb = Checkbutton(timeW, text="Select to turn on the Inverter\nUnderperformance check\nBelow is the parameters\nfor the data", cursor='hand2', variable=underperf_Maincbvar)
-underperf_Maincb.grid(row=0, column=3)
+underperf_Maincb = Checkbutton(underperf_frame, text="Select to turn on the Inverter\nUnderperformance check\nBelow is the parameters\nfor the data", cursor='hand2', variable=underperf_Maincbvar)
+underperf_Maincb.grid(row=0, column=0, columnspan=2)
 underperf_Maincb.select()
 
-underperf_range = IntVar()
-underperf_range.set(30)
-underperfdatalbl= Label(timeW, text= "Days of Data")
-underperfdatalbl.grid(row=1, column=3)
-underperfdaterng = Entry(timeW, width=10, textvariable=underperf_range)
-underperfdaterng.grid(row=2, column=3)
+
+underperf_range = StringVar()
+underperf_range.set((datetime.now().date() - timedelta(days=30)).strftime("%m/%d/%Y"))
+underperf_range2 = StringVar()
+underperf_range2.set((datetime.now().date()).strftime("%m/%d/%Y"))
+underperfdatalbl= Label(underperf_frame, text= "Days of Data\nStart - End")
+underperfdatalbl.grid(row=1, column=0, columnspan=2)
+underperfdaterng = Entry(underperf_frame, width=10, textvariable=underperf_range, validate='all', validatecommand=vcmd_date)
+underperfdaterng.grid(row=2, column=0)
+underperfdaterng2 = Entry(underperf_frame, width=10, textvariable=underperf_range2, validate='all', validatecommand=vcmd_date)
+underperfdaterng2.grid(row=2, column=1)
 
 underperf_hourlimit = IntVar()
 underperf_hourlimit.set(10)
-underperfhourstartlbl= Label(timeW, text= "Hour Start Limit:")
-underperfhourstartlbl.grid(row=3, column=3)
-underperfhourstart = Entry(timeW, width=10, textvariable=underperf_hourlimit)
-underperfhourstart.grid(row=4, column=3)
+underperfhourstartlbl= Label(underperf_frame, text= "Hour Start Limit:")
+underperfhourstartlbl.grid(row=3, column=0, columnspan=2)
+underperfhourstart = Entry(underperf_frame, width=10, textvariable=underperf_hourlimit)
+underperfhourstart.grid(row=4, column=0, columnspan=2)
 
 underperf_hourend = IntVar()
 underperf_hourend.set(15)
-underperfhourlbl= Label(timeW, text= "Hour End Limit:")
-underperfhourlbl.grid(row=5, column=3)
-underperfhour = Entry(timeW, width=10, textvariable=underperf_hourend)
-underperfhour.grid(row=6, column=3)
-
+underperfhourlbl= Label(underperf_frame, text= "Hour End Limit:")
+underperfhourlbl.grid(row=5, column=0, columnspan=2)
+underperfhour = Entry(underperf_frame, width=10, textvariable=underperf_hourend)
+underperfhour.grid(row=6, column=0, columnspan=2)
+# Underperformance Settings end
 
 alertW = Toplevel(root)
 alertW.title("Alert Windows Info")
@@ -2107,8 +2150,10 @@ def update_data():
         gui_update_timer = PausableTimer(60, db_to_dict)
         gui_update_timer.start()
 
-    notes_button.config(state=NORMAL)
+
     sendTexts.config(state=NORMAL)
+    underperfdaterng.config(state=NORMAL)
+    underperfdaterng2.config(state=NORMAL)
 
 def pysyst_connect():
     global cursor_p, connect_pvsystdb
@@ -2180,12 +2225,10 @@ def pvsyst_est(meterval, poa_val, pvsyst_name):
 def underperformance_data_update(): #Inv Comparison Function
     endhour = underperf_hourend.get()
     starthour = underperf_hourlimit.get()
-    dateend = underperf_range.get()
-    #WE need to further manipulate the DF's so that rows are defined by up to the minutes not the seconds
-
-
-    end_date = datetime.now().date()
-    start_date = end_date - timedelta(days=dateend)
+    end_d = underperf_range2.get()
+    start_d = underperf_range.get()
+    start_date = datetime.strptime(start_d, '%m/%d/%Y')
+    end_date = datetime.strptime(end_d, '%m/%d/%Y')
     timecheck = datetime.now()
 
     underperformance_data = {}
@@ -2631,8 +2674,9 @@ def time_window():
 
 def db_to_dict():
     query_start = ty.perf_counter()
-    notes_button.config(state=DISABLED)
     sendTexts.config(state=DISABLED)
+    underperfdaterng.config(state=DISABLED)
+    underperfdaterng2.config(state=DISABLED)
 
     connect_db()
     global tables, inv_data, breaker_data, meter_data, comm_data, POA_data, begin
@@ -2829,16 +2873,18 @@ def load_cb_state():
     else:
         print(f"File {STATE_FILE} does not exist.")
 def check_button_notes():
-    gui_update_timer.pause()
     messagebox.showinfo(parent=alertW, title="Checkbutton Info", message= """The First column of CheckButtons in the Site Data Window turns off all notifications associated with that Site.
                         \nThe POA CB will change the value to 9999 so that no inv outages are filtered by the POA
                         \nThe colored INV CheckButtons are to be selected when a WO is open for that device and will turn off notifications of outages with INV
                         \nThe Box in the middle Represents the Status of that device in Emaint. | ⬜ = NO WO | Black BG = Offline WO Open | Blue BG = Underperformance WO Open | Pink BG = Comms Outage WO Open | Yellow BG = Unknown WO Found |
-                        \nThe 3rd Column is a CB for Underperformance tracking the '%' is based off of the last 7 days of data excluding mornings and evenings as well as times when device was offline.""")
-    gui_update_timer.resume()
+                        \nThe 3rd Column is a CB for Underperformance tracking. Data range is set by the user but as standard 30 days of data and only between the Hours of 10:00 to 15:00.
+                        \nThe first value is calculated by averaging all the values in the data range, then comparing the results to the others in the group.
+                        \nThe second value is a total of all the values in the data range, then comparing the results to the others in the group.""")
 
+    
+    return True
 def open_file():
-    os.startfile(r"G:\Shared drives\Narenco Projects\O&M Projects\NCC\Procedures\Also Energy GUI Interactions.docx")
+    os.startfile(r"G:\Shared drives\Narenco Projects\O&M Projects\NCC\Procedures\NCC Tools - Joseph\Also Energy GUI Interactions.docx")
     
 
 cur_time = datetime.now()
