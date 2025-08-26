@@ -200,6 +200,8 @@ meterpvsystLabel = Label(root, bg="#ADD8E6", text= "% of PvSyst", font=('Tk_defa
 meterpvsystLabel.grid(row=0, column= 6)
 POALabel = Label(root, bg="#ADD8E6", text= "POA", font=('Tk_defaultFont', 10, 'bold'))
 POALabel.grid(row=0, column= 7)
+SSSLabel = Label(root, bg="#ADD8E6", text= "Site Snap Shot", font=('Tk_defaultFont', 10, 'bold'))
+SSSLabel.grid(row=0, column= 8)
 
 #Windows with multiple pages of Site inv data
 solrvr_win = Toplevel(root)
@@ -1201,6 +1203,10 @@ for ro, (name, invdict, metermax, varname, custid, pvsyst_name) in enumerate(mas
     all_CBs.append(globals()[f'{varname}POAcbval'])
     globals()[f'{varname}POAcb'] = Checkbutton(root, bg=main_color, text='X', variable=globals()[f'{varname}POAcbval'], fg= 'black', cursor='hand2')
     globals()[f'{varname}POAcb'].grid(row=ro, column= 7)
+    
+    globals()[f'{varname}kwdata'] = Label(root, bg=main_color, text=' INV kW     |   #of INVs ✅\nMeter kW  |  Total # INVs', fg= 'black')
+    globals()[f'{varname}kwdata'].grid(row=ro, column= 8)
+    
     #End
     #INVERTER INFO
     length_limit = 73
@@ -1402,6 +1408,50 @@ def check_inv_consecutively_online(alist):
             consecutive_count = 0
     
     return False
+
+def siteSnapShot_Update(site, var, inv_num, meterkW):
+    global_vars = globals().copy()
+    invs_ON = []
+    invs_values = []
+    
+    for var_name, var_value in global_vars.items():
+        #Filter variables to just the INV ones for site
+        if any(filt in var_name for filt in {'val', 'invup'}):
+            continue
+        if not all(filt in var_name for filt in {'inv', f'{var}', 'cb'}):
+            continue
+
+        if globals()[f'{var_name}'].cget('bg') == 'green':
+            invs_ON.append(var_name)
+
+    for inv in range(1, inv_num + 1):
+        if site == 'Duplin':
+            if inv <= 3:
+                duplin_except = ' Central'
+                inv_n = inv
+            else:
+                duplin_except = ' String'
+                inv_n = inv -3
+        else:
+            duplin_except = ''
+            inv_n = inv
+        data = inv_data[f'{site}{duplin_except} INV {inv_n} Data']
+        invmaxkW = max([row[1] for row in data[:meter_pulls]])
+        invs_values.append(invmaxkW)
+    
+    total_INVkW = sum(invs_values)
+    communicating_INVs = len(invs_ON) #Count of inverters who's bg is green
+
+    if communicating_INVs == inv_num: #If all inverters are communicating
+        color = main_color
+    elif communicating_INVs < inv_num and total_INVkW >= meterkW + ((total_INVkW/len(invs_values)) - 10000)*(inv_num-communicating_INVs): #If theres a none communicating INV and the Total of reporting INV's is greater than meter value significantly (plus the avg of the inverters - 10 kW) * # of non Communicating inverters
+        color = 'green'
+    else: #Otherwise show yellow that theres a none communicating Inverter and it is offline according to meter
+        color = 'yellow'
+
+    globals()[f'{var}kwdata'].config(text=f"{total_INVkW/1000} kW  | {communicating_INVs:<2}\n{meterkW/1000} kW   | {inv_num:<2}", bg= color) #/1000 for Watts to kW Conversion
+
+
 
 def update_data():
     global text_update_Table
@@ -1684,7 +1734,7 @@ def update_data():
 
                     else:
                         if check_inv_consecutively_online(point[1] for point in data):
-                            globals()[f'{var_name}meterkWLabel'].config(text="✓✓✓", bg='green')
+                            globals()[f'{var_name}meterkWLabel'].config(text=round(avg_kW/1000, 1), bg='green')
                             globals()[f'{var_name}Label'].config(bg='#ADD8E6')
 
                 else:
@@ -1961,7 +2011,7 @@ def update_data():
                                 text_update_Table.append("<br>" + str(msg))
      
                 else:
-                    meterkWstatus= '✓✓✓'
+                    meterkWstatus= round(meterdataKW/1000, 1)
                     meterkWstatuscolor= 'green'
                 #Below we update the GUI with the above defined text and color
                 globals()[f'{var_name}meterkWLabel'].config(text= meterkWstatus, bg= meterkWstatuscolor)
@@ -2008,6 +2058,10 @@ def update_data():
                 globals()[f'{var_name}meterVLabel'].config(bg='pink')
                 globals()[f'{var_name}meterRatioLabel'].config(bg='pink')
 
+
+            siteSnapShot_Update(name, var_name, inverters, meterdatakWM)
+
+    
 
     if underperf_Maincbvar.get() == True:
         underperformance_data_update() #Inverter Comparison Type Underperformance Check
@@ -2795,7 +2849,6 @@ def parse_wo():
         wo_date = row['WO Date']
         wo_num = row['WO No.']
 
-
         if error_type == 'No Issue':
             continue
 
@@ -2820,38 +2873,38 @@ def parse_wo():
             
             if inv_num is None:
                 print(f"Num: {inv_num} | {site} | {wo_num} | {wo_summary}\n")
-            else:            
                 # Construct the file path for the text file
                 txt_file_path = os.path.join(directory, f"{varname} Open WO's.txt")
                 # Append the row data to the text file
                 with open(txt_file_path, 'a+') as file:
-                    file.write(f'{inv_num:<3}|  WO: {wo_num:<8}|  {wo_date}  |  {wo_summary}\n')
+                    file.write(f'{inv_num} |  WO: {wo_num:<8}|  {wo_date}  |  {wo_summary}\n')
+            else:            
+                #Color Assignment Logic
+                current_colorstatus = globals()[f'{varname}inv{inv_num}WOLabel'].cget('text')
+                if current_colorstatus == 'gray':
+                    continue
                 
+                if error_type == 'Underperformance':
+                    if current_colorstatus == 'black':
+                        color = 'gray'
+                    else:
+                        color = 'blue' 
+                elif error_type == 'Equipment Outage':
+                    if current_colorstatus == 'blue':
+                        color = 'gray'
+                    else:
+                        color = 'black'
+                elif error_type == 'COMMs Outage':
+                    color = 'pink'
+                else: 
+                    color = 'yellow'
+                globals()[f'{varname}inv{inv_num}WOLabel'].config(bg=color)
 
-            #Color Assignment Logic
-            current_colorstatus = globals()[f'{varname}inv{inv_num}WOLabel'].cget('text')
-            if current_colorstatus == 'gray':
-                continue
-            
-            if error_type == 'Underperformance':
-                if current_colorstatus == 'black':
-                    color = 'gray'
-                else:
-                    color = 'blue' 
-            elif error_type == 'Equipment Outage':
-                if current_colorstatus == 'blue':
-                    color = 'gray'
-                else:
-                    color = 'black'
-            elif error_type == 'COMMs Outage':
-                color = 'pink'
-            else: 
-                color = 'yellow'
-
-
-            globals()[f'{varname}inv{inv_num}WOLabel'].config(bg=color)
-
-
+                # Construct the file path for the text file
+                txt_file_path = os.path.join(directory, f"{varname} Open WO's.txt")
+                # Append the row data to the text file
+                with open(txt_file_path, 'a+') as file:
+                    file.write(f'{inv_num:<5}|  WO: {wo_num:<8}|  {wo_date}  |  {wo_summary}\n')
 
 STATE_FILE = r"G:\Shared drives\O&M\NCC Automations\Notification System\CheckBoxState.json"
 
@@ -2884,7 +2937,7 @@ def check_button_notes():
     
     return True
 def open_file():
-    os.startfile(r"G:\Shared drives\Narenco Projects\O&M Projects\NCC\Procedures\NCC Tools - Joseph\Also Energy GUI Interactions.docx")
+    os.startfile(r"G:\Shared drives\Narenco Projects\O&M Projects\NCC\Procedures\NCC Tools - Joseph\Also Energy GUI Interactions - How To.docx")
     
 
 cur_time = datetime.now()

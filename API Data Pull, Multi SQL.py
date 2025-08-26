@@ -1,4 +1,3 @@
-
 import requests
 from requests.auth import HTTPBasicAuth
 import time
@@ -75,7 +74,7 @@ def check_and_handle_sql_server():
         return # SQL Server is running, proceed with app
     
     messagebox.showerror("SQL Server Not Found", 
-                         "SQL Server Express (SQLEXPRESS) is not installed or the service 'MSSQL$SQLEXPRESS' cannot be found.\n\nPlease install SQL Server Express Edition 2022 and then run the DB Table Creation Tool and try again.", parent=temp_root)
+                         f"SQL Server Express (SQLEXPRESS) is not installed or the service 'MSSQL$SQLEXPRESS' cannot be found.\n\n{status}\n\nPlease install SQL Server Express Edition 2022 and then run the DB Table Creation Tool and try again.", parent=temp_root)
     
     temp_root.destroy()
     sys.exit(1)

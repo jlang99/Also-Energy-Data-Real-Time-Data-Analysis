@@ -106,30 +106,6 @@ spread10 = Label(timeW, text= "Time")
 spread10.grid(row=5, column=2)
 
 
-underperfdatalbl= Label(timeW, text= "% Params", font= ("Calibiri", 16))
-underperfdatalbl.grid(row=0, column=3)
-
-underperf_range = IntVar()
-underperf_range.set(30)
-underperfdatalbl= Label(timeW, text= "Days of Data")
-underperfdatalbl.grid(row=1, column=3)
-underperfdaterng = Entry(timeW, width=10, textvariable=underperf_range)
-underperfdaterng.grid(row=2, column=3)
-
-underperf_hourlimit = IntVar()
-underperf_hourlimit.set(10)
-underperfhourstartlbl= Label(timeW, text= "Hour Start Limit:")
-underperfhourstartlbl.grid(row=3, column=3)
-underperfhourstart = Entry(timeW, width=10, textvariable=underperf_hourlimit)
-underperfhourstart.grid(row=4, column=3)
-
-underperf_hourend = IntVar()
-underperf_hourend.set(15)
-underperfhourlbl= Label(timeW, text= "Hour End Limit:")
-underperfhourlbl.grid(row=5, column=3)
-underperfhour = Entry(timeW, width=10, textvariable=underperf_hourend)
-underperfhour.grid(row=6, column=3)
-
 
 alertW = Toplevel(root)
 alertW.title("Alert Windows Info")
@@ -1153,10 +1129,17 @@ for ro, (name, invdict, metermax, varname, custid, pvsyst_name) in enumerate(mas
             globals()[f'{varname}inv{num}WOLabel'] = Label(custid, text='⬜') #intial Setup of WO Placeholder. 
             globals()[f'{varname}inv{num}WOLabel'].grid(row= row_offset, column= (ro*6)+1+column_offset)
 
-            globals()[f'{varname}invup{num}cbval'] = IntVar()
-            all_CBs.append(globals()[f'{varname}invup{num}cbval'])
-            globals()[f'{varname}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{varname}invup{num}cbval'], cursor='hand2')
-            globals()[f'{varname}invup{num}cb'].grid(row= row_offset, column= (ro*6)+2+column_offset, sticky=W)
+            if name != "Conetoe":
+                globals()[f'{varname}invup{num}cbval'] = IntVar()
+                all_CBs.append(globals()[f'{varname}invup{num}cbval'])
+                globals()[f'{varname}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{varname}invup{num}cbval'], cursor='hand2')
+                globals()[f'{varname}invup{num}cb'].grid(row= row_offset, column= (ro*6)+2+column_offset, sticky=W)
+            else:
+                if num < 5:
+                    globals()[f'{varname}invup{num}cbval'] = IntVar()
+                    all_CBs.append(globals()[f'{varname}invup{num}cbval'])
+                    globals()[f'{varname}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{varname}invup{num}cbval'], cursor='hand2')
+                    globals()[f'{varname}invup{num}cb'].grid(row= (4*row_offset-3), rowspan= 4, column= (ro*6)+2+column_offset, sticky=W)
 
 
 ##########
