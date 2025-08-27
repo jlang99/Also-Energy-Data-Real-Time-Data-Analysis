@@ -1444,7 +1444,7 @@ def siteSnapShot_Update(site, var, inv_num, meterkW):
 
     if communicating_INVs == inv_num: #If all inverters are communicating
         color = main_color
-    elif communicating_INVs < inv_num and total_INVkW >= meterkW + ((total_INVkW/len(invs_values)) - 10000)*(inv_num-communicating_INVs): #If theres a none communicating INV and the Total of reporting INV's is greater than meter value significantly (plus the avg of the inverters - 10 kW) * # of non Communicating inverters
+    elif communicating_INVs < inv_num and meterkW >= total_INVkW + ((total_INVkW/len(invs_values)) - 10000)*(inv_num-communicating_INVs): #If theres a non-communicating INV and the Meter value is greater than Total of reporting INV's kW value (plus the avg of the inverters - 10 kW) * # of non Communicating inverters
         color = 'green'
     else: #Otherwise show yellow that theres a none communicating Inverter and it is offline according to meter
         color = 'yellow'
