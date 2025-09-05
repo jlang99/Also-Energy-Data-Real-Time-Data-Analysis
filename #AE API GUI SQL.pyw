@@ -1204,7 +1204,7 @@ for ro, (name, invdict, metermax, varname, custid, pvsyst_name) in enumerate(mas
     globals()[f'{varname}POAcb'] = Checkbutton(root, bg=main_color, text='X', variable=globals()[f'{varname}POAcbval'], fg= 'black', cursor='hand2')
     globals()[f'{varname}POAcb'].grid(row=ro, column= 7)
     
-    globals()[f'{varname}kwdata'] = Label(root, bg=main_color, text=' INV kW     |   #of INVs ✅\nMeter kW  |  Total # INVs', fg= 'black')
+    globals()[f'{varname}kwdata'] = Label(root, bg=main_color, text=' INV kW    | Meter-INVs |   #of INVs ✅\nMeter kW   | INVs w/o Comms |  Total # INVs', fg= 'black')
     globals()[f'{varname}kwdata'].grid(row=ro, column= 8)
     
     #End
@@ -1439,17 +1439,20 @@ def siteSnapShot_Update(site, var, inv_num, meterkW):
         invmaxkW = max([row[1] for row in data[:meter_pulls]])
         invs_values.append(invmaxkW)
     
-    total_INVkW = sum(invs_values)
+    no_0s_invs_values = [value for value in invs_values if value > 0]
+    total_INVkW = sum(no_0s_invs_values)
     communicating_INVs = len(invs_ON) #Count of inverters who's bg is green
 
-    if communicating_INVs == inv_num: #If all inverters are communicating
+    if len(no_0s_invs_values) == 0 or meterkW <= 0:
+        color = 'black'
+    elif communicating_INVs == inv_num: #If all inverters are communicating
         color = main_color
-    elif communicating_INVs < inv_num and meterkW >= total_INVkW + ((total_INVkW/len(invs_values)) - 10000)*(inv_num-communicating_INVs): #If theres a non-communicating INV and the Meter value is greater than Total of reporting INV's kW value (plus the avg of the inverters - 10 kW) * # of non Communicating inverters
+    elif communicating_INVs < inv_num and meterkW >= total_INVkW + ((total_INVkW/len(no_0s_invs_values)) * 0.75)*(inv_num-communicating_INVs): #If theres a non-communicating INV and the Meter value is greater than Total of reporting INV's kW value (plus the avg of the inverters - 10 kW) * # of non Communicating inverters
         color = 'green'
     else: #Otherwise show yellow that theres a none communicating Inverter and it is offline according to meter
         color = 'yellow'
 
-    globals()[f'{var}kwdata'].config(text=f"{total_INVkW/1000} kW  | {communicating_INVs:<2}\n{meterkW/1000} kW   | {inv_num:<2}", bg= color) #/1000 for Watts to kW Conversion
+    globals()[f'{var}kwdata'].config(text=f"{total_INVkW/1000} kW   | {round((meterkW/1000)-(total_INVkW/1000), 1)} | {communicating_INVs:<2}\n{meterkW/1000} kW    | {inv_num-communicating_INVs} | {inv_num:<2}", bg= color) #/1000 for Watts to kW Conversion
 
 
 
@@ -2727,6 +2730,13 @@ def time_window():
     checkin() 
 
 def db_to_dict():
+    day_of_week = datetime.today().weekday()
+    if day_of_week > 4:
+        if datetime.now().hour > 14:
+            os.startfile(r"G:\Shared drives\O&M\NCC Automations\Emails\Close AE GUI.ahk")
+            time.sleep(5)
+            os.startfile(r"G:\Shared drives\O&M\NCC Automations\Notification System\Email Notification (Breaker).py")
+
     query_start = ty.perf_counter()
     sendTexts.config(state=DISABLED)
     underperfdaterng.config(state=DISABLED)
