@@ -15,49 +15,24 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import subprocess
-import os
+import os, sys
 import glob
 import json
 import re
 from bs4 import BeautifulSoup
 
-from PythonTools import CREDS, EMAILS, PausableTimer #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
+# Add the parent directory ('NCC Automations') to the Python path
+# This allows us to import the 'PythonTools' package from there.
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(parent_dir)
+from PythonTools import CREDS, EMAILS, sql_date_validation, PausableTimer #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
 
 #Underperformance Analysis Packages
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from PIL import Image, ImageDraw, ImageTk
 
-def date_validation(dvalue):
-    """Validates that the input is in mm/dd/yyyy format."""
-    # An empty entry is a valid state
-    if not dvalue:
-        return True
-    # The final format is 10 characters long
-    if len(dvalue) > 10:
-        return False
 
-    # Check the characters as they are typed
-    for i, char in enumerate(dvalue):
-        if i in [0, 1, 3, 4, 6, 7, 8, 9]:  # Positions for digits
-            if not char.isdigit():
-                return False
-        if i in [2, 5]:  # Positions for slashes
-            if char != '/':
-                return False
-
-    # Check the semantic value of the month and day
-    if len(dvalue) >= 2:
-        # Month must be between 01 and 12
-        month = int(dvalue[0:2])
-        if month < 1 or month > 12:
-            return False
-    if len(dvalue) >= 5:
-        # Day must be between 01 and 31
-        day = int(dvalue[3:5])
-        if day < 1 or day > 31:
-            return False
-        
 
 breaker_pulls = 6
 meter_pulls = 8
@@ -77,7 +52,7 @@ root.wm_attributes("-topmost", True)
 root.configure(bg="#ADD8E6") 
 
 #Date Validation Registration
-vcmd_date = (root.register(date_validation), '%P')
+vcmd_date = (root.register(sql_date_validation), '%P')
 
 checkIns= Toplevel(root)
 try:
@@ -262,866 +237,299 @@ try:
 except Exception as e:
     print(f"Error loading icon: {e}")
 #Inverter Windows created
-''' Data Structure for master_List_Sites
-(Site Name, {
-Inv Dict}, 
-Max Meter Value W's, varname, window group var, PVSYST Site Name)
-'''
 
-master_List_Sites = [('Bishopville II', {
-    1: "1-1", 2: "1-2", 3: "1-3", 4: "1-4", 5: "1-5", 6: "1-6",
-    7: "1-7", 8: "1-8", 9: "1-9", 10: "2-1", 11: "2-2", 12: "2-3",
-    13: "2-4", 14: "2-5", 15: "2-6", 16: "2-7", 17: "2-8", 18: "2-9",
-    19: "3-1", 20: "3-2", 21: "3-3", 22: "3-4", 23: "3-5", 24: "3-6",
-    25: "3-7", 26: "3-8", 27: "3-9", 28: "4-1", 29: "4-2", 30: "4-3",
-    31: "4-4", 32: "4-5", 33: "4-6", 34: "4-7", 35: "4-8", 36: "4-9"},
-                        9900000, 'bishopvilleII', hst, None),
 
-                    ('Bluebird', {
-    1: "A1", 2: "A2", 3: "A3", 4: "A4", 5: "A5", 6: "A6",
-    7: "A7", 8: "A8", 9: "A9", 10: "A10", 11: "A11", 12: "A12",
-    13: "B13", 14: "B14", 15: "B15", 16: "B16", 17: "B17", 18: "B18",
-    19: "B19", 20: "B20", 21: "B21", 22: "B22", 23: "B23", 24: "B24"}, 
-                    3000000, 'bluebird', nar, 'BLUEBIRD'),
-
-                    ('Bulloch 1A', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
-    7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
-    13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18",
-    19: "19", 20: "20", 21: "21", 22: "22", 23: "23", 24: "24"}, 
-                    3000000, 'bulloch1a', solrvr, 'BULLOCH1A'),
-
-                    ('Bulloch 1B', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
-    7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
-    13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18",
-    19: "19", 20: "20", 21: "21", 22: "22", 23: "23", 24: "24"}, 
-                    3000000, 'bulloch1b', solrvr, 'BULLOCH1B'),
-
-                    ('Cardinal', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
-    11: "11", 12: "12", 13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18", 19: "19", 20: "20",
-    21: "21", 22: "22", 23: "23", 24: "24", 25: "25", 26: "26", 27: "27", 28: "28", 29: "29", 30: "30",
-    31: "31", 32: "32", 33: "33", 34: "34", 35: "35", 36: "36", 37: "37", 38: "38", 39: "39", 40: "40",
-    41: "41", 42: "42", 43: "43", 44: "44", 45: "45", 46: "46", 47: "47", 48: "48", 49: "49", 50: "50",
-    51: "51", 52: "52", 53: "53", 54: "54", 55: "55", 56: "56", 57: "57", 58: "58", 59: "59"}, 
-                    7080000, 'cardinal', nar, 'CARDINAL'),
-
-                    ('CDIA', {1:"1"}, 192000, 'cdia', nar, None),
-
-                    ('Cherry Blossom', {1: "1", 2: "2", 3: "3", 4: "4"},
-                     10000000, 'cherryblossom', nar, 'CHERRY BLOSSOM'),
-
-                    ('Cougar', {
-    1: "1-1", 2: "1-2", 3: "1-3", 4: "1-4", 5: "1-5", 6: "2-1",
-    7: "2-2", 8: "2-3", 9: "2-4", 10: "2-5", 11: "2-6", 12: "3-1",
-    13: "3-2", 14: "3-3", 15: "3-4", 16: "3-5", 17: "4-1", 18: "4-2",
-    19: "4-3", 20: "4-4", 21: "4-5", 22: "5-1", 23: "5-2", 24: "5-3",
-    25: "5-4", 26: "5-5", 27: "6-1", 28: "6-2", 29: "6-3", 30: "6-4", 31:"6-5"},
-                     2670000, 'cougar', nar, 'COUGAR'),
-
-                    ('Conetoe', {
-    1: "1-1", 2: "1-2", 3: "1-3", 4: "1-4",
-    5: "2-1", 6: "2-2", 7: "2-3", 8: "2-4",
-    9: "3-1", 10: "3-2", 11: "3-3", 12: "3-4",
-    13: "4-1", 14: "4-2", 15: "4-3", 16: "4-4"},
-                     5000000, 'conetoe1', soltage, None),
-
-                    ('Duplin', {
-    1: "C-1", 2: "C-2", 3: "C-3", 4: "S-1", 5: "S-2", 6: "S-3",
-    7: "S-4", 8: "S-5", 9: "S-6", 10: "S-7", 11: "S-8", 12: "S-9",
-    13: "S-10", 14: "S-11", 15: "S-12", 16: "S-13", 17: "S-14", 18: "S-15",
-    19: "S-16", 20: "S-17", 21: "S-18"},
-                     5040000, 'duplin', soltage, None),
-
-                    ('Elk', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "1-3", 10: "10",
-    11: "11", 12: "12", 13: "13", 14: "14", 15: "3-3", 16: "16", 17: "17", 18: "18", 19: "19", 20: "20",
-    21: "21", 22: "22", 23: "23", 24: "24", 25: "25", 26: "26", 27: "27", 28: "28", 29: "2-8", 30: "30",
-    31: "31", 32: "32", 33: "2-13", 34: "34", 35: "3-7", 36: "3-8", 37: "37", 38: "38", 39: "3-11", 40: "40",
-    41: "41", 42: "42", 43: "43"},
-                    5380000, 'elk', solrvr, 'ELK'),
-
-                    ('Freightliner', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
-    11: "11", 12: "12", 13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18"},
-                     2250000, 'freightliner', ncemc, 'FREIGHTLINE'), 
-
-                    ('Gray Fox', {
-    1: "1.1", 2: "1.2", 3: "1.3", 4: "1.4", 5: "1.5", 6: "1.6", 7: "1.7", 8: "1.8", 9: "1.9", 10: "1.10",
-    11: "1.11", 12: "1.12", 13: "1.13", 14: "1.14", 15: "1.15", 16: "1.16", 17: "1.17", 18: "1.18", 19: "1.19", 20: "1.20",
-    21: "2.1", 22: "2.2", 23: "2.3", 24: "2.4", 25: "2.5", 26: "2.6", 27: "2.7", 28: "2.8", 29: "2.9", 30: "2.10",
-    31: "2.11", 32: "2.12", 33: "2.13", 34: "2.14", 35: "2.15", 36: "2.16", 37: "2.17", 38: "2.18", 39: "2.19", 40: "2.20"},
-                     5000000, 'grayfox', solrvr, 'GRAYFOX'),
-
-                    ('Harding', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
-    7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
-    13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18",
-    19: "19", 20: "20", 21: "21", 22: "22", 23: "23", 24: "24"},
-                     3000000, 'harding', solrvr, 'HARDING'),
-
-                    ('Harrison', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
-    11: "11", 12: "12", 13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18", 19: "19", 20: "20",
-    21: "21", 22: "22", 23: "23", 24: "24", 25: "25", 26: "26", 27: "27", 28: "28", 29: "29", 30: "30",
-    31: "31", 32: "32", 33: "33", 34: "34", 35: "35", 36: "36", 37: "37", 38: "38", 39: "39", 40: "40",
-    41: "41", 42: "42", 43: "43"},
-                    5380000, 'harrison', nar, 'HARRISON'),
-
-                    ('Hayes', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
-    7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
-    13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18",
-    19: "19", 20: "20", 21: "21", 22: "22", 23: "23", 24: "24", 25: "25", 26: "26"},
-                     3240000, 'hayes', nar, 'HAYES'),
-
-                    ('Hickory', {1:"1", 2:"2"}, 5000000, 'hickory', nar2, 'HICKORY'),
-                    
-                    ('Hickson', {
-    1: "1-1", 2: "1-2", 3: "1-3", 4: "1-4", 5: "1-5", 6: "1-6",
-    7: "1-7", 8: "1-8", 9: "1-9", 10: "1-10", 11: "1-11", 12: "1-12",
-    13: "1-13", 14: "1-14", 15: "1-15", 16: "1-16"},
-                     2000000, 'hickson', hst, None),
-
-                    ('Holly Swamp', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
-    7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
-    13: "13", 14: "14", 15: "15", 16: "16"},
-                     2000000, 'hollyswamp', ncemc, 'HOLLYSWAMP'),
-                    
-                    ('Jefferson', {
-    1: "1.1", 2: "1.2", 3: "1.3", 4: "1.4", 5: "1.5", 6: "1.6", 7: "1.7", 8: "1.8", 9: "1.9", 10: "1.10",
-    11: "1.11", 12: "1.12", 13: "1.13", 14: "1.14", 15: "1.15", 16: "1.16",
-    17: "2.1", 18: "2.2", 19: "2.3", 20: "2.4", 21: "2.5", 22: "2.6", 23: "2.7", 24: "2.8", 25: "2.9", 26: "2.10",
-    27: "2.11", 28: "2.12", 29: "2.13", 30: "2.14", 31: "2.15", 32: "2.16",
-    33: "3.1", 34: "3.2", 35: "3.3", 36: "3.4", 37: "3.5", 38: "3.6", 39: "3.7", 40: "3.8", 41: "3.9", 42: "3.10",
-    43: "3.11", 44: "3.12", 45: "3.13", 46: "3.14", 47: "3.15", 48: "3.16",
-    49: "4.1", 50: "4.2", 51: "4.3", 52: "4.4", 53: "4.5", 54: "4.6", 55: "4.7", 56: "4.8", 57: "4.9", 58: "4.10",
-    59: "4.11", 60: "4.12", 61: "4.13", 62: "4.14", 63: "4.15", 64: "4.16"},
-                     8000000, 'jefferson', hst, None),
-
-                    ('Marshall', {
-    1: "1.1", 2: "1.2", 3: "1.3", 4: "1.4", 5: "1.5", 6: "1.6",
-    7: "1.7", 8: "1.8", 9: "1.9", 10: "1.10", 11: "1.11", 12: "1.12",
-    13: "1.13", 14: "1.14", 15: "1.15", 16: "1.16"},
-                    2000000, 'marshall', hst, None),
-
-                    ('McLean', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
-    11: "11", 12: "12", 13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18", 19: "19", 20: "20",
-    21: "21", 22: "22", 23: "23", 24: "24", 25: "25", 26: "26", 27: "27", 28: "28", 29: "29", 30: "30",
-    31: "31", 32: "32", 33: "33", 34: "34", 35: "35", 36: "36", 37: "37", 38: "38", 39: "39", 40: "40"},
-                     5000000, 'mclean', solrvr, 'MCLEAN'), 
-                    
-                    ('Ogburn', {
-    1: "1-1", 2: "1-2", 3: "1-3", 4: "1-4", 5: "1-5", 6: "1-6",
-    7: "1-7", 8: "1-8", 9: "1-9", 10: "1-10", 11: "1-11", 12: "1-12",
-    13: "1-13", 14: "1-14", 15: "1-15", 16: "1-16"},
-                    2000000, 'ogburn', hst, None),
-                    
-                    ('PG', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
-    7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
-    13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18"},
-                    2210000, 'pg', ncemc, 'PG'),
-                    
-                    ('Richmond', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
-    7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
-    13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18",
-    19: "19", 20: "20", 21: "21", 22: "22", 23: "23", 24: "24"},
-                    3000000, 'richmond', solrvr2, 'RICHMOND'),
-                    
-                    ('Shorthorn', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
-    11: "11", 12: "12", 13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18", 19: "19", 20: "20",
-    21: "21", 22: "22", 23: "23", 24: "24", 25: "25", 26: "26", 27: "27", 28: "28", 29: "29", 30: "30",
-    31: "31", 32: "32", 33: "33", 34: "34", 35: "35", 36: "36", 37: "37", 38: "38", 39: "39", 40: "40",
-    41: "41", 42: "42", 43: "43", 44: "44", 45: "45", 46: "46", 47: "47", 48: "48", 49: "49", 50: "50",
-    51: "51", 52: "52", 53: "53", 54: "54", 55: "55", 56: "56", 57: "57", 58: "58", 59: "59", 60: "60",
-    61: "61", 62: "62", 63: "63", 64: "64", 65: "65", 66: "66", 67: "67", 68: "68", 69: "69", 70: "70",
-    71: "71", 72: "72"},
-                    9000000, 'shorthorn', solrvr2, 'SHORTHORN'),
-
-                    ('Sunflower', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
-    11: "11", 12: "12", 13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18", 19: "19", 20: "20",
-    21: "21", 22: "22", 23: "23", 24: "24", 25: "25", 26: "26", 27: "27", 28: "28", 29: "29", 30: "30",
-    31: "31", 32: "32", 33: "33", 34: "34", 35: "35", 36: "36", 37: "37", 38: "38", 39: "39", 40: "40",
-    41: "41", 42: "42", 43: "43", 44: "44", 45: "45", 46: "46", 47: "47", 48: "48", 49: "49", 50: "50",
-    51: "51", 52: "52", 53: "53", 54: "54", 55: "55", 56: "56", 57: "57", 58: "58", 59: "59", 60: "60",
-    61: "61", 62: "62", 63: "63", 64: "64", 65: "65", 66: "66", 67: "67", 68: "68", 69: "69", 70: "70",
-    71: "71", 72: "72", 73: "73", 74: "74", 75: "75", 76: "76", 77: "77", 78: "78", 79: "79", 80: "80"},
-                    10000000, 'sunflower', solrvr2, 'SUNFLOWER'), 
-                    
-                    ('Tedder', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
-    7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
-    13: "13", 14: "14", 15: "15", 16: "16"},
-                    2000000, 'tedder', hst, None),
-
-                    ('Thunderhead', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
-    7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
-    13: "13", 14: "14", 15: "15", 16: "16"},
-                    2000000, 'thunderhead', hst2, None),
-                    ('Upson', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
-    7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
-    13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18",
-    19: "19", 20: "20", 21: "21", 22: "22", 23: "23", 24: "24"},
-                    3000000, 'upson', solrvr2, None), 
-                    
-                    ('Van Buren', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
-    7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
-    13: "13", 14: "14", 15: "15", 16: "16", 17: "17"},
-                    2000000, 'vanburen', hst2, 'VAN BUREN'), 
-                    
-                    ('Warbler', {
-    1: "A1", 2: "A2", 3: "A3", 4: "A4", 5: "A5", 6: "A6",
-    7: "A7", 8: "A8", 9: "A9", 10: "A10", 11: "A11", 12: "A12",
-    13: "A13", 14: "A14", 15: "A15", 16: "A16",
-    17: "B17", 18: "B18", 19: "B19", 20: "B20", 21: "B21", 22: "B22",
-    23: "B23", 24: "B24", 25: "B25", 26: "B26", 27: "B27", 28: "B28",
-    29: "B29", 30: "B30", 31: "B31", 32: "B32"},
-                    4000000, 'warbler', solrvr2, 'WARBLER'),
-                    
-                    ('Washington', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
-    11: "11", 12: "12", 13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18", 19: "19", 20: "20",
-    21: "21", 22: "22", 23: "23", 24: "24", 25: "25", 26: "26", 27: "27", 28: "28", 29: "29", 30: "30",
-    31: "31", 32: "32", 33: "33", 34: "34", 35: "35", 36: "36", 37: "37", 38: "38", 39: "39", 40: "40"},
-                    5000000, 'washington', solrvr3, None), 
-                    
-                    ('Wayne 1', {1: "1", 2: "2", 3: "3", 4: "4"}, 5000000, 'wayne1', soltage, None), 
-                    
-                    ('Wayne 2', {1: "1", 2: "2", 3: "3", 4: "4"}, 5000000, 'wayne2', soltage, None), 
-                    
-                    ('Wayne 3', {1: "1", 2: "2", 3: "3", 4: "4"}, 5000000, 'wayne3', soltage, None), 
-                    
-                    ('Wellons', {1: "1-1", 2: "1-2", 3: "2-1", 4: "2-2", 5:"3-1", 6:"3-2"}, 5000000, 'wellons', nar2, 'WELLONS'), 
-                    
-                    ('Whitehall', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6",
-    7: "7", 8: "8", 9: "9", 10: "10", 11: "11", 12: "12",
-    13: "13", 14: "14", 15: "15", 16: "16"},
-                    2000000, 'whitehall', solrvr3, 'WHITEHALL'), 
-                    
-                    ('Whitetail', {
-    1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "7", 8: "8", 9: "9", 10: "10",
-    11: "11", 12: "12", 13: "13", 14: "14", 15: "15", 16: "16", 17: "17", 18: "18", 19: "19", 20: "20",
-    21: "21", 22: "22", 23: "23", 24: "24", 25: "25", 26: "26", 27: "27", 28: "28", 29: "29", 30: "30",
-    31: "31", 32: "32", 33: "33", 34: "34", 35: "35", 36: "36", 37: "37", 38: "38", 39: "39", 40: "40",
-    41: "41", 42: "42", 43: "43", 44: "44", 45: "45", 46: "46", 47: "47", 48: "48", 49: "49", 50: "50",
-    51: "51", 52: "52", 53: "53", 54: "54", 55: "55", 56: "56", 57: "57", 58: "58", 59: "59", 60: "60",
-    61: "61", 62: "62", 63: "63", 64: "64", 65: "65", 66: "66", 67: "67", 68: "68", 69: "69", 70: "70",
-    71: "71", 72: "72", 73: "73", 74: "74", 75: "75", 76: "76", 77: "77", 78: "78", 79: "79", 80: "80"},
-                    10000000, 'whitetail', solrvr3, None),
-                    
-                    ('Violet', {1:"1", 2:"2"}, 5000000, 'violet', nar2, 'VIOLET')]
-
-site_INV_groups = {
-    "Cardinal": {
-        "cardinal96daykwList": [
-            "cardinal_INV_1_Watts", "cardinal_INV_2_Watts", "cardinal_INV_3_Watts",
-            "cardinal_INV_4_Watts", "cardinal_INV_5_Watts", "cardinal_INV_6_Watts",
-            "cardinal_INV_7_Watts", "cardinal_INV_22_Watts", "cardinal_INV_23_Watts",
-            "cardinal_INV_24_Watts", "cardinal_INV_25_Watts", "cardinal_INV_26_Watts",
-            "cardinal_INV_27_Watts", "cardinal_INV_28_Watts", "cardinal_INV_43_Watts",
-            "cardinal_INV_44_Watts", "cardinal_INV_45_Watts", "cardinal_INV_46_Watts",
-            "cardinal_INV_47_Watts"
-        ],
-        "cardinal952daykwList": [
-            "cardinal_INV_8_Watts", "cardinal_INV_9_Watts", "cardinal_INV_10_Watts",
-            "cardinal_INV_11_Watts", "cardinal_INV_12_Watts", "cardinal_INV_13_Watts",
-            "cardinal_INV_14_Watts", "cardinal_INV_29_Watts", "cardinal_INV_30_Watts",
-            "cardinal_INV_31_Watts", "cardinal_INV_32_Watts", "cardinal_INV_33_Watts",
-            "cardinal_INV_34_Watts", "cardinal_INV_35_Watts", "cardinal_INV_48_Watts",
-            "cardinal_INV_49_Watts", "cardinal_INV_50_Watts", "cardinal_INV_51_Watts",
-            "cardinal_INV_52_Watts", "cardinal_INV_53_Watts"
-        ],
-        "cardinal944daykwList": [
-            "cardinal_INV_15_Watts", "cardinal_INV_16_Watts", "cardinal_INV_17_Watts",
-            "cardinal_INV_18_Watts", "cardinal_INV_19_Watts", "cardinal_INV_20_Watts",
-            "cardinal_INV_21_Watts", "cardinal_INV_36_Watts", "cardinal_INV_37_Watts",
-            "cardinal_INV_38_Watts", "cardinal_INV_39_Watts", "cardinal_INV_40_Watts",
-            "cardinal_INV_41_Watts", "cardinal_INV_42_Watts", "cardinal_INV_54_Watts",
-            "cardinal_INV_55_Watts", "cardinal_INV_56_Watts", "cardinal_INV_57_Watts",
-            "cardinal_INV_58_Watts", "cardinal_INV_59_Watts"
-        ]
+MAP_SITES_HARDWARE_GUI = {
+    'Bishopville II': {
+        'INV_DICT': {i: f"{(i-1)//9 + 1}.{(i-1)%9 + 1}" for i in range(1, 37)},
+        'METER_MAX': 9900000,
+        'VAR_NAME': 'bishopvilleII',
+        'CUST_ID': hst,
+        'PVSYST': None
     },
-    "Bluebird": {
-        "bluebirddaykwList": [
-            "bluebird_INV_1_Watts", "bluebird_INV_2_Watts", "bluebird_INV_3_Watts",
-            "bluebird_INV_4_Watts", "bluebird_INV_5_Watts", "bluebird_INV_6_Watts",
-            "bluebird_INV_7_Watts", "bluebird_INV_8_Watts", "bluebird_INV_9_Watts",
-            "bluebird_INV_10_Watts", "bluebird_INV_11_Watts", "bluebird_INV_12_Watts",
-            "bluebird_INV_13_Watts", "bluebird_INV_14_Watts", "bluebird_INV_15_Watts",
-            "bluebird_INV_16_Watts", "bluebird_INV_17_Watts", "bluebird_INV_18_Watts",
-            "bluebird_INV_19_Watts", "bluebird_INV_20_Watts", "bluebird_INV_21_Watts",
-            "bluebird_INV_22_Watts", "bluebird_INV_23_Watts", "bluebird_INV_24_Watts"
-        ]
+    'Bluebird': {
+        'INV_DICT': {i: f'A{i}' if i <= 12 else f'B{i}' for i in range(1, 25)},
+        'METER_MAX': 3000000,
+        'VAR_NAME': 'bluebird',
+        'CUST_ID': nar,
+        'PVSYST': 'BLUEBIRD'
     },
-    "Cherry Blossom": {
-        "cherryblossomdaykwList": [
-            "cherryblossominv_INV_1_Watts", "cherryblossominv_INV_2_Watts",
-            "cherryblossominv_INV_3_Watts", "cherryblossominv_INV_4_Watts"
-        ]
+    'Bulloch 1A': {
+        'INV_DICT': {i: str(i) for i in range(1, 25)},
+        'METER_MAX': 3000000,
+        'VAR_NAME': 'bulloch1a',
+        'CUST_ID': solrvr,
+        'PVSYST': 'BULLOCH1A'
     },
-    "Harrison": {
-        "harrisondaykwList": [
-            "harrison_INV_2_Watts", "harrison_INV_3_Watts", "harrison_INV_4_Watts",
-            "harrison_INV_5_Watts", "harrison_INV_6_Watts", "harrison_INV_7_Watts",
-            "harrison_INV_9_Watts", "harrison_INV_11_Watts", "harrison_INV_12_Watts",
-            "harrison_INV_13_Watts", "harrison_INV_14_Watts", "harrison_INV_15_Watts",
-            "harrison_INV_16_Watts", "harrison_INV_18_Watts", "harrison_INV_19_Watts",
-            "harrison_INV_20_Watts", "harrison_INV_22_Watts", "harrison_INV_23_Watts",
-            "harrison_INV_24_Watts", "harrison_INV_25_Watts", "harrison_INV_26_Watts",
-            "harrison_INV_27_Watts", "harrison_INV_28_Watts", "harrison_INV_31_Watts",
-            "harrison_INV_32_Watts", "harrison_INV_33_Watts", "harrison_INV_34_Watts",
-            "harrison_INV_35_Watts", "harrison_INV_36_Watts", "harrison_INV_37_Watts",
-            "harrison_INV_38_Watts", "harrison_INV_39_Watts", "harrison_INV_42_Watts",
-            "harrison_INV_43_Watts"
-        ],
-        "harrison92daykwList": [
-            "harrison_INV_1_Watts", "harrison_INV_8_Watts", "harrison_INV_10_Watts",
-            "harrison_INV_17_Watts", "harrison_INV_21_Watts", "harrison_INV_29_Watts",
-            "harrison_INV_30_Watts", "harrison_INV_40_Watts", "harrison_INV_41_Watts"
-        ]
+    'Bulloch 1B': {
+        'INV_DICT': {i: str(i) for i in range(1, 25)},
+        'METER_MAX': 3000000,
+        'VAR_NAME': 'bulloch1b',
+        'CUST_ID': solrvr,
+        'PVSYST': 'BULLOCH1B'
     },
-    "Hayes": {
-        "hayesdaykwList": [
-            "hayes_INV_1_Watts", "hayes_INV_2_Watts", "hayes_INV_3_Watts",
-            "hayes_INV_4_Watts", "hayes_INV_5_Watts", "hayes_INV_6_Watts",
-            "hayes_INV_7_Watts", "hayes_INV_8_Watts", "hayes_INV_9_Watts",
-            "hayes_INV_10_Watts", "hayes_INV_11_Watts", "hayes_INV_12_Watts",
-            "hayes_INV_13_Watts", "hayes_INV_14_Watts", "hayes_INV_15_Watts",
-            "hayes_INV_16_Watts", "hayes_INV_17_Watts", "hayes_INV_19_Watts",
-            "hayes_INV_20_Watts", "hayes_INV_21_Watts", "hayes_INV_23_Watts",
-            "hayes_INV_24_Watts", "hayes_INV_25_Watts", "hayes_INV_26_Watts"
-        ],
-        "hayes96daykwList": [
-            "hayes_INV_22_Watts", "hayes_INV_18_Watts"
-        ]
+    'Cardinal': {
+        'INV_DICT': {i: str(i) for i in range(1, 60)},
+        'METER_MAX': 7080000,
+        'VAR_NAME': 'cardinal',
+        'CUST_ID': nar, 
+        'PVSYST': 'CARDINAL'
     },
-    "Hickory": {
-        "hickorydaykwList": [
-            "hickory_INV_1_Watts", "hickory_INV_2_Watts"
-        ]
+    'CDIA': {
+        'INV_DICT': {1: '1'},
+        'METER_MAX': 192000,
+        'VAR_NAME': 'cdia',
+        'CUST_ID': nar,
+        'PVSYST': None
     },
-    "Vanburen": {
-        "vanburendaykwList": [
-            "vanburen_INV_7_Watts", "vanburen_INV_8_Watts", "vanburen_INV_9_Watts",
-            "vanburen_INV_10_Watts", "vanburen_INV_11_Watts", "vanburen_INV_12_Watts",
-            "vanburen_INV_13_Watts", "vanburen_INV_14_Watts", "vanburen_INV_15_Watts",
-            "vanburen_INV_16_Watts", "vanburen_INV_17_Watts"
-        ],
-        "vanburen93daykwList": [
-            "vanburen_INV_1_Watts", "vanburen_INV_2_Watts", "vanburen_INV_3_Watts",
-            "vanburen_INV_4_Watts", "vanburen_INV_5_Watts", "vanburen_INV_6_Watts"
-        ]
+    'Cherry Blossom': {
+        'INV_DICT': {1: '1', 2: '2', 3: '3', 4: '4'},
+        'METER_MAX': 10000000,
+        'VAR_NAME': 'cherryblossom',
+        'CUST_ID': nar,
+        'PVSYST': 'CHERRY BLOSSOM'
     },
-    "Violet": {
-        "violetdaykwList": [
-            "violet_INV_1_Watts", "violet_INV_2_Watts"
-        ]
+    'Cougar': {
+        'INV_DICT': {
+            1: '1-1', 2: '1-2', 3: '1-3', 4: '1-4', 5: '1-5', 6: '2-1', 7: '2-2', 8: '2-3', 9: '2-4', 10: '2-5', 11: '2-6',
+            12: '3-1', 13: '3-2', 14: '3-3', 15: '3-4', 16: '3-5', 17: '4-1', 18: '4-2', 19: '4-3', 20: '4-4', 21: '4-5',
+            22: '5-1', 23: '5-2', 24: '5-3', 25: '5-4', 26: '5-5', 27: '6-1', 28: '6-2', 29: '6-3', 30: '6-4', 31: '6-5'
+        },
+        'METER_MAX': 2670000,
+        'VAR_NAME': 'cougar',
+        'CUST_ID': nar,
+        'PVSYST': 'COUGAR'
     },
-    "Wellons": {
-        "wellonsdaykwList": [
-            "wellons_INV_1_Watts", "wellons_INV_2_Watts", "wellons_INV_3_Watts",
-            "wellons_INV_4_Watts", "wellons_INV_5_Watts", "wellons_INV_6_Watts"
-        ]
+    'Conetoe': {
+        'INV_DICT': {i: f"{(i-1)//4 + 1}.{(i-1)%4 + 1}" for i in range(1, 17)},
+        'METER_MAX': 5000000,
+        'VAR_NAME': 'conetoe1',
+        'CUST_ID': soltage,
+        'PVSYST': None
     },
-    "Bishopville II": {
-        "bishopvilleIIdaykwList": [
-            "bishopvilleII_INV_6_Watts", "bishopvilleII_INV_7_Watts",
-            "bishopvilleII_INV_8_Watts", "bishopvilleII_INV_9_Watts",
-            "bishopvilleII_INV_10_Watts", "bishopvilleII_INV_13_Watts",
-            "bishopvilleII_INV_15_Watts", "bishopvilleII_INV_19_Watts",
-            "bishopvilleII_INV_20_Watts", "bishopvilleII_INV_21_Watts",
-            "bishopvilleII_INV_22_Watts", "bishopvilleII_INV_23_Watts",
-            "bishopvilleII_INV_26_Watts", "bishopvilleII_INV_27_Watts",
-            "bishopvilleII_INV_28_Watts", "bishopvilleII_INV_29_Watts",
-            "bishopvilleII_INV_30_Watts", "bishopvilleII_INV_32_Watts",
-            "bishopvilleII_INV_34_Watts"
-        ],
-        "bishopvilleII34strdaykwList": [
-            "bishopvilleII_INV_1_Watts", "bishopvilleII_INV_2_Watts",
-            "bishopvilleII_INV_3_Watts", "bishopvilleII_INV_4_Watts",
-            "bishopvilleII_INV_5_Watts", "bishopvilleII_INV_11_Watts",
-            "bishopvilleII_INV_12_Watts", "bishopvilleII_INV_14_Watts",
-            "bishopvilleII_INV_16_Watts", "bishopvilleII_INV_17_Watts",
-            "bishopvilleII_INV_18_Watts", "bishopvilleII_INV_31_Watts",
-            "bishopvilleII_INV_33_Watts", "bishopvilleII_INV_35_Watts",
-            "bishopvilleII_INV_36_Watts"
-        ],
-        "bishopvilleII36strdaykwList": [
-            "bishopvilleII_INV_24_Watts", "bishopvilleII_INV_25_Watts"
-        ]
+    'Duplin': {
+        'INV_DICT': {i: f'C-{i}' if i <= 3 else f'S-{i-3}' for i in range(1,22)},
+        'METER_MAX': 5040000,
+        'VAR_NAME': 'duplin',
+        'CUST_ID': soltage,
+        'PVSYST': None
     },
-    "Hickson": {
-        "hicksondaykwList": [
-            "hickson_INV_7_Watts", "hickson_INV_8_Watts", "hickson_INV_9_Watts",
-            "hickson_INV_12_Watts", "hickson_INV_13_Watts", "hickson_INV_14_Watts",
-            "hickson_INV_15_Watts", "hickson_INV_16_Watts"
-        ],
-        "hickson17strdaykwList": [
-            "hickson_INV_1_Watts", "hickson_INV_2_Watts", "hickson_INV_3_Watts",
-            "hickson_INV_4_Watts", "hickson_INV_5_Watts", "hickson_INV_6_Watts",
-            "hickson_INV_10_Watts", "hickson_INV_11_Watts"
-        ]
+    'Elk': {
+        'INV_DICT': {
+            1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 8: '8', 9: '1-3', 10: '10', 11: '11', 12: '12', 13: '13',
+            14: '14', 15: '3-3', 16: '16', 17: '17', 18: '18', 19: '19', 20: '20', 21: '21', 22: '22', 23: '23', 24: '24',
+            25: '25', 26: '26', 27: '27', 28: '28', 29: '2-8', 30: '30', 31: '31', 32: '32', 33: '2-13', 34: '34', 35: '3-7',
+            36: '3-8', 37: '37', 38: '38', 39: '3-11', 40: '40', 41: '41', 42: '42', 43: '43'
+        },
+        'METER_MAX': 5380000,
+        'VAR_NAME': 'elk',
+        'CUST_ID': solrvr,
+        'PVSYST': 'ELK'
     },
-    "Jefferson": {
-        "jeffersondaykwList": [
-            "jefferson_INV_5_Watts", "jefferson_INV_7_Watts",
-            "jefferson_INV_8_Watts", "jefferson_INV_9_Watts",
-            "jefferson_INV_10_Watts", "jefferson_INV_11_Watts",
-            "jefferson_INV_12_Watts", "jefferson_INV_15_Watts",
-            "jefferson_INV_16_Watts", "jefferson_INV_19_Watts",
-            "jefferson_INV_24_Watts", "jefferson_INV_26_Watts",
-            "jefferson_INV_27_Watts", "jefferson_INV_28_Watts",
-            "jefferson_INV_29_Watts", "jefferson_INV_30_Watts",
-            "jefferson_INV_31_Watts", "jefferson_INV_32_Watts",
-            "jefferson_INV_33_Watts", "jefferson_INV_34_Watts",
-            "jefferson_INV_35_Watts", "jefferson_INV_36_Watts",
-            "jefferson_INV_37_Watts", "jefferson_INV_38_Watts",
-            "jefferson_INV_39_Watts", "jefferson_INV_48_Watts",
-            "jefferson_INV_57_Watts", "jefferson_INV_58_Watts",
-            "jefferson_INV_59_Watts", "jefferson_INV_60_Watts",
-            "jefferson_INV_61_Watts", "jefferson_INV_62_Watts",
-            "jefferson_INV_63_Watts", "jefferson_INV_64_Watts"
-        ],
-        "jefferson18strdaykwList": [
-            "jefferson_INV_1_Watts", "jefferson_INV_2_Watts",
-            "jefferson_INV_3_Watts", "jefferson_INV_4_Watts",
-            "jefferson_INV_6_Watts", "jefferson_INV_13_Watts",
-            "jefferson_INV_14_Watts", "jefferson_INV_17_Watts",
-            "jefferson_INV_18_Watts", "jefferson_INV_20_Watts",
-            "jefferson_INV_21_Watts", "jefferson_INV_22_Watts",
-            "jefferson_INV_23_Watts", "jefferson_INV_25_Watts",
-            "jefferson_INV_40_Watts", "jefferson_INV_41_Watts",
-            "jefferson_INV_42_Watts", "jefferson_INV_43_Watts",
-            "jefferson_INV_44_Watts", "jefferson_INV_45_Watts",
-            "jefferson_INV_46_Watts", "jefferson_INV_47_Watts",
-            "jefferson_INV_49_Watts", "jefferson_INV_50_Watts",
-            "jefferson_INV_51_Watts", "jefferson_INV_52_Watts",
-            "jefferson_INV_53_Watts", "jefferson_INV_54_Watts",
-            "jefferson_INV_55_Watts", "jefferson_INV_56_Watts"
-        ]
+    'Freightliner': {
+        'INV_DICT': {i: str(i) for i in range(1, 19)},
+        'METER_MAX': 2250000,
+        'VAR_NAME': 'freightliner',
+        'CUST_ID': ncemc,
+        'PVSYST': 'FREIGHTLINE'
     },
-    "Marshall": {
-        "marshalldaykwList": [
-            "marshall_INV_1_Watts", "marshall_INV_2_Watts", "marshall_INV_3_Watts",
-            "marshall_INV_4_Watts", "marshall_INV_5_Watts", "marshall_INV_6_Watts",
-            "marshall_INV_7_Watts", "marshall_INV_8_Watts", "marshall_INV_9_Watts",
-            "marshall_INV_10_Watts", "marshall_INV_11_Watts", "marshall_INV_12_Watts",
-            "marshall_INV_13_Watts", "marshall_INV_14_Watts", "marshall_INV_15_Watts",
-            "marshall_INV_16_Watts"
-        ]
+    'Gray Fox': {
+        'INV_DICT': {i: f"{(i-1)//20 + 1}.{(i-1)%20 + 1}" for i in range(1, 41)},
+        'METER_MAX': 5000000,
+        'VAR_NAME': 'grayfox',
+        'CUST_ID': solrvr,
+        'PVSYST': 'GRAYFOX'
     },
-    "Ogburn": {
-        "ogburndaykwList": [
-            "ogburn_INV_1_Watts", "ogburn_INV_2_Watts", "ogburn_INV_3_Watts",
-            "ogburn_INV_4_Watts", "ogburn_INV_5_Watts", "ogburn_INV_6_Watts",
-            "ogburn_INV_7_Watts", "ogburn_INV_8_Watts", "ogburn_INV_9_Watts",
-            "ogburn_INV_10_Watts", "ogburn_INV_11_Watts", "ogburn_INV_12_Watts",
-            "ogburn_INV_13_Watts", "ogburn_INV_14_Watts", "ogburn_INV_15_Watts",
-            "ogburn_INV_16_Watts"
-        ]
+    'Harding': {
+        'INV_DICT': {i: str(i) for i in range(1, 25)},
+        'METER_MAX': 3000000,
+        'VAR_NAME': 'harding',
+        'CUST_ID': solrvr,
+        'PVSYST': 'HARDING'
     },
-    "Tedder": {
-        "tedderdaykwList": [
-            "tedder_INV_5_Watts", "tedder_INV_6_Watts", "tedder_INV_7_Watts",
-            "tedder_INV_9_Watts", "tedder_INV_10_Watts", "tedder_INV_11_Watts",
-            "tedder_INV_12_Watts", "tedder_INV_13_Watts", "tedder_INV_14_Watts"
-        ],
-        "tedder15strdaykwList": [
-            "tedder_INV_1_Watts", "tedder_INV_2_Watts", "tedder_INV_3_Watts",
-            "tedder_INV_4_Watts", "tedder_INV_8_Watts", "tedder_INV_15_Watts",
-            "tedder_INV_16_Watts"
-        ]
+    'Harrison': {
+        'INV_DICT': {i: str(i) for i in range(1, 44)},
+        'METER_MAX': 5380000,
+        'VAR_NAME': 'harrison', 
+        'CUST_ID': nar, 
+        'PVSYST': 'HARRISON'
     },
-    "Thunderhead": {
-        "thunderheaddaykwList": [
-            "thunderhead_INV_1_Watts", "thunderhead_INV_2_Watts",
-            "thunderhead_INV_3_Watts", "thunderhead_INV_4_Watts",
-            "thunderhead_INV_5_Watts", "thunderhead_INV_6_Watts",
-            "thunderhead_INV_7_Watts", "thunderhead_INV_8_Watts",
-            "thunderhead_INV_9_Watts", "thunderhead_INV_10_Watts",
-            "thunderhead_INV_11_Watts", "thunderhead_INV_12_Watts",
-            "thunderhead_INV_14_Watts", "thunderhead_INV_16_Watts"
-        ],
-        "thunderhead14strdaykwList": [
-            "thunderhead_INV_15_Watts", "thunderhead_INV_13_Watts"
-        ]
+    'Hayes': {
+        'INV_DICT': {i: str(i) for i in range(1, 27)},
+        'METER_MAX': 3240000,
+        'VAR_NAME': 'hayes',
+        'CUST_ID': nar,
+        'PVSYST': 'HAYES'
     },
-    "Bulloch 1A": {
-        "bulloch1adaykwList": [
-            "bulloch1a_INV_7_Watts", "bulloch1a_INV_8_Watts",
-            "bulloch1a_INV_9_Watts", "bulloch1a_INV_10_Watts",
-            "bulloch1a_INV_11_Watts", "bulloch1a_INV_12_Watts",
-            "bulloch1a_INV_13_Watts", "bulloch1a_INV_14_Watts",
-            "bulloch1a_INV_15_Watts", "bulloch1a_INV_16_Watts",
-            "bulloch1a_INV_17_Watts", "bulloch1a_INV_18_Watts",
-            "bulloch1a_INV_19_Watts", "bulloch1a_INV_20_Watts",
-            "bulloch1a_INV_21_Watts", "bulloch1a_INV_22_Watts",
-            "bulloch1a_INV_23_Watts", "bulloch1a_INV_24_Watts"
-        ],
-        "bulloch1a10strdaykwList": [
-            "bulloch1a_INV_1_Watts", "bulloch1a_INV_2_Watts",
-            "bulloch1a_INV_3_Watts", "bulloch1a_INV_4_Watts",
-            "bulloch1a_INV_5_Watts", "bulloch1a_INV_6_Watts"
-        ]
+    'Hickory': {
+        'INV_DICT': {1: '1', 2: '2'}, 
+        'METER_MAX': 5000000,
+        'VAR_NAME':'hickory',
+        'CUST_ID': nar2,
+        'PVSYST': 'HICKORY'
     },
-    "Bulloch 1B": {
-        "bulloch1bdaykwList": [
-            "bulloch1b_INV_2_Watts", "bulloch1b_INV_3_Watts",
-            "bulloch1b_INV_4_Watts", "bulloch1b_INV_5_Watts",
-            "bulloch1b_INV_6_Watts", "bulloch1b_INV_7_Watts",
-            "bulloch1b_INV_8_Watts", "bulloch1b_INV_13_Watts",
-            "bulloch1b_INV_14_Watts", "bulloch1b_INV_15_Watts",
-            "bulloch1b_INV_16_Watts", "bulloch1b_INV_18_Watts",
-            "bulloch1b_INV_19_Watts", "bulloch1b_INV_20_Watts",
-            "bulloch1b_INV_21_Watts", "bulloch1b_INV_22_Watts",
-            "bulloch1b_INV_23_Watts", "bulloch1b_INV_24_Watts"
-        ],
-        "bulloch1b10strdaykwList": [
-            "bulloch1b_INV_1_Watts", "bulloch1b_INV_9_Watts",
-            "bulloch1b_INV_10_Watts", "bulloch1b_INV_11_Watts",
-            "bulloch1b_INV_12_Watts", "bulloch1b_INV_17_Watts"
-        ]
+    'Hickson': {
+        'INV_DICT': {i: f"1-{i}" for i in range(1, 17)},
+        'METER_MAX': 2000000,
+        'VAR_NAME': 'hickson', 
+        'CUST_ID': hst,
+        'PVSYST': None
     },
-    "Gray Fox": {
-        "grayfoxdaykwList": [
-            "grayfox_INV_1_Watts", "grayfox_INV_2_Watts", "grayfox_INV_3_Watts",
-            "grayfox_INV_4_Watts", "grayfox_INV_5_Watts", "grayfox_INV_6_Watts",
-            "grayfox_INV_7_Watts", "grayfox_INV_8_Watts", "grayfox_INV_9_Watts",
-            "grayfox_INV_10_Watts", "grayfox_INV_11_Watts", "grayfox_INV_12_Watts",
-            "grayfox_INV_13_Watts", "grayfox_INV_14_Watts", "grayfox_INV_15_Watts",
-            "grayfox_INV_16_Watts", "grayfox_INV_17_Watts", "grayfox_INV_18_Watts",
-            "grayfox_INV_19_Watts", "grayfox_INV_20_Watts", "grayfox_INV_21_Watts",
-            "grayfox_INV_22_Watts", "grayfox_INV_23_Watts", "grayfox_INV_24_Watts",
-            "grayfox_INV_25_Watts", "grayfox_INV_26_Watts", "grayfox_INV_27_Watts",
-            "grayfox_INV_28_Watts", "grayfox_INV_29_Watts", "grayfox_INV_30_Watts",
-            "grayfox_INV_31_Watts", "grayfox_INV_32_Watts", "grayfox_INV_33_Watts",
-            "grayfox_INV_34_Watts", "grayfox_INV_35_Watts", "grayfox_INV_36_Watts",
-            "grayfox_INV_37_Watts", "grayfox_INV_38_Watts", "grayfox_INV_39_Watts",
-            "grayfox_INV_40_Watts"
-        ]
+    'Holly Swamp': {
+        'INV_DICT': {i: str(i) for i in range(1, 17)},
+        'METER_MAX': 2000000,
+        'VAR_NAME': 'hollyswamp',
+        'CUST_ID': ncemc,
+        'PVSYST': 'HOLLYSWAMP'
     },
-    "Harding": {
-        "hardingdaykwList": [
-            "harding_INV_4_Watts", "harding_INV_5_Watts", "harding_INV_6_Watts",
-            "harding_INV_10_Watts", "harding_INV_11_Watts", "harding_INV_12_Watts",
-            "harding_INV_13_Watts", "harding_INV_14_Watts", "harding_INV_15_Watts",
-            "harding_INV_17_Watts", "harding_INV_18_Watts", "harding_INV_19_Watts"
-        ],
-        "harding12strdaykwList": [
-            "harding_INV_1_Watts", "harding_INV_2_Watts", "harding_INV_3_Watts",
-            "harding_INV_7_Watts", "harding_INV_8_Watts", "harding_INV_9_Watts",
-            "harding_INV_16_Watts", "harding_INV_20_Watts", "harding_INV_21_Watts",
-            "harding_INV_22_Watts", "harding_INV_23_Watts", "harding_INV_24_Watts"
-        ]
+    'Jefferson': {
+        'INV_DICT': {i: f"{(i - 1) // 16 + 1}.{(i - 1) % 16 + 1}" for i in range(1, 65)},
+        'METER_MAX': 8000000,
+        'VAR_NAME': 'jefferson',
+        'CUST_ID': hst,
+        'PVSYST': None
     },
-    "McLean": {
-        "mcleandaykwList": [
-            "mclean_INV_2_Watts",  "mclean_INV_3_Watts",  "mclean_INV_4_Watts",
-            "mclean_INV_5_Watts",  "mclean_INV_6_Watts",  "mclean_INV_7_Watts",
-            "mclean_INV_8_Watts",  "mclean_INV_9_Watts",  "mclean_INV_10_Watts",
-            "mclean_INV_11_Watts", "mclean_INV_12_Watts", "mclean_INV_13_Watts",
-            "mclean_INV_14_Watts", "mclean_INV_15_Watts", "mclean_INV_16_Watts",
-            "mclean_INV_18_Watts", "mclean_INV_20_Watts",  "mclean_INV_22_Watts",
-            "mclean_INV_24_Watts", "mclean_INV_25_Watts", "mclean_INV_26_Watts",
-            "mclean_INV_30_Watts"
-        ],
-        "mclean10strdaykwList": [
-            "mclean_INV_1_Watts",  "mclean_INV_17_Watts", "mclean_INV_19_Watts",
-            "mclean_INV_21_Watts", "mclean_INV_23_Watts", "mclean_INV_27_Watts",
-            "mclean_INV_28_Watts", "mclean_INV_29_Watts", "mclean_INV_31_Watts",
-            "mclean_INV_32_Watts", "mclean_INV_33_Watts", "mclean_INV_34_Watts",
-            "mclean_INV_35_Watts", "mclean_INV_36_Watts", "mclean_INV_37_Watts",
-            "mclean_INV_38_Watts", "mclean_INV_39_Watts", "mclean_INV_40_Watts"
-        ]
+    'Marshall': {
+        'INV_DICT': {i: f"1.{i}" for i in range(1, 17)},
+        'METER_MAX': 2000000,
+        'VAR_NAME': 'marshall',
+        'CUST_ID': hst,
+        'PVSYST': None
     },
-    "Richmond": {
-        "richmonddaykwList": [
-            "richmond_INV_1_Watts", "richmond_INV_2_Watts", "richmond_INV_3_Watts",
-            "richmond_INV_4_Watts", "richmond_INV_5_Watts", "richmond_INV_6_Watts",
-            "richmond_INV_7_Watts", "richmond_INV_11_Watts", "richmond_INV_12_Watts",
-            "richmond_INV_13_Watts", "richmond_INV_14_Watts", "richmond_INV_15_Watts",
-            "richmond_INV_16_Watts", "richmond_INV_17_Watts", "richmond_INV_18_Watts",
-            "richmond_INV_19_Watts", "richmond_INV_20_Watts", "richmond_INV_21_Watts"
-        ],
-        "richmond10strdaykwList": [
-            "richmond_INV_8_Watts", "richmond_INV_9_Watts", "richmond_INV_10_Watts",
-            "richmond_INV_22_Watts", "richmond_INV_23_Watts", "richmond_INV_24_Watts"
-        ]
+    'McLean': {
+        'INV_DICT': {i: str(i) for i in range(1, 41)},
+        'METER_MAX': 5000000,
+        'VAR_NAME': 'mclean',
+        'CUST_ID': solrvr,
+        'PVSYST': 'MCLEAN'
     },
-    "Shorthorn": {
-        "shorthorndaykwList": [
-            "shorthorn_INV_1_Watts", "shorthorn_INV_2_Watts", "shorthorn_INV_3_Watts",
-            "shorthorn_INV_4_Watts", "shorthorn_INV_5_Watts", "shorthorn_INV_6_Watts",
-            "shorthorn_INV_7_Watts", "shorthorn_INV_8_Watts", "shorthorn_INV_9_Watts",
-            "shorthorn_INV_10_Watts", "shorthorn_INV_11_Watts", "shorthorn_INV_12_Watts",
-            "shorthorn_INV_13_Watts", "shorthorn_INV_14_Watts", "shorthorn_INV_15_Watts",
-            "shorthorn_INV_16_Watts", "shorthorn_INV_17_Watts", "shorthorn_INV_18_Watts",
-            "shorthorn_INV_19_Watts", "shorthorn_INV_20_Watts", "shorthorn_INV_22_Watts",
-            "shorthorn_INV_23_Watts", "shorthorn_INV_24_Watts",  "shorthorn_INV_26_Watts",
-            "shorthorn_INV_27_Watts", "shorthorn_INV_28_Watts",  "shorthorn_INV_32_Watts",
-            "shorthorn_INV_33_Watts",  "shorthorn_INV_37_Watts", "shorthorn_INV_38_Watts",
-            "shorthorn_INV_39_Watts", "shorthorn_INV_40_Watts", "shorthorn_INV_41_Watts",
-            "shorthorn_INV_42_Watts", "shorthorn_INV_43_Watts", "shorthorn_INV_45_Watts",
-            "shorthorn_INV_46_Watts", "shorthorn_INV_47_Watts", "shorthorn_INV_48_Watts",
-            "shorthorn_INV_52_Watts", "shorthorn_INV_53_Watts", "shorthorn_INV_57_Watts",
-            "shorthorn_INV_58_Watts", "shorthorn_INV_59_Watts", "shorthorn_INV_60_Watts",
-            "shorthorn_INV_61_Watts", "shorthorn_INV_62_Watts", "shorthorn_INV_63_Watts",
-            "shorthorn_INV_64_Watts", "shorthorn_INV_65_Watts", "shorthorn_INV_66_Watts"
-        ],
-        "shorthorn13strdaykwList": [
-            "shorthorn_INV_21_Watts", "shorthorn_INV_25_Watts", "shorthorn_INV_29_Watts",
-            "shorthorn_INV_30_Watts", "shorthorn_INV_31_Watts", "shorthorn_INV_34_Watts",
-            "shorthorn_INV_35_Watts", "shorthorn_INV_36_Watts",  "shorthorn_INV_44_Watts",
-            "shorthorn_INV_49_Watts", "shorthorn_INV_50_Watts", "shorthorn_INV_51_Watts",
-            "shorthorn_INV_54_Watts", "shorthorn_INV_55_Watts", "shorthorn_INV_56_Watts",
-            "shorthorn_INV_67_Watts", "shorthorn_INV_68_Watts", "shorthorn_INV_69_Watts",
-            "shorthorn_INV_70_Watts", "shorthorn_INV_71_Watts", "shorthorn_INV_72_Watts"
-        ]
+    'Ogburn': {
+        'INV_DICT': {i: f"1-{i}" for i in range(1, 17)},
+        'METER_MAX': 2000000,
+        'VAR_NAME': 'ogburn',
+        'CUST_ID': hst,
+        'PVSYST': None
     },
-    "Sunflower": {
-        "sunflowerdaykwList": [
-            "sunflower_INV_3_Watts", "sunflower_INV_4_Watts", "sunflower_INV_5_Watts",
-            "sunflower_INV_6_Watts", "sunflower_INV_7_Watts", "sunflower_INV_8_Watts",
-            "sunflower_INV_9_Watts", "sunflower_INV_10_Watts", "sunflower_INV_11_Watts",
-            "sunflower_INV_12_Watts", "sunflower_INV_13_Watts", "sunflower_INV_14_Watts",
-            "sunflower_INV_15_Watts", "sunflower_INV_16_Watts", "sunflower_INV_17_Watts",
-            "sunflower_INV_18_Watts", "sunflower_INV_19_Watts", "sunflower_INV_20_Watts",
-            "sunflower_INV_34_Watts",  "sunflower_INV_62_Watts",
-            "sunflower_INV_63_Watts", "sunflower_INV_64_Watts", "sunflower_INV_65_Watts",
-            "sunflower_INV_66_Watts", "sunflower_INV_67_Watts", "sunflower_INV_68_Watts",
-            "sunflower_INV_69_Watts", "sunflower_INV_70_Watts", "sunflower_INV_71_Watts",
-            "sunflower_INV_72_Watts", "sunflower_INV_73_Watts", "sunflower_INV_74_Watts",
-            "sunflower_INV_75_Watts", "sunflower_INV_76_Watts", "sunflower_INV_77_Watts"
-        ],
-        "sunflower12strdaykwList": [
-            "sunflower_INV_1_Watts", "sunflower_INV_2_Watts", "sunflower_INV_21_Watts",
-            "sunflower_INV_22_Watts", "sunflower_INV_23_Watts", "sunflower_INV_24_Watts",
-            "sunflower_INV_25_Watts", "sunflower_INV_26_Watts",  "sunflower_INV_27_Watts",
-            "sunflower_INV_28_Watts", "sunflower_INV_29_Watts", "sunflower_INV_30_Watts",
-            "sunflower_INV_31_Watts", "sunflower_INV_32_Watts",  "sunflower_INV_33_Watts",
-            "sunflower_INV_35_Watts", "sunflower_INV_36_Watts", "sunflower_INV_37_Watts",
-            "sunflower_INV_38_Watts", "sunflower_INV_39_Watts", "sunflower_INV_40_Watts",
-            "sunflower_INV_41_Watts", "sunflower_INV_42_Watts", "sunflower_INV_43_Watts",
-            "sunflower_INV_44_Watts", "sunflower_INV_45_Watts", "sunflower_INV_46_Watts",
-            "sunflower_INV_47_Watts", "sunflower_INV_48_Watts", "sunflower_INV_49_Watts",
-            "sunflower_INV_50_Watts", "sunflower_INV_51_Watts", "sunflower_INV_52_Watts",
-            "sunflower_INV_53_Watts", "sunflower_INV_54_Watts", "sunflower_INV_55_Watts",
-            "sunflower_INV_56_Watts", "sunflower_INV_57_Watts", "sunflower_INV_58_Watts",
-            "sunflower_INV_59_Watts", "sunflower_INV_60_Watts", "sunflower_INV_61_Watts",
-            "sunflower_INV_78_Watts", "sunflower_INV_79_Watts", "sunflower_INV_80_Watts"
-        ]
+    'PG': {
+        'INV_DICT': {i: str(i) for i in range(1, 19)},
+        'METER_MAX': 2210000,
+        'VAR_NAME': 'pg',
+        'CUST_ID': ncemc,
+        'PVSYST': 'PG'
     },
-    "Upson": {
-        "upsondaykwList": [
-            "upson_INV_1_Watts", "upson_INV_2_Watts", "upson_INV_3_Watts",
-            "upson_INV_4_Watts", "upson_INV_5_Watts", "upson_INV_9_Watts",
-            "upson_INV_10_Watts", "upson_INV_11_Watts", "upson_INV_12_Watts",
-            "upson_INV_13_Watts", "upson_INV_14_Watts", "upson_INV_15_Watts",
-            "upson_INV_16_Watts", "upson_INV_17_Watts", "upson_INV_21_Watts",
-            "upson_INV_22_Watts", "upson_INV_23_Watts", "upson_INV_24_Watts"
-        ],
-        "upson10strdaykwList": [
-            "upson_INV_6_Watts", "upson_INV_7_Watts", "upson_INV_8_Watts",
-            "upson_INV_18_Watts", "upson_INV_19_Watts", "upson_INV_20_Watts"
-        ]
+    'Richmond': {
+        'INV_DICT': {i: str(i) for i in range(1, 25)},
+        'METER_MAX': 3000000,
+        'VAR_NAME': 'richmond',
+        'CUST_ID': solrvr2,
+        'PVSYST': 'RICHMOND'
     },
-    "Warbler": {
-        "warblerdaykwList": [
-            "warbler_INV_1_Watts", "warbler_INV_2_Watts", "warbler_INV_3_Watts",
-            "warbler_INV_4_Watts", "warbler_INV_5_Watts", "warbler_INV_6_Watts",
-            "warbler_INV_7_Watts", "warbler_INV_8_Watts", "warbler_INV_9_Watts",
-            "warbler_INV_10_Watts", "warbler_INV_11_Watts", "warbler_INV_12_Watts",
-            "warbler_INV_13_Watts", "warbler_INV_14_Watts", "warbler_INV_15_Watts",
-            "warbler_INV_16_Watts", "warbler_INV_17_Watts", "warbler_INV_18_Watts",
-            "warbler_INV_19_Watts", "warbler_INV_20_Watts", "warbler_INV_21_Watts",
-            "warbler_INV_22_Watts", "warbler_INV_23_Watts", "warbler_INV_24_Watts",
-            "warbler_INV_25_Watts", "warbler_INV_26_Watts", "warbler_INV_27_Watts",
-            "warbler_INV_28_Watts", "warbler_INV_29_Watts", "warbler_INV_30_Watts",
-            "warbler_INV_31_Watts", "warbler_INV_32_Watts"
-        ]
+    'Shorthorn': {
+        'INV_DICT': {i: str(i) for i in range(1, 73)},
+        'METER_MAX': 9000000,
+        'VAR_NAME': 'shorthorn',
+        'CUST_ID': solrvr2,
+        'PVSYST': 'SHORTHORN'
     },
-    "Washington": {
-        "washingtondaykwList": [
-            "washington_INV_4_Watts", "washington_INV_5_Watts",
-            "washington_INV_6_Watts", "washington_INV_7_Watts",
-            "washington_INV_8_Watts", "washington_INV_9_Watts",
-            "washington_INV_10_Watts", "washington_INV_11_Watts",
-            "washington_INV_12_Watts", "washington_INV_15_Watts",
-            "washington_INV_16_Watts", "washington_INV_17_Watts",
-            "washington_INV_18_Watts", "washington_INV_19_Watts",
-            "washington_INV_21_Watts", "washington_INV_22_Watts",
-            "washington_INV_23_Watts", "washington_INV_24_Watts",
-            "washington_INV_40_Watts"
-        ],
-        "washington12strdaykwList": [
-            "washington_INV_1_Watts", "washington_INV_2_Watts",
-            "washington_INV_3_Watts", "washington_INV_13_Watts",
-            "washington_INV_14_Watts", "washington_INV_20_Watts",
-            "washington_INV_25_Watts", "washington_INV_26_Watts",
-            "washington_INV_27_Watts", "washington_INV_28_Watts",
-            "washington_INV_29_Watts", "washington_INV_30_Watts",
-            "washington_INV_31_Watts", "washington_INV_32_Watts",
-            "washington_INV_33_Watts", "washington_INV_34_Watts",
-            "washington_INV_35_Watts", "washington_INV_36_Watts",
-            "washington_INV_37_Watts", "washington_INV_38_Watts",
-            "washington_INV_39_Watts"
-        ]
+    'Sunflower': {
+        'INV_DICT': {i: str(i) for i in range(1, 81)},
+        'METER_MAX': 10000000,
+        'VAR_NAME': 'sunflower',
+        'CUST_ID': solrvr2,
+        'PVSYST': 'SUNFLOWER'
     },
-    "Whitehall": {
-        "whitehalldaykwList": [
-            "whitehall_INV_1_Watts", "whitehall_INV_3_Watts",
-            "whitehall_INV_4_Watts", "whitehall_INV_5_Watts",
-            "whitehall_INV_13_Watts", "whitehall_INV_14_Watts",
-            "whitehall_INV_15_Watts", "whitehall_INV_16_Watts"
-        ],
-        "whitehall13strdaykwList": [
-            "whitehall_INV_2_Watts", "whitehall_INV_6_Watts",
-            "whitehall_INV_7_Watts", "whitehall_INV_8_Watts",
-            "whitehall_INV_9_Watts", "whitehall_INV_10_Watts",
-            "whitehall_INV_11_Watts", "whitehall_INV_12_Watts"
-        ]
+    'Tedder': {
+        'INV_DICT': {i: str(i) for i in range(1, 17)},
+        'METER_MAX': 2000000,
+        'VAR_NAME': 'tedder',
+        'CUST_ID': hst,
+        'PVSYST': None
     },
-    "Whitetail": {
-        "whitetaildaykwList": [
-            "whitetail_INV_1_Watts", "whitetail_INV_2_Watts", "whitetail_INV_3_Watts",
-            "whitetail_INV_5_Watts", "whitetail_INV_6_Watts", "whitetail_INV_7_Watts",
-            "whitetail_INV_8_Watts", "whitetail_INV_9_Watts", "whitetail_INV_10_Watts",
-            "whitetail_INV_11_Watts", "whitetail_INV_12_Watts",  "whitetail_INV_22_Watts",
-            "whitetail_INV_23_Watts", "whitetail_INV_24_Watts", "whitetail_INV_25_Watts",
-            "whitetail_INV_32_Watts", "whitetail_INV_33_Watts",  "whitetail_INV_35_Watts",
-            "whitetail_INV_36_Watts", "whitetail_INV_37_Watts", "whitetail_INV_38_Watts",
-            "whitetail_INV_39_Watts", "whitetail_INV_40_Watts", "whitetail_INV_41_Watts",
-            "whitetail_INV_42_Watts",  "whitetail_INV_49_Watts", "whitetail_INV_50_Watts",
-            "whitetail_INV_51_Watts",  "whitetail_INV_57_Watts",  "whitetail_INV_61_Watts",
-            "whitetail_INV_62_Watts", "whitetail_INV_63_Watts", "whitetail_INV_65_Watts",
-            "whitetail_INV_66_Watts", "whitetail_INV_67_Watts", "whitetail_INV_68_Watts",
-            "whitetail_INV_69_Watts", "whitetail_INV_70_Watts", "whitetail_INV_71_Watts",
-            "whitetail_INV_72_Watts", "whitetail_INV_73_Watts", "whitetail_INV_74_Watts",
-            "whitetail_INV_75_Watts", "whitetail_INV_76_Watts", "whitetail_INV_77_Watts",
-            "whitetail_INV_78_Watts", "whitetail_INV_79_Watts", "whitetail_INV_80_Watts"
-        ],
-        "whitetail17strdaykwList": [
-            "whitetail_INV_4_Watts",  "whitetail_INV_13_Watts",
-            "whitetail_INV_14_Watts", "whitetail_INV_15_Watts",
-            "whitetail_INV_16_Watts", "whitetail_INV_17_Watts",
-            "whitetail_INV_18_Watts", "whitetail_INV_19_Watts",
-            "whitetail_INV_20_Watts", "whitetail_INV_21_Watts",
-            "whitetail_INV_26_Watts", "whitetail_INV_27_Watts",
-            "whitetail_INV_28_Watts", "whitetail_INV_29_Watts",
-            "whitetail_INV_30_Watts", "whitetail_INV_31_Watts",
-            "whitetail_INV_34_Watts", "whitetail_INV_43_Watts",
-            "whitetail_INV_44_Watts", "whitetail_INV_45_Watts",
-            "whitetail_INV_46_Watts", "whitetail_INV_47_Watts",
-            "whitetail_INV_48_Watts", "whitetail_INV_52_Watts",
-            "whitetail_INV_53_Watts", "whitetail_INV_54_Watts",
-            "whitetail_INV_55_Watts", "whitetail_INV_56_Watts",
-            "whitetail_INV_58_Watts", "whitetail_INV_59_Watts",
-            "whitetail_INV_60_Watts", "whitetail_INV_64_Watts"
-        ]
+    'Thunderhead': {
+        'INV_DICT': {i: str(i) for i in range(1, 17)},
+        'METER_MAX': 2000000,
+        'VAR_NAME': 'thunderhead',
+        'CUST_ID': hst2,
+        'PVSYST': None
     },
-    "Conetoe": {
-        "conetoe1daykwList": [
-            "conetoe1_INV_1_Watts", "conetoe1_INV_2_Watts", "conetoe1_INV_3_Watts",
-            "conetoe1_INV_4_Watts", "conetoe1_INV_5_Watts", "conetoe1_INV_6_Watts",
-            "conetoe1_INV_7_Watts", "conetoe1_INV_8_Watts", "conetoe1_INV_9_Watts",
-            "conetoe1_INV_10_Watts", "conetoe1_INV_11_Watts", "conetoe1_INV_12_Watts",
-            "conetoe1_INV_13_Watts", "conetoe1_INV_14_Watts", "conetoe1_INV_15_Watts",
-            "conetoe1_INV_16_Watts"
-        ]
+    'Upson': {
+        'INV_DICT': {i: str(i) for i in range(1, 25)},
+        'METER_MAX': 3000000,
+        'VAR_NAME': 'upson',
+        'CUST_ID': solrvr2,
+        'PVSYST': None
     },
-    "Duplin": {
-        "duplindaykwList": [
-            "duplins_INV_1_Watts",  "duplins_INV_2_Watts",  "duplins_INV_3_Watts",
-            "duplins_INV_8_Watts",  "duplins_INV_5_Watts",  "duplins_INV_6_Watts",
-            "duplins_INV_7_Watts",  "duplins_INV_8_Watts",  "duplins_INV_9_Watts",
-            "duplins_INV_10_Watts", "duplins_INV_11_Watts", "duplins_INV_12_Watts",
-            "duplins_INV_13_Watts", "duplins_INV_14_Watts", "duplins_INV_15_Watts",
-            "duplins_INV_16_Watts", "duplins_INV_17_Watts", "duplins_INV_18_Watts"
-        ],
-        "duplinCentraldaykwList": [
-            "duplin_INV_1_Watts",  "duplin_INV_2_Watts",  "duplin_INV_3_Watts"
-        ]
+    'Van Buren': {
+        'INV_DICT': {i: str(i) for i in range(1, 18)},
+        'METER_MAX': 2000000,
+        'VAR_NAME': 'vanburen',
+        'CUST_ID': hst2,
+        'PVSYST': 'VAN BUREN'
     },
-    "Wayne 1": {
-        "wayne1daykwList": [
-            "wayne1_INV_2_Watts", "wayne1_INV_3_Watts"
-        ],
-        "wayne11000daykwList": [
-            "wayne1_INV_1_Watts", "wayne1_INV_4_Watts"
-        ]
+    'Warbler': {
+        'INV_DICT': {i: f"{'A' if i <= 16 else 'B'}{i}" for i in range(1, 33)},
+        'METER_MAX': 4000000,
+        'VAR_NAME': 'warbler',
+        'CUST_ID': solrvr2,
+        'PVSYST': 'WARBLER'
     },
-    "Wayne 2": {
-        "wayne2daykwList": [
-            "wayne2_INV_1_Watts", "wayne2_INV_2_Watts"
-        ],
-        "wayne21000daykwList": [
-            "wayne2_INV_3_Watts",  "wayne2_INV_4_Watts"
-        ]
+    'Washington': {
+        'INV_DICT': {i: str(i) for i in range(1, 41)},
+        'METER_MAX': 5000000,
+        'VAR_NAME': 'washington',
+        'CUST_ID': solrvr3,
+        'PVSYST': None
     },
-    "Wayne 3": {
-        "wayne3daykwList": [
-            "wayne3_INV_3_Watts", "wayne3_INV_4_Watts"
-        ],
-        "wayne31000daykwList": [
-            "wayne3_INV_1_Watts", "wayne3_INV_2_Watts"
-        ]
+    'Wayne 1': {
+        'INV_DICT': {1: '1', 2: '2', 3: '3', 4: '4'},
+        'METER_MAX': 5000000,
+        'VAR_NAME': 'wayne1',
+        'CUST_ID': soltage,
+        'PVSYST': None
     },
-    "Freightliner": {
-        "freightlinedaykwList": [
-            "freightliner_INV_1_Watts",  "freightliner_INV_3_Watts",
-            "freightliner_INV_4_Watts",  "freightliner_INV_5_Watts",
-            "freightliner_INV_8_Watts",  "freightliner_INV_9_Watts",
-            "freightliner_INV_10_Watts", "freightliner_INV_11_Watts",
-            "freightliner_INV_12_Watts", "freightliner_INV_15_Watts",
-            "freightliner_INV_16_Watts", "freightliner_INV_17_Watts",
-            "freightliner_INV_18_Watts"
-        ],
-        "freightline66daykwList": [
-            "freightliner_INV_2_Watts",  "freightliner_INV_6_Watts",
-            "freightliner_INV_7_Watts",  "freightliner_INV_13_Watts",
-            "freightliner_INV_14_Watts"
-        ]
+    'Wayne 2': {
+        'INV_DICT': {1: '1', 2: '2', 3: '3', 4: '4'},
+        'METER_MAX': 5000000,
+        'VAR_NAME': 'wayne2',
+        'CUST_ID': soltage,
+        'PVSYST': None
     },
-    "Holly Swamp": {
-        "hollyswampdaykwList": [
-            "hollyswamp_INV_1_Watts", "hollyswamp_INV_2_Watts",
-            "hollyswamp_INV_3_Watts", "hollyswamp_INV_4_Watts",
-            "hollyswamp_INV_5_Watts", "hollyswamp_INV_6_Watts",
-            "hollyswamp_INV_7_Watts", "hollyswamp_INV_8_Watts",
-            "hollyswamp_INV_9_Watts", "hollyswamp_INV_10_Watts",
-            "hollyswamp_INV_11_Watts", "hollyswamp_INV_12_Watts",
-            "hollyswamp_INV_14_Watts", "hollyswamp_INV_16_Watts"
-        ],
-        "hollyswamp18strdaykwList": [
-            "hollyswamp_INV_15_Watts", "hollyswamp_INV_13_Watts"
-        ]
+    'Wayne 3': {
+        'INV_DICT': {1: '1', 2: '2', 3: '3', 4: '4'},
+        'METER_MAX': 5000000,
+        'VAR_NAME': 'wayne3',
+        'CUST_ID': soltage,
+        'PVSYST': None
     },
-    "PG": {
-        "pgdaykwList": [
-            "pg_INV_7_Watts",  "pg_INV_8_Watts",  "pg_INV_9_Watts",
-            "pg_INV_10_Watts", "pg_INV_11_Watts", "pg_INV_12_Watts",
-            "pg_INV_13_Watts", "pg_INV_14_Watts", "pg_INV_15_Watts",
-            "pg_INV_16_Watts", "pg_INV_17_Watts", "pg_INV_18_Watts"
-        ],
-        "pg66daykwList": [
-            "pg_INV_1_Watts", "pg_INV_2_Watts", "pg_INV_3_Watts",
-            "pg_INV_4_Watts", "pg_INV_5_Watts", "pg_INV_6_Watts"
-        ]
+    'Wellons': {
+        'INV_DICT': {1: '1-1', 2: '1-2', 3: '2-1', 4: '2-2', 5: '3-1', 6: '3-2'},
+        'METER_MAX': 5000000,
+        'VAR_NAME': 'wellons',
+        'CUST_ID': nar2,
+        'PVSYST': 'WELLONS'
     },
+    'Whitehall': {
+        'INV_DICT': {i: str(i) for i in range(1, 17)},
+        'METER_MAX': 2000000,
+        'VAR_NAME': 'whitehall',
+        'CUST_ID': solrvr3,
+        'PVSYST': 'WHITEHALL'
+    },
+    'Whitetail': {
+        'INV_DICT': {i: str(i) for i in range(1, 81)},
+        'METER_MAX': 10000000,
+        'VAR_NAME': 'whitetail',
+        'CUST_ID': solrvr3,
+        'PVSYST': None
+    },
+    'Violet': {
+        'INV_DICT': {1: '1', 2: '2'},
+        'METER_MAX': 5000000,
+        'VAR_NAME': 'violet',
+        'CUST_ID': nar2,
+        'PVSYST': 'VIOLET'
+    }
 }
-
-
 
 sites_WObreakers = {'Bluebird', 'Bulloch 1A', 'Bulloch 1B', 'Conetoe', 'CDIA', 'Cougar', 'Duplin', 'Freightliner', 'Holly Swamp', 'PG', 'Richmond', 'Upson', 'Van Buren', 'Wayne 1', 'Wayne 2', 'Wayne 3', 'Wellons'}
 #I Don't Need both, Don't know why I still have both, but I do.
@@ -1163,49 +571,53 @@ def open_wo_tracking(name):
 
 #Start looping through the dictionary at the top to create what is Below. 
 #This one shall create the Sites Breaker/Meter/POA window
-for ro, (name, invdict, metermax, varname, custid, pvsyst_name) in enumerate(master_List_Sites, start=1):
+for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), start=1):
+    invdict = site_dictionary['INV_DICT']
+    var_name = site_dictionary['VAR_NAME']
+    custid = site_dictionary['CUST_ID']
+
     invnum = len(invdict)
     #Site Info
     #Main Color
-    globals()[f'{varname}Label'] = Label(root, bg=main_color, text=name, fg= 'black', font=('Tk_defaultFont', 10, 'bold'))
-    globals()[f'{varname}Label'].grid(row=ro, column= 0, sticky=W)
+    globals()[f'{var_name}Label'] = Label(root, bg=main_color, text=name, fg= 'black', font=('Tk_defaultFont', 10, 'bold'))
+    globals()[f'{var_name}Label'].grid(row=ro, column= 0, sticky=W)
     if name in has_breaker:
         if name == 'Violet':
             vio_excep = 1
         else:
             vio_excep = ''
-        globals()[f'{varname}{vio_excep}statusLabel'] = Label(root, bg=main_color, text='❌', fg= 'black')
-        globals()[f'{varname}{vio_excep}statusLabel'].grid(row=ro, column= 1)
+        globals()[f'{var_name}{vio_excep}statusLabel'] = Label(root, bg=main_color, text='❌', fg= 'black')
+        globals()[f'{var_name}{vio_excep}statusLabel'].grid(row=ro, column= 1)
         if name == 'Violet':
             violet2statusLabel = Label(root, bg=main_color, text='❌', fg= 'black')
             violet2statusLabel.grid(row=ro+1, column= 1)
 
     if name != 'CDIA':
         #Site Voltage Boolean
-        globals()[f'{varname}meterVLabel'] = Label(root, bg=main_color, text='V', fg= 'black')
-        globals()[f'{varname}meterVLabel'].grid(row=ro, column= 2)
+        globals()[f'{var_name}meterVLabel'] = Label(root, bg=main_color, text='V', fg= 'black')
+        globals()[f'{var_name}meterVLabel'].grid(row=ro, column= 2)
 
-    globals()[f'{varname}metercbval'] = IntVar()
-    all_CBs.append(globals()[f'{varname}metercbval'])
-    globals()[f'{varname}metercb'] = Checkbutton(root, bg=main_color, variable=globals()[f'{varname}metercbval'], fg= 'black', cursor='hand2')
-    globals()[f'{varname}metercb'].grid(row=ro, column= 3)
+    globals()[f'{var_name}metercbval'] = IntVar()
+    all_CBs.append(globals()[f'{var_name}metercbval'])
+    globals()[f'{var_name}metercb'] = Checkbutton(root, bg=main_color, variable=globals()[f'{var_name}metercbval'], fg= 'black', cursor='hand2')
+    globals()[f'{var_name}metercb'].grid(row=ro, column= 3)
     #Meter Producing Boolean
-    globals()[f'{varname}meterkWLabel'] = Label(root, bg=main_color, text='kW', fg= 'black')
-    globals()[f'{varname}meterkWLabel'].grid(row=ro, column= 4)
+    globals()[f'{var_name}meterkWLabel'] = Label(root, bg=main_color, text='kW', fg= 'black')
+    globals()[f'{var_name}meterkWLabel'].grid(row=ro, column= 4)
     #Meter % of Max capability
-    globals()[f'{varname}meterRatioLabel'] = Label(root, bg=main_color, text='Ratio', fg= 'black')
-    globals()[f'{varname}meterRatioLabel'].grid(row=ro, column= 5)
+    globals()[f'{var_name}meterRatioLabel'] = Label(root, bg=main_color, text='Ratio', fg= 'black')
+    globals()[f'{var_name}meterRatioLabel'].grid(row=ro, column= 5)
     #PVSyst Value
-    globals()[f'{varname}meterPvSystLabel'] = Label(root, bg=main_color, text='Ratio', fg= 'black')
-    globals()[f'{varname}meterPvSystLabel'].grid(row=ro, column= 6)
+    globals()[f'{var_name}meterPvSystLabel'] = Label(root, bg=main_color, text='Ratio', fg= 'black')
+    globals()[f'{var_name}meterPvSystLabel'].grid(row=ro, column= 6)
 
-    globals()[f'{varname}POAcbval'] = IntVar()
-    all_CBs.append(globals()[f'{varname}POAcbval'])
-    globals()[f'{varname}POAcb'] = Checkbutton(root, bg=main_color, text='X', variable=globals()[f'{varname}POAcbval'], fg= 'black', cursor='hand2')
-    globals()[f'{varname}POAcb'].grid(row=ro, column= 7)
+    globals()[f'{var_name}POAcbval'] = IntVar()
+    all_CBs.append(globals()[f'{var_name}POAcbval'])
+    globals()[f'{var_name}POAcb'] = Checkbutton(root, bg=main_color, text='X', variable=globals()[f'{var_name}POAcbval'], fg= 'black', cursor='hand2')
+    globals()[f'{var_name}POAcb'].grid(row=ro, column= 7)
     
-    globals()[f'{varname}kwdata'] = Label(root, bg=main_color, text=' INV kW    | Meter-INVs |   #of INVs ✅\nMeter kW   | INVs w/o Comms |  Total # INVs', fg= 'black')
-    globals()[f'{varname}kwdata'].grid(row=ro, column= 8)
+    globals()[f'{var_name}kwdata'] = Label(root, bg=main_color, text=' INV kW    | Meter-INVs |   #of INVs ✅\nMeter kW   | INVs w/o Comms |  Total # INVs', fg= 'black')
+    globals()[f'{var_name}kwdata'].grid(row=ro, column= 8)
     
     #End
     #INVERTER INFO
@@ -1216,8 +628,8 @@ for ro, (name, invdict, metermax, varname, custid, pvsyst_name) in enumerate(mas
         else:
             span_col = 3
 
-        globals()[f'{varname}invsLabel'] = Button(custid, text=name, command=lambda name=varname: open_wo_tracking(name), bg=main_color, font=("Tk_defaultFont", 12, 'bold'), cursor='hand2')
-        globals()[f'{varname}invsLabel'].grid(row= 0, column= ro*3, columnspan= span_col, sticky='ew')
+        globals()[f'{var_name}invsLabel'] = Button(custid, text=name, command=lambda name=name: open_wo_tracking(name), bg=main_color, font=("Tk_defaultFont", 12, 'bold'), cursor='hand2')
+        globals()[f'{var_name}invsLabel'].grid(row= 0, column= ro*3, columnspan= span_col, sticky='ew')
     for num in range(1, invnum+1):
         column_offset = 0 if num <= length_limit else 3
         row_offset = num if num <= length_limit else num - length_limit
@@ -1227,25 +639,25 @@ for ro, (name, invdict, metermax, varname, custid, pvsyst_name) in enumerate(mas
             else:
                 inv_val = str(num)
 
-            globals()[f'{varname}inv{inv_val}cbval'] = IntVar()
-            all_CBs.append(globals()[f'{varname}inv{inv_val}cbval'])
-            globals()[f'{varname}inv{inv_val}cb'] = Checkbutton(custid, text=str(inv_val), variable=globals()[f'{varname}inv{inv_val}cbval'], cursor='hand2')
-            globals()[f'{varname}inv{inv_val}cb'].grid(row= row_offset, column= (ro*3)+column_offset, sticky=W)
+            globals()[f'{var_name}inv{inv_val}cbval'] = IntVar()
+            all_CBs.append(globals()[f'{var_name}inv{inv_val}cbval'])
+            globals()[f'{var_name}inv{inv_val}cb'] = Checkbutton(custid, text=str(inv_val), variable=globals()[f'{var_name}inv{inv_val}cbval'], cursor='hand2')
+            globals()[f'{var_name}inv{inv_val}cb'].grid(row= row_offset, column= (ro*3)+column_offset, sticky=W)
 
-            globals()[f'{varname}inv{num}WOLabel'] = Label(custid, text='⬜') #intial Setup of WO Placeholder. 
-            globals()[f'{varname}inv{num}WOLabel'].grid(row= row_offset, column= (ro*3)+1+column_offset)
+            globals()[f'{var_name}inv{num}WOLabel'] = Label(custid, text='⬜') #intial Setup of WO Placeholder. 
+            globals()[f'{var_name}inv{num}WOLabel'].grid(row= row_offset, column= (ro*3)+1+column_offset)
 
             if name != "Conetoe":
-                globals()[f'{varname}invup{num}cbval'] = IntVar()
-                all_CBs.append(globals()[f'{varname}invup{num}cbval'])
-                globals()[f'{varname}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{varname}invup{num}cbval'], cursor='hand2')
-                globals()[f'{varname}invup{num}cb'].grid(row= row_offset, column= (ro*3)+2+column_offset, sticky=W)
+                globals()[f'{var_name}invup{num}cbval'] = IntVar()
+                all_CBs.append(globals()[f'{var_name}invup{num}cbval'])
+                globals()[f'{var_name}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{var_name}invup{num}cbval'], cursor='hand2')
+                globals()[f'{var_name}invup{num}cb'].grid(row= row_offset, column= (ro*3)+2+column_offset, sticky=W)
             else:
                 if num < 5:
-                    globals()[f'{varname}invup{num}cbval'] = IntVar()
-                    all_CBs.append(globals()[f'{varname}invup{num}cbval'])
-                    globals()[f'{varname}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{varname}invup{num}cbval'], cursor='hand2')
-                    globals()[f'{varname}invup{num}cb'].grid(row= (4*row_offset-3), rowspan= 4, column= (ro*3)+2+column_offset, sticky=W)
+                    globals()[f'{var_name}invup{num}cbval'] = IntVar()
+                    all_CBs.append(globals()[f'{var_name}invup{num}cbval'])
+                    globals()[f'{var_name}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{var_name}invup{num}cbval'], cursor='hand2')
+                    globals()[f'{var_name}invup{num}cb'].grid(row= (4*row_offset-3), rowspan= 4, column= (ro*3)+2+column_offset, sticky=W)
 
 
 ##########
@@ -1409,20 +821,20 @@ def check_inv_consecutively_online(alist):
     
     return False
 
-def siteSnapShot_Update(site, var, inv_num, meterkW):
+def siteSnapShot_Update(site, var_name, inv_num, meterkW):
     global_vars = globals().copy()
     invs_ON = []
     invs_values = []
     
-    for var_name, var_value in global_vars.items():
+    for var, var_value in global_vars.items():
         #Filter variables to just the INV ones for site
-        if any(filt in var_name for filt in {'val', 'invup'}):
-            continue
-        if not all(filt in var_name for filt in {'inv', f'{var}', 'cb'}):
+        if (not isinstance(var_value, (Checkbutton, Label, Button)) or
+                any(filt in var for filt in {'val', 'invup'}) or
+                not all(filt in var for filt in {'inv', f'{var_name}', 'cb'})):
             continue
 
-        if globals()[f'{var_name}'].cget('bg') == 'green':
-            invs_ON.append(var_name)
+        if globals()[f'{var}'].cget('bg') == 'green':
+            invs_ON.append(var)
 
     for inv in range(1, inv_num + 1):
         if site == 'Duplin':
@@ -1452,7 +864,7 @@ def siteSnapShot_Update(site, var, inv_num, meterkW):
     else: #Otherwise show yellow that theres a none communicating Inverter and it is offline according to meter
         color = 'yellow'
 
-    globals()[f'{var}kwdata'].config(text=f"{total_INVkW/1000} kW   | {round((meterkW/1000)-(total_INVkW/1000), 1)} | {communicating_INVs:<2}\n{meterkW/1000} kW    | {inv_num-communicating_INVs} | {inv_num:<2}", bg= color) #/1000 for Watts to kW Conversion
+    globals()[f'{var_name}kwdata'].config(text=f"{total_INVkW/1000} kW   | {round((meterkW/1000)-(total_INVkW/1000), 1)} | {communicating_INVs:<2}\n{meterkW/1000} kW    | {inv_num-communicating_INVs} | {inv_num:<2}", bg= color) #/1000 for Watts to kW Conversion
 
 
 
@@ -1483,8 +895,10 @@ def update_data():
 
     status_all = {}
     #Retireve Current INV status's and store in lists
-    for site_info in master_List_Sites:
-        name, invdict, metermax, var_name, custid, pvsyst_name = site_info
+    for name, site_dictionary in MAP_SITES_HARDWARE_GUI.items():
+        invdict = site_dictionary['INV_DICT']
+        var_name = site_dictionary['VAR_NAME']
+
         inverters = len(invdict)
         l = []
         if name != "CDIA":
@@ -1506,9 +920,13 @@ def update_data():
     tm_now = datetime.now()
     str_tm_now = tm_now.strftime('%H')
     h_tm_now = int(str_tm_now)
+    for name, site_dictionary in MAP_SITES_HARDWARE_GUI.items():
+        invdict = site_dictionary['INV_DICT']
+        var_name = site_dictionary['VAR_NAME']
+        custid = site_dictionary['CUST_ID']
+        metermax = site_dictionary['METER_MAX']
+        pvsyst_name = site_dictionary['PVSYST']
 
-    for site_info in master_List_Sites:
-        name, invdict, metermax, var_name, custid, pvsyst_name = site_info
         inverters = len(invdict)
         if name == "Violet":
             time_date_compare = (timecurrent - timedelta(hours=4))
@@ -1850,6 +1268,7 @@ def update_data():
                             else:
                                 text_update_Table.append("<br>" + str(msg))
         #Meter Check
+        erroneous_meter_value = 760000000
         if name != "CDIA":
             meter_Ltime = metercomms.strftime('%m/%d/%y | %H:%M')
             if metercomms > time_date_compare:
@@ -1890,9 +1309,9 @@ def update_data():
                 meterdataAA = all(row[3] < 1 for row in meterdata if row[3] is not None)
                 meterdataAB = all(row[4] < 1 for row in meterdata if row[4] is not None)
                 meterdataAC = all(row[5] < 1 for row in meterdata if row[5] is not None)
-                meterdataKW = np.mean([row[6] for row in meterdata if row[6] is not None])
+                meterdataKW = np.mean([row[6] for row in meterdata if row[6] is not None and row[6] < erroneous_meter_value])
                 if name == "Wellons":
-                    meterdatakWM = max(row[6] for row in meterdata if row[6] is not None and row[6] < 760000000) if max(row[6] for row in meterdata if row[6] is not None and row[6] < 760000000) else 0
+                    meterdatakWM = max(row[6] for row in meterdata if row[6] is not None and row[6] < erroneous_meter_value) if max(row[6] for row in meterdata if row[6] is not None and row[6] < erroneous_meter_value) else 0
                 else:
                     meterdatakWM = max(row[6] for row in meterdata if row[6] is not None) if max(row[6] for row in meterdata if row[6] is not None) else 0
 
@@ -2116,8 +1535,13 @@ def update_data():
     poststatus_all = {}
     #Retireve Current INV status's and store in lists
 
-    for site_info in master_List_Sites:
-        name, invdict, metermax, var_name, custid, pvsyst_name = site_info
+    for name, site_dictionary in MAP_SITES_HARDWARE_GUI.items():
+        invdict = site_dictionary['INV_DICT']
+        var_name = site_dictionary['VAR_NAME']
+        custid = site_dictionary['CUST_ID']
+        metermax = site_dictionary['METER_MAX']
+        pvsyst_name = site_dictionary['PVSYST']
+
         inverters = len(invdict)
         l = []
         if name != "CDIA":
@@ -2135,8 +1559,12 @@ def update_data():
             poststatus_all[f'{var_name}'] = l
     #ic(poststatus_all['vanburen'])
     
-    for index, site_info in enumerate(master_List_Sites):
-        name, invdict, metermax, var_name, custid, pvsyst_name = site_info
+    for index, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items()):
+        invdict = site_dictionary['INV_DICT']
+        var_name = site_dictionary['VAR_NAME']
+        custid = site_dictionary['CUST_ID']
+        metermax = site_dictionary['METER_MAX']
+        pvsyst_name = site_dictionary['PVSYST']
         inverters = len(invdict)
         if name != "CDIA":
             master_cb_skips_INV_checks = True if globals()[f'{var_name}metercbval'].get() == 0 else False
@@ -2186,8 +1614,10 @@ def update_data():
     
     
     #Comapres all lists of sites inverters to see what remains online
-    for site_info in master_List_Sites:
-        name, invdict, metermax, var_name, custid, pvsyst_name = site_info
+    for name, site_dictionary in MAP_SITES_HARDWARE_GUI.items():
+        invdict = site_dictionary['INV_DICT']
+        var_name = site_dictionary['VAR_NAME']
+
         inverters = len(invdict)
         if int(globals()[f'{var_name}POAcb'].cget("text")) > 100:
             if name != "CDIA":
@@ -2312,7 +1742,12 @@ def underperformance_data_update(): #Inv Comparison Function
     coentoe_inv3 = []
     coentoe_inv4 = []
 
-    for site, invdict, metermax, var, custid, pvsyst_name in master_List_Sites:
+    for site, site_dictionary in MAP_SITES_HARDWARE_GUI.items():
+        invdict = site_dictionary['INV_DICT']
+        var_name = site_dictionary['VAR_NAME']
+        custid = site_dictionary['CUST_ID']
+        metermax = site_dictionary['METER_MAX']
+        pvsyst_name = site_dictionary['PVSYST']
         inv_count = len(invdict)
         if site == "CDIA":
             continue
@@ -2333,8 +1768,8 @@ def underperformance_data_update(): #Inv Comparison Function
                 df_grouped = df_filtered.groupby('Timestamp').mean().reset_index()
                 df_resampled = df_grouped.set_index('Timestamp').resample('5min').ffill()
                 df_resampled['kWh'] = df_resampled['Watts'] * (2 / 60) / 1000
-                globals()[f'{var}{alt}inv{num}daykw'] = df_resampled['kWh'].sum()
-                globals()[f'{var}{alt}inv{num}daykwavg'] = df_resampled['Watts'].mean()
+                globals()[f'{var_name}{alt}inv{num}daykw'] = df_resampled['kWh'].sum()
+                globals()[f'{var_name}{alt}inv{num}daykwavg'] = df_resampled['Watts'].mean()
             elif site == "Conetoe":
                 table_name = f'{site} INV {i} Data'
                 df = underperformance_data.get(table_name, pd.DataFrame(columns=['Timestamp', 'Watts']))
@@ -2348,26 +1783,26 @@ def underperformance_data_update(): #Inv Comparison Function
                 if i < 5:
                     coentoe_inv1.append((avg_w, daily_kw))
                     if i == 4:
-                        globals()[f'{var}inv1daykwavg'] = np.mean([item[0] for item in coentoe_inv1])
-                        globals()[f'{var}inv1daykw'] = np.mean([item[1] for item in coentoe_inv1])
+                        globals()[f'{var_name}inv1daykwavg'] = np.mean([item[0] for item in coentoe_inv1])
+                        globals()[f'{var_name}inv1daykw'] = np.mean([item[1] for item in coentoe_inv1])
 
                 elif 4 < i < 9:
                     coentoe_inv2.append((avg_w, daily_kw))
                     if i == 8:
-                        globals()[f'{var}inv2daykwavg'] = np.mean([item[0] for item in coentoe_inv2])
-                        globals()[f'{var}inv2daykw'] = np.mean([item[1] for item in coentoe_inv2])
+                        globals()[f'{var_name}inv2daykwavg'] = np.mean([item[0] for item in coentoe_inv2])
+                        globals()[f'{var_name}inv2daykw'] = np.mean([item[1] for item in coentoe_inv2])
 
                 elif 8 < i < 13:
                     coentoe_inv3.append((avg_w, daily_kw))
                     if i == 12:
-                        globals()[f'{var}inv3daykwavg'] = np.mean([item[0] for item in coentoe_inv3])
-                        globals()[f'{var}inv3daykw'] = np.mean([item[1] for item in coentoe_inv3])
+                        globals()[f'{var_name}inv3daykwavg'] = np.mean([item[0] for item in coentoe_inv3])
+                        globals()[f'{var_name}inv3daykw'] = np.mean([item[1] for item in coentoe_inv3])
 
                 else:
                     coentoe_inv4.append((avg_w, daily_kw))
                     if i == 16:
-                        globals()[f'{var}inv4daykwavg'] = np.mean([item[0] for item in coentoe_inv4])
-                        globals()[f'{var}inv4daykw'] = np.mean([item[1] for item in coentoe_inv4])
+                        globals()[f'{var_name}inv4daykwavg'] = np.mean([item[0] for item in coentoe_inv4])
+                        globals()[f'{var_name}inv4daykw'] = np.mean([item[1] for item in coentoe_inv4])
 
                 
             else:
@@ -2378,8 +1813,8 @@ def underperformance_data_update(): #Inv Comparison Function
                 df_grouped = df_filtered.groupby('Timestamp').mean().reset_index()
                 df_resampled = df_grouped.set_index('Timestamp').resample('5min').ffill()
                 df_resampled['kWh'] = df_resampled['Watts'] * (2 / 60) / 1000
-                globals()[f'{var}inv{i}daykw'] = df_resampled['kWh'].sum()
-                globals()[f'{var}inv{i}daykwavg'] = df_resampled['Watts'].mean()
+                globals()[f'{var_name}inv{i}daykw'] = df_resampled['kWh'].sum()
+                globals()[f'{var_name}inv{i}daykwavg'] = df_resampled['Watts'].mean()
 
 
         
@@ -2656,9 +2091,9 @@ def checkin():
 
 def last_update():
     times = []
-    for site, invdict, metermax, var, place, pvsyst_name in master_List_Sites:
-        if site != "CDIA":
-            c.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Meter Data] ORDER BY [Timestamp] DESC")
+    for name in MAP_SITES_HARDWARE_GUI:
+        if name != "CDIA":
+            c.execute(f"SELECT TOP 1 [Timestamp] FROM [{name} Meter Data] ORDER BY [Timestamp] DESC")
             last_time = c.fetchone()
             times.append(last_time[0])
     most_recent = max(times)
@@ -2733,9 +2168,10 @@ def db_to_dict():
     day_of_week = datetime.today().weekday()
     if day_of_week > 4:
         if datetime.now().hour > 14:
-            os.startfile(r"G:\Shared drives\O&M\NCC Automations\Emails\Close AE GUI.ahk")
-            time.sleep(5)
             os.startfile(r"G:\Shared drives\O&M\NCC Automations\Notification System\Email Notification (Breaker).py")
+            ty.sleep(5)
+            os.startfile(r"G:\Shared drives\O&M\NCC Automations\Emails\Close AE GUI.ahk")
+            
 
     query_start = ty.perf_counter()
     sendTexts.config(state=DISABLED)
@@ -2839,17 +2275,17 @@ def parse_wo():
         site = row['Site']
         if pd.isna(site) or site in  {"Charter GM", "Charter RM", "Charter Roof"}:
             continue
-        varname = str(site)
+        var_name = str(site)
         for phrase in var_adjustment:
-            varname = varname.replace(phrase, "")
+            var_name = var_name.replace(phrase, "")
         if 'Wayne' in site:
-            varname = varname.replace("III", "3")
-            varname = varname.replace("II", "2")
-            varname = varname.replace("I", "1")
-        varname = varname.replace(" ", "").lower()
-        varname = varname.replace("freightline", "freightliner")
+            var_name = var_name.replace("III", "3")
+            var_name = var_name.replace("II", "2")
+            var_name = var_name.replace("I", "1")
+        var_name = var_name.replace(" ", "").lower()
+        var_name = var_name.replace("freightline", "freightliner")
         if site == "BISHOPVILLE":
-            varname = 'bishopvilleII'
+            var_name = 'bishopvilleII'
         
         status = row['Job Status']
         error_type = row['Fault Code Category']
@@ -2884,13 +2320,13 @@ def parse_wo():
             if inv_num is None:
                 print(f"Num: {inv_num} | {site} | {wo_num} | {wo_summary}\n")
                 # Construct the file path for the text file
-                txt_file_path = os.path.join(directory, f"{varname} Open WO's.txt")
+                txt_file_path = os.path.join(directory, f"{var_name} Open WO's.txt")
                 # Append the row data to the text file
                 with open(txt_file_path, 'a+') as file:
                     file.write(f'{inv_num} |  WO: {wo_num:<8}|  {wo_date}  |  {wo_summary}\n')
             else:            
                 #Color Assignment Logic
-                current_colorstatus = globals()[f'{varname}inv{inv_num}WOLabel'].cget('text')
+                current_colorstatus = globals()[f'{var_name}inv{inv_num}WOLabel'].cget('text')
                 if current_colorstatus == 'gray':
                     continue
                 
@@ -2908,10 +2344,10 @@ def parse_wo():
                     color = 'pink'
                 else: 
                     color = 'yellow'
-                globals()[f'{varname}inv{inv_num}WOLabel'].config(bg=color)
+                globals()[f'{var_name}inv{inv_num}WOLabel'].config(bg=color)
 
                 # Construct the file path for the text file
-                txt_file_path = os.path.join(directory, f"{varname} Open WO's.txt")
+                txt_file_path = os.path.join(directory, f"{var_name} Open WO's.txt")
                 # Append the row data to the text file
                 with open(txt_file_path, 'a+') as file:
                     file.write(f'{inv_num:<5}|  WO: {wo_num:<8}|  {wo_date}  |  {wo_summary}\n')

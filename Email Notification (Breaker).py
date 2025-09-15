@@ -16,8 +16,12 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import json
-import os
+import os, sys
 
+# Add the parent directory ('NCC Automations') to the Python path
+# This allows us to import the 'PythonTools' package from there.
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(parent_dir)
 from PythonTools import CREDS, EMAILS, PausableTimer #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
 
 

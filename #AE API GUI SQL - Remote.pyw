@@ -15,13 +15,16 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import subprocess
-import os
+import os, sys
 import glob
 import json
 import re
 from bs4 import BeautifulSoup
 
-# Source is an __init__.py file
+# Add the parent directory ('NCC Automations') to the Python path
+# This allows us to import the 'PythonTools' package from there.
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(parent_dir)
 from PythonTools import CREDS, EMAILS, PausableTimer #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
 
 #Underperformance Analysis Packages
@@ -1369,7 +1372,6 @@ def update_data():
             metercomms = max(comm_data[f'{name} Meter Data'])[0]
 
 
-
         #POA data Update
         if globals()[f'{var_name}POAcbval'].get() == 1:
             poa_noti = False
@@ -1580,7 +1582,7 @@ def update_data():
 
                     else:
                         if check_inv_consecutively_online(point[1] for point in data):
-                            globals()[f'{var_name}meterkWLabel'].config(text="✓✓✓", bg='green')
+                            globals()[f'{var_name}meterkWLabel'].config(text=round(avg_kW/1000, 1), bg='green')
                             globals()[f'{var_name}Label'].config(bg='#ADD8E6')
 
                 else:
@@ -1857,14 +1859,13 @@ def update_data():
                                 text_update_Table.append("<br>" + str(msg))
      
                 else:
-                    meterkWstatus= '✓✓✓'
+                    meterkWstatus= round(meterdataKW/1000, 1)
                     meterkWstatuscolor= 'green'
                 #Below we update the GUI with the above defined text and color
                 globals()[f'{var_name}meterkWLabel'].config(text= meterkWstatus, bg= meterkWstatuscolor)
                 
                 #PVSYST Ratio Update
                 try:
-                    pysyst_connect()
                     if meterdatakWM and poa and pvsyst_name:
                         performance_ratio, degradation, meter_est = pvsyst_est(meterdatakWM, poa, pvsyst_name)
                         if pvsyst_name is not None:
@@ -1886,10 +1887,8 @@ def update_data():
                             globals()[f'{var_name}meterPvSystLabel'].config(text=f'{round(performance_ratio, 1)}%', bg=pvSyst_color)
                         else:
                             globals()[f'{var_name}meterPvSystLabel'].config(text='N/A')
-                    connect_pvsystdb.close()
                 except Exception as erro:
                     print("Error: ", erro)
-                    pass
 
 
             else:
