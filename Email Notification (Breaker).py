@@ -30,14 +30,13 @@ from PythonTools import CREDS, EMAILS, PausableTimer #Both of these Variables ar
 breaker_pulls = 10
 meter_pulls = 15
 voltage_check = 5 
-
-master_List_Sites = {('Bishopville II', 36, 'bishopvilleII'), ('Bluebird', 24, 'bluebird'), ('Bulloch 1A', 24, 'bulloch1a'), ('Bulloch 1B', 24, 'bulloch1b'), ('Cardinal', 59, 'cardinal'),
-                     ('Cherry Blossom', 4, 'cherryblossom'), ('Conetoe', 4, 'conetoe'), ('Cougar', 30, 'cougar'), ('Duplin', 21, 'duplin'), ('Elk', 43, 'elk'), ('Freightliner', 18, 'freightliner'), ('Gray Fox', 40, 'grayfox'),
-                      ('Harding', 24, 'harding'), ('Harrison', 43, 'harrison'), ('Hayes', 26, 'hayes'), ('Hickory', 2, 'hickory'), ('Hickson', 16, 'hickson'), ('Holly Swamp', 16, 'hollyswamp'),
-                       ('Jefferson', 64, 'jefferson'), ('Marshall', 16, 'marshall'), ('McLean', 40, 'mcLean'), ('Ogburn', 16, 'ogburn'), ('PG', 18, 'pg'), ('Richmond', 24, 'richmond'),
-                        ('Shorthorn', 72, 'shorthorn'), ('Sunflower', 80, 'sunflower'), ('Tedder', 16, 'tedder'), ('Thunderhead', 16, 'thunderhead'), ('Upson', 24, 'upson'), 
-                        ('Van Buren', 17, 'vanburen'), ('Violet', 2, 'violet'), ('Warbler', 32, 'warbler'), ('Washington', 40, 'washington'), ('Wayne 1', 4, 'wayne1'),
-                        ('Wayne 2', 4, 'wayne2'), ('Wayne 3', 4, 'wayne3'), ('Wellons', 6, 'wellons'), ('Whitehall', 16, 'whitehall'), ('Whitetail', 80, 'whitetail')}
+master_List_Sites = {'Bishopville II', 'Bluebird', 'Bulloch 1A', 'Bulloch 1B', 'Cardinal',
+                     'Cherry Blossom', 'Conetoe', 'Cougar', 'Duplin', 'Elk', 'Freightliner', 'Gray Fox',
+                     'Harding', 'Harrison', 'Hayes', 'Hickory', 'Hickson', 'Holly Swamp',
+                     'Jefferson', 'Marshall', 'McLean', 'Ogburn', 'PG', 'Richmond',
+                     'Shorthorn', 'Sunflower', 'Tedder', 'Thunderhead', 'Upson',
+                     'Van Buren', 'Violet', 'Warbler', 'Washington', 'Wayne 1',
+                     'Wayne 2', 'Wayne 3', 'Wellons', 'Whitehall', 'Whitetail'}
 
 has_breaker = {'Bishopville II', 'Cardinal', 'Cherry Blossom', 'Elk', 'Gray Fox', 'Harding', 'Harrison', 'Hayes', 'Hickory', 'Hickson', 'Jefferson', 'Marshall', 'McLean', 'Ogburn', 
                'Shorthorn', 'Sunflower', 'Tedder', 'Thunderhead', 'Warbler', 'Washington', 'Whitehall', 'Whitetail'}
@@ -137,7 +136,8 @@ def update_breaker_status():
     curtime = datetime.now()
     compare_time = curtime - timedelta(hours=4)   
     h_time = curtime.hour
-    for site, inv_num, var in master_List_Sites:
+    for site in master_List_Sites:
+        var = site.lower().replace(" ", "")
         try: #Defining POA for meter KW notification
             poa = max(poa_data[f'{site} POA Data'])[0]
         except Exception:
@@ -388,7 +388,8 @@ num_columns = 4
 row = 0
 column = 0
 
-for site, inv, var in master_List_Sites:
+for site in master_List_Sites:
+    var = site.lower().replace(" ", "")
     if site != "Violet":
         # Create a Label for the site
         site_label = Label(guiframe, text=site)
@@ -450,4 +451,3 @@ def destroy_window():
 #root.after(20000, destroy_window)
 
 root.mainloop()
-

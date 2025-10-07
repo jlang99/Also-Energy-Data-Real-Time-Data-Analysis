@@ -25,14 +25,14 @@ from bs4 import BeautifulSoup
 # This allows us to import the 'PythonTools' package from there.
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
-from PythonTools import CREDS, EMAILS, sql_date_validation, PausableTimer #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
+from PythonTools import CREDS, EMAILS, sql_date_validation, PausableTimer, restart_pc #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
 
 #Underperformance Analysis Packages
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from PIL import Image, ImageDraw, ImageTk
 
-
+site_widgets ={}
 
 breaker_pulls = 6
 meter_pulls = 8
@@ -127,7 +127,7 @@ underperf_Maincb.select()
 
 
 underperf_range = StringVar()
-underperf_range.set((datetime.now().date() - timedelta(days=30)).strftime("%m/%d/%Y"))
+underperf_range.set((datetime.now().date() - timedelta(days=7)).strftime("%m/%d/%Y"))
 underperf_range2 = StringVar()
 underperf_range2.set((datetime.now().date()).strftime("%m/%d/%Y"))
 underperfdatalbl= Label(underperf_frame, text= "Days of Data\nStart - End")
@@ -176,6 +176,9 @@ meterpvsystLabel.grid(row=0, column= 6)
 POALabel = Label(root, bg="#ADD8E6", text= "POA", font=('Tk_defaultFont', 10, 'bold'))
 POALabel.grid(row=0, column= 7)
 SSSLabel = Label(root, bg="#ADD8E6", text= "Site Snap Shot", font=('Tk_defaultFont', 10, 'bold'))
+
+# Configure column 8 to expand, allowing the snapshot frame to fill the available space
+root.columnconfigure(8, weight=1)
 SSSLabel.grid(row=0, column= 8)
 
 #Windows with multiple pages of Site inv data
@@ -191,9 +194,9 @@ style.configure("TNotebook.Tab", padding=[90, 2], font=('Tk_defaultFont', 12, 'b
 solrvr = ttk.Frame(solrvrnotebook)
 solrvr2 = ttk.Frame(solrvrnotebook)
 solrvr3 = ttk.Frame(solrvrnotebook)
-solrvrnotebook.add(solrvr, text="Bulloch 1A - McLean")
-solrvrnotebook.add(solrvr2, text="Richmond - Warbler")
-solrvrnotebook.add(solrvr3, text="Washington - Whitetail")
+solrvrnotebook.add(solrvr, text="Bulloch 1A - Longleaf")
+solrvrnotebook.add(solrvr2, text="McLean - Upson")
+solrvrnotebook.add(solrvr3, text="Warbler - Whitetail")
 solrvrnotebook.pack(expand=True, fill='both')
 
 hst_win = Toplevel(root)
@@ -245,49 +248,61 @@ MAP_SITES_HARDWARE_GUI = {
         'METER_MAX': 9900000,
         'VAR_NAME': 'bishopvilleII',
         'CUST_ID': hst,
-        'PVSYST': None
+        'PVSYST': None,
+        'BREAKER': True,
     },
     'Bluebird': {
         'INV_DICT': {i: f'A{i}' if i <= 12 else f'B{i}' for i in range(1, 25)},
         'METER_MAX': 3000000,
         'VAR_NAME': 'bluebird',
         'CUST_ID': nar,
-        'PVSYST': 'BLUEBIRD'
+        'PVSYST': 'BLUEBIRD',
+        'BREAKER': False,
     },
     'Bulloch 1A': {
         'INV_DICT': {i: str(i) for i in range(1, 25)},
         'METER_MAX': 3000000,
         'VAR_NAME': 'bulloch1a',
         'CUST_ID': solrvr,
-        'PVSYST': 'BULLOCH1A'
+        'PVSYST': 'BULLOCH1A',
+        'BREAKER': False,
+
     },
     'Bulloch 1B': {
         'INV_DICT': {i: str(i) for i in range(1, 25)},
         'METER_MAX': 3000000,
         'VAR_NAME': 'bulloch1b',
         'CUST_ID': solrvr,
-        'PVSYST': 'BULLOCH1B'
+        'PVSYST': 'BULLOCH1B',
+        'BREAKER': False,
+
     },
     'Cardinal': {
         'INV_DICT': {i: str(i) for i in range(1, 60)},
         'METER_MAX': 7080000,
         'VAR_NAME': 'cardinal',
         'CUST_ID': nar, 
-        'PVSYST': 'CARDINAL'
+        'PVSYST': 'CARDINAL',
+        'BREAKER': True,
+
     },
     'CDIA': {
         'INV_DICT': {1: '1'},
         'METER_MAX': 192000,
         'VAR_NAME': 'cdia',
         'CUST_ID': nar,
-        'PVSYST': None
+        'PVSYST': None,
+        'BREAKER': False,
+
     },
     'Cherry Blossom': {
         'INV_DICT': {1: '1', 2: '2', 3: '3', 4: '4'},
         'METER_MAX': 10000000,
         'VAR_NAME': 'cherryblossom',
         'CUST_ID': nar,
-        'PVSYST': 'CHERRY BLOSSOM'
+        'PVSYST': 'CHERRY BLOSSOM',
+        'BREAKER': True,
+
     },
     'Cougar': {
         'INV_DICT': {
@@ -298,21 +313,27 @@ MAP_SITES_HARDWARE_GUI = {
         'METER_MAX': 2670000,
         'VAR_NAME': 'cougar',
         'CUST_ID': nar,
-        'PVSYST': 'COUGAR'
+        'PVSYST': 'COUGAR',
+        'BREAKER': False,
+
     },
     'Conetoe': {
         'INV_DICT': {i: f"{(i-1)//4 + 1}.{(i-1)%4 + 1}" for i in range(1, 17)},
         'METER_MAX': 5000000,
         'VAR_NAME': 'conetoe1',
         'CUST_ID': soltage,
-        'PVSYST': None
+        'PVSYST': None,
+        'BREAKER': False,
+
     },
     'Duplin': {
         'INV_DICT': {i: f'C-{i}' if i <= 3 else f'S-{i-3}' for i in range(1,22)},
         'METER_MAX': 5040000,
         'VAR_NAME': 'duplin',
         'CUST_ID': soltage,
-        'PVSYST': None
+        'PVSYST': None,
+        'BREAKER': False,
+
     },
     'Elk': {
         'INV_DICT': {
@@ -324,221 +345,284 @@ MAP_SITES_HARDWARE_GUI = {
         'METER_MAX': 5380000,
         'VAR_NAME': 'elk',
         'CUST_ID': solrvr,
-        'PVSYST': 'ELK'
+        'PVSYST': 'ELK',
+        'BREAKER': True,
+
     },
     'Freightliner': {
         'INV_DICT': {i: str(i) for i in range(1, 19)},
         'METER_MAX': 2250000,
         'VAR_NAME': 'freightliner',
         'CUST_ID': ncemc,
-        'PVSYST': 'FREIGHTLINE'
+        'PVSYST': 'FREIGHTLINE',
+        'BREAKER': False,
+
     },
     'Gray Fox': {
         'INV_DICT': {i: f"{(i-1)//20 + 1}.{(i-1)%20 + 1}" for i in range(1, 41)},
         'METER_MAX': 5000000,
         'VAR_NAME': 'grayfox',
         'CUST_ID': solrvr,
-        'PVSYST': 'GRAYFOX'
+        'PVSYST': 'GRAYFOX',
+        'BREAKER': True,
+
     },
     'Harding': {
         'INV_DICT': {i: str(i) for i in range(1, 25)},
         'METER_MAX': 3000000,
         'VAR_NAME': 'harding',
         'CUST_ID': solrvr,
-        'PVSYST': 'HARDING'
+        'PVSYST': 'HARDING',
+        'BREAKER': True,
+
     },
     'Harrison': {
         'INV_DICT': {i: str(i) for i in range(1, 44)},
         'METER_MAX': 5380000,
         'VAR_NAME': 'harrison', 
         'CUST_ID': nar, 
-        'PVSYST': 'HARRISON'
+        'PVSYST': 'HARRISON',
+        'BREAKER': True,
+
     },
     'Hayes': {
         'INV_DICT': {i: str(i) for i in range(1, 27)},
         'METER_MAX': 3240000,
         'VAR_NAME': 'hayes',
         'CUST_ID': nar,
-        'PVSYST': 'HAYES'
+        'PVSYST': 'HAYES',
+        'BREAKER': True,
+
     },
     'Hickory': {
         'INV_DICT': {1: '1', 2: '2'}, 
         'METER_MAX': 5000000,
         'VAR_NAME':'hickory',
         'CUST_ID': nar2,
-        'PVSYST': 'HICKORY'
+        'PVSYST': 'HICKORY',
+        'BREAKER': True,
+
     },
     'Hickson': {
         'INV_DICT': {i: f"1-{i}" for i in range(1, 17)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'hickson', 
         'CUST_ID': hst,
-        'PVSYST': None
+        'PVSYST': None,
+        'BREAKER': True,
+
     },
     'Holly Swamp': {
         'INV_DICT': {i: str(i) for i in range(1, 17)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'hollyswamp',
         'CUST_ID': ncemc,
-        'PVSYST': 'HOLLYSWAMP'
+        'PVSYST': 'HOLLYSWAMP',
+        'BREAKER': False,
+
     },
     'Jefferson': {
         'INV_DICT': {i: f"{(i - 1) // 16 + 1}.{(i - 1) % 16 + 1}" for i in range(1, 65)},
         'METER_MAX': 8000000,
         'VAR_NAME': 'jefferson',
         'CUST_ID': hst,
-        'PVSYST': None
+        'PVSYST': None,
+        'BREAKER': False,
+
+    },
+    'Longleaf Pine': {
+        'INV_DICT': {i: f"A{i}" if i < 21 else f"B{i - 20}" for i in range(1, 41)},
+        'METER_MAX': 5000000,
+        'VAR_NAME': 'longleafpine',
+        'CUST_ID': solrvr,
+        'PVSYST': None,
+        'BREAKER': True,
+
     },
     'Marshall': {
         'INV_DICT': {i: f"1.{i}" for i in range(1, 17)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'marshall',
         'CUST_ID': hst,
-        'PVSYST': None
+        'PVSYST': None,
+        'BREAKER': True,
+
     },
     'McLean': {
         'INV_DICT': {i: str(i) for i in range(1, 41)},
         'METER_MAX': 5000000,
         'VAR_NAME': 'mclean',
-        'CUST_ID': solrvr,
-        'PVSYST': 'MCLEAN'
+        'CUST_ID': solrvr2,
+        'PVSYST': 'MCLEAN',
+        'BREAKER': True,
+
     },
     'Ogburn': {
         'INV_DICT': {i: f"1-{i}" for i in range(1, 17)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'ogburn',
         'CUST_ID': hst,
-        'PVSYST': None
+        'PVSYST': None,
+        'BREAKER': True,
+
     },
     'PG': {
         'INV_DICT': {i: str(i) for i in range(1, 19)},
         'METER_MAX': 2210000,
         'VAR_NAME': 'pg',
         'CUST_ID': ncemc,
-        'PVSYST': 'PG'
+        'PVSYST': 'PG',
+        'BREAKER': False,
+
     },
     'Richmond': {
         'INV_DICT': {i: str(i) for i in range(1, 25)},
         'METER_MAX': 3000000,
         'VAR_NAME': 'richmond',
         'CUST_ID': solrvr2,
-        'PVSYST': 'RICHMOND'
+        'PVSYST': 'RICHMOND',
+        'BREAKER': False,
+
     },
     'Shorthorn': {
         'INV_DICT': {i: str(i) for i in range(1, 73)},
         'METER_MAX': 9000000,
         'VAR_NAME': 'shorthorn',
         'CUST_ID': solrvr2,
-        'PVSYST': 'SHORTHORN'
+        'PVSYST': 'SHORTHORN',
+        'BREAKER': True,
+
     },
     'Sunflower': {
         'INV_DICT': {i: str(i) for i in range(1, 81)},
         'METER_MAX': 10000000,
         'VAR_NAME': 'sunflower',
         'CUST_ID': solrvr2,
-        'PVSYST': 'SUNFLOWER'
+        'PVSYST': 'SUNFLOWER',
+        'BREAKER': True,
+
     },
     'Tedder': {
         'INV_DICT': {i: str(i) for i in range(1, 17)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'tedder',
         'CUST_ID': hst,
-        'PVSYST': None
+        'PVSYST': None,
+        'BREAKER': True,
+
     },
     'Thunderhead': {
         'INV_DICT': {i: str(i) for i in range(1, 17)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'thunderhead',
         'CUST_ID': hst2,
-        'PVSYST': None
+        'PVSYST': None,
+        'BREAKER': True,
+
     },
     'Upson': {
         'INV_DICT': {i: str(i) for i in range(1, 25)},
         'METER_MAX': 3000000,
         'VAR_NAME': 'upson',
         'CUST_ID': solrvr2,
-        'PVSYST': None
+        'PVSYST': None,
+        'BREAKER': False,
+
     },
     'Van Buren': {
         'INV_DICT': {i: str(i) for i in range(1, 18)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'vanburen',
         'CUST_ID': hst2,
-        'PVSYST': 'VAN BUREN'
+        'PVSYST': 'VAN BUREN',
+        'BREAKER': False,
+
     },
     'Warbler': {
         'INV_DICT': {i: f"{'A' if i <= 16 else 'B'}{i}" for i in range(1, 33)},
         'METER_MAX': 4000000,
         'VAR_NAME': 'warbler',
-        'CUST_ID': solrvr2,
-        'PVSYST': 'WARBLER'
+        'CUST_ID': solrvr3,
+        'PVSYST': 'WARBLER',
+        'BREAKER': False,
+
     },
     'Washington': {
         'INV_DICT': {i: str(i) for i in range(1, 41)},
         'METER_MAX': 5000000,
         'VAR_NAME': 'washington',
         'CUST_ID': solrvr3,
-        'PVSYST': None
+        'PVSYST': None,
+        'BREAKER': True,
+
     },
     'Wayne 1': {
         'INV_DICT': {1: '1', 2: '2', 3: '3', 4: '4'},
         'METER_MAX': 5000000,
         'VAR_NAME': 'wayne1',
         'CUST_ID': soltage,
-        'PVSYST': None
+        'PVSYST': None,
+        'BREAKER': False,
+
     },
     'Wayne 2': {
         'INV_DICT': {1: '1', 2: '2', 3: '3', 4: '4'},
         'METER_MAX': 5000000,
         'VAR_NAME': 'wayne2',
         'CUST_ID': soltage,
-        'PVSYST': None
+        'PVSYST': None,
+        'BREAKER': False,
+
     },
     'Wayne 3': {
         'INV_DICT': {1: '1', 2: '2', 3: '3', 4: '4'},
         'METER_MAX': 5000000,
         'VAR_NAME': 'wayne3',
         'CUST_ID': soltage,
-        'PVSYST': None
+        'PVSYST': None,
+        'BREAKER': False,
+
     },
     'Wellons': {
         'INV_DICT': {1: '1-1', 2: '1-2', 3: '2-1', 4: '2-2', 5: '3-1', 6: '3-2'},
         'METER_MAX': 5000000,
         'VAR_NAME': 'wellons',
         'CUST_ID': nar2,
-        'PVSYST': 'WELLONS'
+        'PVSYST': 'WELLONS',
+        'BREAKER': False,
+
     },
     'Whitehall': {
         'INV_DICT': {i: str(i) for i in range(1, 17)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'whitehall',
         'CUST_ID': solrvr3,
-        'PVSYST': 'WHITEHALL'
+        'PVSYST': 'WHITEHALL',
+        'BREAKER': True,
+
     },
     'Whitetail': {
         'INV_DICT': {i: str(i) for i in range(1, 81)},
         'METER_MAX': 10000000,
         'VAR_NAME': 'whitetail',
         'CUST_ID': solrvr3,
-        'PVSYST': None
+        'PVSYST': None,
+        'BREAKER': True,
+
     },
     'Violet': {
         'INV_DICT': {1: '1', 2: '2'},
         'METER_MAX': 5000000,
         'VAR_NAME': 'violet',
         'CUST_ID': nar2,
-        'PVSYST': 'VIOLET'
+        'PVSYST': 'VIOLET',
+        'BREAKER': True,
+
     }
 }
 
-sites_WObreakers = {'Bluebird', 'Bulloch 1A', 'Bulloch 1B', 'Conetoe', 'CDIA', 'Cougar', 'Duplin', 'Freightliner', 'Holly Swamp', 'PG', 'Richmond', 'Upson', 'Van Buren', 'Wayne 1', 'Wayne 2', 'Wayne 3', 'Wellons'}
-#I Don't Need both, Don't know why I still have both, but I do.
-has_breaker = {'Bishopville II', 'Cardinal', 'Cherry Blossom', 'Elk', 'Gray Fox', 'Harding', 'Harrison', 'Hayes', 'Hickory', 'Hickson', 'Jefferson', 'Marshall', 'McLean', 'Ogburn', 
-               'Shorthorn', 'Sunflower', 'Tedder', 'Thunderhead', 'Warbler', 'Washington', 'Whitehall', 'Whitetail', 'Violet'}
 
 all_CBs = []
-
-
 normal_numbering = {'Bluebird', 'Cardinal', 'Cherry Blossom', 'Cougar', 'Harrison', 'Hayes', 'Hickory', 'Violet', 'HICKSON',
                     'JEFFERSON', 'Marshall', 'OGBURN', 'Tedder', 'Thunderhead', 'Van Buren', 'Bulloch 1A', 'Bulloch 1B', 'Elk', 'Duplin',
                     'Harding', 'Mclean', 'Richmond Cadle', 'Shorthorn', 'Sunflower', 'Upson', 'Warbler', 'Washington', 'Whitehall', 'Whitetail',
@@ -566,8 +650,11 @@ def define_inv_num(site, group, num):
 
 
 def open_wo_tracking(name):
-    os.startfile(f"G:\\Shared drives\\O&M\\NCC Automations\\Notification System\\WO Tracking\\{name} Open WO's.txt")
-
+    file = f"G:\\Shared drives\\O&M\\NCC Automations\\Notification System\\WO Tracking\\{name} Open WO's.txt"
+    try:
+        os.startfile(file)
+    except FileNotFoundError:
+        print(f"File Not Found: {file}")
 
 #Start looping through the dictionary at the top to create what is Below. 
 #This one shall create the Sites Breaker/Meter/POA window
@@ -575,13 +662,15 @@ for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), sta
     invdict = site_dictionary['INV_DICT']
     var_name = site_dictionary['VAR_NAME']
     custid = site_dictionary['CUST_ID']
+    breakertf = site_dictionary['BREAKER']
+
 
     invnum = len(invdict)
     #Site Info
     #Main Color
     globals()[f'{var_name}Label'] = Label(root, bg=main_color, text=name, fg= 'black', font=('Tk_defaultFont', 10, 'bold'))
     globals()[f'{var_name}Label'].grid(row=ro, column= 0, sticky=W)
-    if name in has_breaker:
+    if breakertf:
         if name == 'Violet':
             vio_excep = 1
         else:
@@ -616,8 +705,41 @@ for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), sta
     globals()[f'{var_name}POAcb'] = Checkbutton(root, bg=main_color, text='X', variable=globals()[f'{var_name}POAcbval'], fg= 'black', cursor='hand2')
     globals()[f'{var_name}POAcb'].grid(row=ro, column= 7)
     
-    globals()[f'{var_name}kwdata'] = Label(root, bg=main_color, text=' INV kW    | Meter-INVs |   #of INVs ✅\nMeter kW   | INVs w/o Comms |  Total # INVs', fg= 'black')
-    globals()[f'{var_name}kwdata'].grid(row=ro, column= 8)
+    # Create a frame for the site snapshot data
+    globals()[f'{var_name}kwdata_frame'] = Frame(root, bg=main_color, bd=1, relief="solid")
+    globals()[f'{var_name}kwdata_frame'].grid(row=ro, column=8, sticky='ew')
+
+    # Configure columns to have equal weight, allowing them to share space
+    globals()[f'{var_name}kwdata_frame'].columnconfigure(0, weight=1)
+    globals()[f'{var_name}kwdata_frame'].columnconfigure(1, weight=1)
+    globals()[f'{var_name}kwdata_frame'].columnconfigure(2, weight=1)
+
+    # Initialize the site's widget dictionary
+    site_widgets[var_name] = {
+        'kwdata_frame': globals()[f'{var_name}kwdata_frame']
+    }
+
+    # Create 6 individual labels inside the frame, using sticky='ew' to make them fill their columns
+    globals()[f'{var_name}_inv_kw_total'] = Label(globals()[f'{var_name}kwdata_frame'], bg=main_color, text='INV kW', fg='black')
+    globals()[f'{var_name}_inv_kw_total'].grid(row=0, column=0, sticky='ew')
+    globals()[f'{var_name}_meter_inv_diff'] = Label(globals()[f'{var_name}kwdata_frame'], bg=main_color, text='Meter-INVs', fg='black')
+    globals()[f'{var_name}_meter_inv_diff'].grid(row=0, column=1, sticky='ew')
+    globals()[f'{var_name}_invs_online'] = Label(globals()[f'{var_name}kwdata_frame'], bg=main_color, text='# INVs ✅', fg='black')
+    globals()[f'{var_name}_invs_online'].grid(row=0, column=2, sticky='ew')
+    globals()[f'{var_name}_meter_kw'] = Label(globals()[f'{var_name}kwdata_frame'], bg=main_color, text='Meter kW', fg='black')
+    globals()[f'{var_name}_meter_kw'].grid(row=1, column=0, sticky='ew')
+    globals()[f'{var_name}_invs_no_comms'] = Label(globals()[f'{var_name}kwdata_frame'], bg=main_color, text='No Comms', fg='black')
+    globals()[f'{var_name}_invs_no_comms'].grid(row=1, column=1, sticky='ew')
+    globals()[f'{var_name}_invs_total'] = Label(globals()[f'{var_name}kwdata_frame'], bg=main_color, text='Total INVs', fg='black')
+    globals()[f'{var_name}_invs_total'].grid(row=1, column=2, sticky='ew')
+
+    # Add the new labels to the site_widgets dictionary
+    site_widgets[var_name]['inv_kw_total'] = globals()[f'{var_name}_inv_kw_total']
+    site_widgets[var_name]['meter_inv_diff'] = globals()[f'{var_name}_meter_inv_diff']
+    site_widgets[var_name]['invs_online'] = globals()[f'{var_name}_invs_online']
+    site_widgets[var_name]['meter_kw'] = globals()[f'{var_name}_meter_kw']
+    site_widgets[var_name]['invs_no_comms'] = globals()[f'{var_name}_invs_no_comms']
+    site_widgets[var_name]['invs_total'] = globals()[f'{var_name}_invs_total']
     
     #End
     #INVERTER INFO
@@ -864,7 +986,14 @@ def siteSnapShot_Update(site, var_name, inv_num, meterkW):
     else: #Otherwise show yellow that theres a none communicating Inverter and it is offline according to meter
         color = 'yellow'
 
-    globals()[f'{var_name}kwdata'].config(text=f"{total_INVkW/1000} kW   | {round((meterkW/1000)-(total_INVkW/1000), 1)} | {communicating_INVs:<2}\n{meterkW/1000} kW    | {inv_num-communicating_INVs} | {inv_num:<2}", bg= color) #/1000 for Watts to kW Conversion
+    # Update the individual labels and the frame background color
+    site_widgets[var_name]['kwdata_frame'].config(bg=color)
+    site_widgets[var_name]['inv_kw_total'].config(text=f"{total_INVkW/1000:.1f} kW", bg=color, font=('Tk_default', 9, 'bold'))
+    site_widgets[var_name]['meter_inv_diff'].config(text=f"{round((meterkW - total_INVkW) / 1000, 1)} kW", bg=color, font=('Tk_default', 9, 'bold'))
+    site_widgets[var_name]['invs_online'].config(text=f"{communicating_INVs}", bg=color, font=('Tk_default', 9, 'bold'))
+    site_widgets[var_name]['meter_kw'].config(text=f"{meterkW/1000:.1f} kW", bg=color, font=('Tk_default', 9, 'bold'))
+    site_widgets[var_name]['invs_no_comms'].config(text=f"{inv_num - communicating_INVs}", bg=color, font=('Tk_default', 9, 'bold'))
+    site_widgets[var_name]['invs_total'].config(text=f"{inv_num}", bg=color, font=('Tk_default', 9, 'bold'))
 
 
 
@@ -926,6 +1055,8 @@ def update_data():
         custid = site_dictionary['CUST_ID']
         metermax = site_dictionary['METER_MAX']
         pvsyst_name = site_dictionary['PVSYST']
+        breakertf = site_dictionary['BREAKER']
+
 
         inverters = len(invdict)
         if name == "Violet":
@@ -975,9 +1106,9 @@ def update_data():
                     messagebox.showwarning(parent= alertW, title=f"{name}, POA Comms Error", message=msg)
                 else:
                     text_update_Table.append("<br>" + str(msg))
-            globals()[f'{var_name}POAcb'].config(bg='pink', text=poa)
+            globals()[f'{var_name}POAcb'].config(bg='pink', text=poa, font=('Tk_defaultFont', 10, 'bold'))
         else:
-            globals()[f'{var_name}POAcb'].config(bg=poa_color, text=poa)
+            globals()[f'{var_name}POAcb'].config(bg=poa_color, text=poa, font=('Tk_defaultFont', 10, 'bold'))
 
 
         master_cb_skips_INV_check = True if globals()[f'{var_name}metercbval'].get() == 0 else False
@@ -985,7 +1116,7 @@ def update_data():
 
 
         #Breaker Update
-        if name not in sites_WObreakers:
+        if breakertf:
             if name == "Violet":
                 for two in range(1, 3):
                     breakercomm = max(comm_data[f'{name} Breaker Data {two}'])[0]
@@ -1101,7 +1232,7 @@ def update_data():
                     ratio_color = 'black'
                 else: 
                     ratio_color = 'gray'
-                globals()[f'{var_name}meterRatioLabel'].config(text= f"{round(meterRatio*100, 1)}%", bg= ratio_color)
+                globals()[f'{var_name}meterRatioLabel'].config(text= f"{round(meterRatio*100, 1)}%", bg= ratio_color, font=('Tk_defaultFont', 10, 'bold'))
 
                 avg_dcv = np.mean([row[0] for row in data])
                 inv_comm = max(comm_data[f'{name} INV 1 Data'])[0]
@@ -1128,7 +1259,7 @@ def update_data():
                                     else:
                                         text_update_Table.append("<br>" + str(msg))
 
-                            globals()[f'{var_name}meterkWLabel'].config(text="X✓", bg='orange')
+                            globals()[f'{var_name}meterkWLabel'].config(text="X✓", bg='orange', font=('Tk_defaultFont', 10, 'bold'))
                             globals()[f'{var_name}Label'].config(bg='orange')
 
                         else:
@@ -1155,7 +1286,7 @@ def update_data():
 
                     else:
                         if check_inv_consecutively_online(point[1] for point in data):
-                            globals()[f'{var_name}meterkWLabel'].config(text=round(avg_kW/1000, 1), bg='green')
+                            globals()[f'{var_name}meterkWLabel'].config(text=round(avg_kW/1000, 1), bg='green', font=('Tk_defaultFont', 10, 'bold'))
                             globals()[f'{var_name}Label'].config(bg='#ADD8E6')
 
                 else:
@@ -1405,7 +1536,7 @@ def update_data():
                     ratio_color = 'gray'
                 print(f"{name:<15} | {round(meterRatio*100, 1):<5} | {meterdatakWM:<9} | {metermax}")
 
-                globals()[f'{var_name}meterRatioLabel'].config(text= f"{round(meterRatio*100, 1)}%", bg= ratio_color)
+                globals()[f'{var_name}meterRatioLabel'].config(text= f"{round(meterRatio*100, 1)}%", bg= ratio_color, font=('Tk_defaultFont', 10, 'bold'))
 
 
                 if (meterdataKW < 2 or meterdataAA or meterdataAB or meterdataAC) and begin:
@@ -1436,7 +1567,7 @@ def update_data():
                     meterkWstatus= round(meterdataKW/1000, 1)
                     meterkWstatuscolor= 'green'
                 #Below we update the GUI with the above defined text and color
-                globals()[f'{var_name}meterkWLabel'].config(text= meterkWstatus, bg= meterkWstatuscolor)
+                globals()[f'{var_name}meterkWLabel'].config(text= meterkWstatus, bg= meterkWstatuscolor, font=('Tk_defaultFont', 10, 'bold'))
                 
                 #PVSYST Ratio Update
                 try:
@@ -1459,7 +1590,7 @@ def update_data():
                                 pvSyst_color = '#4169E1'  # Royal Blue
                             else: 
                                 pvSyst_color = 'gray'
-                            globals()[f'{var_name}meterPvSystLabel'].config(text=f'{round(performance_ratio, 1)}%', bg=pvSyst_color)
+                            globals()[f'{var_name}meterPvSystLabel'].config(text=f'{round(performance_ratio, 1)}%', bg=pvSyst_color, font=('Tk_defaultFont', 10, 'bold'))
                         else:
                             globals()[f'{var_name}meterPvSystLabel'].config(text='N/A')
                     connect_pvsystdb.close()
@@ -1518,10 +1649,15 @@ def update_data():
 
     def allinv_message_check(num):
         global text_update_Table
+        file_path = f"C:\\Users\\OMOPS\\OneDrive - Narenco\\Documents\\APISiteStat\\Site {num} All INV Msg Stat.txt"
         try:
-            with open(f"C:\\Users\\OMOPS\\OneDrive - Narenco\\Documents\\APISiteStat\\Site {num} All INV Msg Stat.txt", "r+") as rad:
+            with open(file_path, "r+") as rad:
                 allinvstat = rad.read()
                 return allinvstat
+        except FileNotFoundError:
+            with open(file_path, "w") as rad:
+                 rad.write('1')
+            return '1'
         except Exception as errorr:
             msg = f"Error Reading Site {num} txt file"
             if not textOnly.get():
@@ -2167,11 +2303,15 @@ def time_window():
 def db_to_dict():
     day_of_week = datetime.today().weekday()
     if day_of_week > 4:
-        if datetime.now().hour > 14:
+        now = datetime.now()
+        if (now.hour == 14 and now.minute >= 55) or (now.hour > 14):
             os.startfile(r"G:\Shared drives\O&M\NCC Automations\Notification System\Email Notification (Breaker).py")
             ty.sleep(5)
             os.startfile(r"G:\Shared drives\O&M\NCC Automations\Emails\Close AE GUI.ahk")
-            
+    else:
+        now = datetime.now()
+        if now.hour >= 20:
+            restart_pc()
 
     query_start = ty.perf_counter()
     sendTexts.config(state=DISABLED)

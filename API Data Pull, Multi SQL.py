@@ -93,9 +93,6 @@ dataPullTime = 1
 
 
 email = EMAILS['NCC Desk']
-
-
-
 password = CREDS['AlsoEnergy']
 base_url = "https://api.alsoenergy.com"
 token_endpoint = "/Auth/token"
