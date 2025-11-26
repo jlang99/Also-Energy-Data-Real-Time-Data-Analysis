@@ -190,7 +190,7 @@ def get_data_for_site(site, site_data, api_data, AE_HARDWARE_MAP, start, base_ur
                 volts_c_register_names = ['Volts C-N', 'Volts C', 'AC Voltage C', 'Voltage CN', 'AC Voltage C (Line-Neutral)', 'Voltage, C-N', 'AC Phase C Voltage', 'AC Voltage CN']
                 meterkw_register_names = ['Active Power', 'Real power', 'Real Power', 'Total power']    #Real Power is probably not used but lowercase power is.            
                 
-                weather_station_register_names = ['POA Irradiance', 'Plane of Array Irradiance',  'GHI Irradiance', 'Sun (GHI)', 'Sun (POA Temp comp)', 'Sun (POA raw)', 'GHI', 'POA', 'POA irradiance', 'Sun (POA)']
+                weather_station_register_names = ['POA Irradiance', 'Plane of Array Irradiance',  'GHI Irradiance', 'Sun (GHI)', 'Sun (POA Temp comp)', 'GHI', 'POA', 'POA irradiance', 'Sun (POA)']
 
                 # Iterate over register groups for the current hardware
                 for register_group in hardware_data_response.get('registerGroups', []):

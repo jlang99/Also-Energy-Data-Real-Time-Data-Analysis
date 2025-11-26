@@ -26,11 +26,12 @@ from bs4 import BeautifulSoup
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
 from PythonTools import CREDS, EMAILS, sql_date_validation, PausableTimer, restart_pc #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
+from PythonTools import CREDS, EMAILS, sql_date_validation, PausableTimer, restart_pc, ToolTip #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
 
-#Underperformance Analysis Packages
+
 import pandas as pd
 from sklearn.linear_model import LinearRegression
-from PIL import Image, ImageDraw, ImageTk
+
 
 site_widgets ={}
 
@@ -117,40 +118,6 @@ spread10 = Label(timeW, text= "Time")
 spread10.grid(row=5, column=2)
 
 
-underperf_frame = Frame(timeWin)
-underperf_frame.pack(side=RIGHT)
-#Underperformance Settings
-underperf_Maincbvar = BooleanVar()
-underperf_Maincb = Checkbutton(underperf_frame, text="Select to turn on the Inverter\nUnderperformance check\nBelow is the parameters\nfor the data", cursor='hand2', variable=underperf_Maincbvar)
-underperf_Maincb.grid(row=0, column=0, columnspan=2)
-underperf_Maincb.select()
-
-
-underperf_range = StringVar()
-underperf_range.set((datetime.now().date() - timedelta(days=7)).strftime("%m/%d/%Y"))
-underperf_range2 = StringVar()
-underperf_range2.set((datetime.now().date()).strftime("%m/%d/%Y"))
-underperfdatalbl= Label(underperf_frame, text= "Days of Data\nStart - End")
-underperfdatalbl.grid(row=1, column=0, columnspan=2)
-underperfdaterng = Entry(underperf_frame, width=10, textvariable=underperf_range, validate='all', validatecommand=vcmd_date)
-underperfdaterng.grid(row=2, column=0)
-underperfdaterng2 = Entry(underperf_frame, width=10, textvariable=underperf_range2, validate='all', validatecommand=vcmd_date)
-underperfdaterng2.grid(row=2, column=1)
-
-underperf_hourlimit = IntVar()
-underperf_hourlimit.set(10)
-underperfhourstartlbl= Label(underperf_frame, text= "Hour Start Limit:")
-underperfhourstartlbl.grid(row=3, column=0, columnspan=2)
-underperfhourstart = Entry(underperf_frame, width=10, textvariable=underperf_hourlimit)
-underperfhourstart.grid(row=4, column=0, columnspan=2)
-
-underperf_hourend = IntVar()
-underperf_hourend.set(15)
-underperfhourlbl= Label(underperf_frame, text= "Hour End Limit:")
-underperfhourlbl.grid(row=5, column=0, columnspan=2)
-underperfhour = Entry(underperf_frame, width=10, textvariable=underperf_hourend)
-underperfhour.grid(row=6, column=0, columnspan=2)
-# Underperformance Settings end
 
 alertW = Toplevel(root)
 alertW.title("Alert Windows Info")
@@ -193,10 +160,10 @@ style = ttk.Style(root)
 style.configure("TNotebook.Tab", padding=[90, 2], font=('Tk_defaultFont', 12, 'bold'))
 solrvr = ttk.Frame(solrvrnotebook)
 solrvr2 = ttk.Frame(solrvrnotebook)
-solrvr3 = ttk.Frame(solrvrnotebook)
-solrvrnotebook.add(solrvr, text="Bulloch 1A - Longleaf")
-solrvrnotebook.add(solrvr2, text="McLean - Upson")
-solrvrnotebook.add(solrvr3, text="Warbler - Whitetail")
+
+solrvrnotebook.add(solrvr, text="Bulloch 1A - Sunflower")
+solrvrnotebook.add(solrvr2, text="Upson - Williams")
+
 solrvrnotebook.pack(expand=True, fill='both')
 
 hst_win = Toplevel(root)
@@ -207,9 +174,7 @@ except Exception as e:
     print(f"Error loading icon: {e}")
 hstnotebook = ttk.Notebook(hst_win)
 hst = ttk.Frame(hstnotebook)
-hst2 = ttk.Frame(hstnotebook)
-hstnotebook.add(hst, text="Bishopville II - Tedder")
-hstnotebook.add(hst2, text="Thunderhead - Van Buren")
+hstnotebook.add(hst, text="Bishopville II - Van Buren")
 hstnotebook.pack(expand=True, fill='both')
 
 nar_win = Toplevel(root)
@@ -220,14 +185,14 @@ except Exception as e:
     print(f"Error loading icon: {e}")
 narnotebook = ttk.Notebook(nar_win)
 nar = ttk.Frame(narnotebook)
-nar2 = ttk.Frame(narnotebook)
-narnotebook.add(nar, text="Bluebird - Hayes")
-narnotebook.add(nar2, text="Hickory - Violet")
+narnotebook.add(nar, text="Bluebird - Violet")
 narnotebook.pack(expand=True, fill='both')
 
 #Static Inv Windows
 soltage = Toplevel(root)
 soltage.title("Soltage")
+soltage.wm_attributes("-topmost", True)
+
 try:
     soltage.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
 except Exception as e:
@@ -398,7 +363,7 @@ MAP_SITES_HARDWARE_GUI = {
         'INV_DICT': {1: '1', 2: '2'}, 
         'METER_MAX': 5000000,
         'VAR_NAME':'hickory',
-        'CUST_ID': nar2,
+        'CUST_ID': nar,
         'PVSYST': 'HICKORY',
         'BREAKER': True,
 
@@ -452,7 +417,7 @@ MAP_SITES_HARDWARE_GUI = {
         'INV_DICT': {i: str(i) for i in range(1, 41)},
         'METER_MAX': 5000000,
         'VAR_NAME': 'mclean',
-        'CUST_ID': solrvr2,
+        'CUST_ID': solrvr,
         'PVSYST': 'MCLEAN',
         'BREAKER': True,
 
@@ -479,7 +444,7 @@ MAP_SITES_HARDWARE_GUI = {
         'INV_DICT': {i: str(i) for i in range(1, 25)},
         'METER_MAX': 3000000,
         'VAR_NAME': 'richmond',
-        'CUST_ID': solrvr2,
+        'CUST_ID': solrvr,
         'PVSYST': 'RICHMOND',
         'BREAKER': False,
 
@@ -488,7 +453,7 @@ MAP_SITES_HARDWARE_GUI = {
         'INV_DICT': {i: str(i) for i in range(1, 73)},
         'METER_MAX': 9000000,
         'VAR_NAME': 'shorthorn',
-        'CUST_ID': solrvr2,
+        'CUST_ID': solrvr,
         'PVSYST': 'SHORTHORN',
         'BREAKER': True,
 
@@ -497,7 +462,7 @@ MAP_SITES_HARDWARE_GUI = {
         'INV_DICT': {i: str(i) for i in range(1, 81)},
         'METER_MAX': 10000000,
         'VAR_NAME': 'sunflower',
-        'CUST_ID': solrvr2,
+        'CUST_ID': solrvr,
         'PVSYST': 'SUNFLOWER',
         'BREAKER': True,
 
@@ -515,7 +480,7 @@ MAP_SITES_HARDWARE_GUI = {
         'INV_DICT': {i: str(i) for i in range(1, 17)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'thunderhead',
-        'CUST_ID': hst2,
+        'CUST_ID': hst,
         'PVSYST': None,
         'BREAKER': True,
 
@@ -533,7 +498,7 @@ MAP_SITES_HARDWARE_GUI = {
         'INV_DICT': {i: str(i) for i in range(1, 18)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'vanburen',
-        'CUST_ID': hst2,
+        'CUST_ID': hst,
         'PVSYST': 'VAN BUREN',
         'BREAKER': False,
 
@@ -542,16 +507,16 @@ MAP_SITES_HARDWARE_GUI = {
         'INV_DICT': {i: f"{'A' if i <= 16 else 'B'}{i}" for i in range(1, 33)},
         'METER_MAX': 4000000,
         'VAR_NAME': 'warbler',
-        'CUST_ID': solrvr3,
+        'CUST_ID': solrvr2,
         'PVSYST': 'WARBLER',
-        'BREAKER': False,
+        'BREAKER': True,
 
     },
     'Washington': {
         'INV_DICT': {i: str(i) for i in range(1, 41)},
         'METER_MAX': 5000000,
         'VAR_NAME': 'washington',
-        'CUST_ID': solrvr3,
+        'CUST_ID': solrvr2,
         'PVSYST': None,
         'BREAKER': True,
 
@@ -587,7 +552,7 @@ MAP_SITES_HARDWARE_GUI = {
         'INV_DICT': {1: '1-1', 2: '1-2', 3: '2-1', 4: '2-2', 5: '3-1', 6: '3-2'},
         'METER_MAX': 5000000,
         'VAR_NAME': 'wellons',
-        'CUST_ID': nar2,
+        'CUST_ID': nar,
         'PVSYST': 'WELLONS',
         'BREAKER': False,
 
@@ -596,7 +561,7 @@ MAP_SITES_HARDWARE_GUI = {
         'INV_DICT': {i: str(i) for i in range(1, 17)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'whitehall',
-        'CUST_ID': solrvr3,
+        'CUST_ID': solrvr2,
         'PVSYST': 'WHITEHALL',
         'BREAKER': True,
 
@@ -605,7 +570,16 @@ MAP_SITES_HARDWARE_GUI = {
         'INV_DICT': {i: str(i) for i in range(1, 81)},
         'METER_MAX': 10000000,
         'VAR_NAME': 'whitetail',
-        'CUST_ID': solrvr3,
+        'CUST_ID': solrvr2,
+        'PVSYST': None,
+        'BREAKER': True,
+
+    },
+    'Williams': {
+        'INV_DICT': {i: f"{'A' if i <= 20 else 'B'}{i}" for i in range(1, 41)},
+        'METER_MAX': 5000000,
+        'VAR_NAME': 'williams',
+        'CUST_ID': solrvr2,
         'PVSYST': None,
         'BREAKER': True,
 
@@ -614,7 +588,7 @@ MAP_SITES_HARDWARE_GUI = {
         'INV_DICT': {1: '1', 2: '2'},
         'METER_MAX': 5000000,
         'VAR_NAME': 'violet',
-        'CUST_ID': nar2,
+        'CUST_ID': nar,
         'PVSYST': 'VIOLET',
         'BREAKER': True,
 
@@ -656,14 +630,13 @@ def open_wo_tracking(name):
     except FileNotFoundError:
         print(f"File Not Found: {file}")
 
-#Start looping through the dictionary at the top to create what is Below. 
-#This one shall create the Sites Breaker/Meter/POA window
+#This loop creates all the tkinter widgets for the GUI
+col = 1
 for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), start=1):
     invdict = site_dictionary['INV_DICT']
     var_name = site_dictionary['VAR_NAME']
     custid = site_dictionary['CUST_ID']
     breakertf = site_dictionary['BREAKER']
-
 
     invnum = len(invdict)
     #Site Info
@@ -749,9 +722,8 @@ for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), sta
             span_col = 6
         else:
             span_col = 3
-
         globals()[f'{var_name}invsLabel'] = Button(custid, text=name, command=lambda name=name: open_wo_tracking(name), bg=main_color, font=("Tk_defaultFont", 12, 'bold'), cursor='hand2')
-        globals()[f'{var_name}invsLabel'].grid(row= 0, column= ro*3, columnspan= span_col, sticky='ew')
+        globals()[f'{var_name}invsLabel'].grid(row= 0, column= col, columnspan= span_col, sticky='ew')
     for num in range(1, invnum+1):
         column_offset = 0 if num <= length_limit else 3
         row_offset = num if num <= length_limit else num - length_limit
@@ -764,22 +736,23 @@ for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), sta
             globals()[f'{var_name}inv{inv_val}cbval'] = IntVar()
             all_CBs.append(globals()[f'{var_name}inv{inv_val}cbval'])
             globals()[f'{var_name}inv{inv_val}cb'] = Checkbutton(custid, text=str(inv_val), variable=globals()[f'{var_name}inv{inv_val}cbval'], cursor='hand2')
-            globals()[f'{var_name}inv{inv_val}cb'].grid(row= row_offset, column= (ro*3)+column_offset, sticky=W)
+            globals()[f'{var_name}inv{inv_val}cb'].grid(row= row_offset, column= col+column_offset, sticky=W)
 
             globals()[f'{var_name}inv{num}WOLabel'] = Label(custid, text='⬜') #intial Setup of WO Placeholder. 
-            globals()[f'{var_name}inv{num}WOLabel'].grid(row= row_offset, column= (ro*3)+1+column_offset)
+            globals()[f'{var_name}inv{num}WOLabel'].grid(row= row_offset, column= col+1+column_offset)
 
             if name != "Conetoe":
                 globals()[f'{var_name}invup{num}cbval'] = IntVar()
                 all_CBs.append(globals()[f'{var_name}invup{num}cbval'])
                 globals()[f'{var_name}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{var_name}invup{num}cbval'], cursor='hand2')
-                globals()[f'{var_name}invup{num}cb'].grid(row= row_offset, column= (ro*3)+2+column_offset, sticky=W)
+                globals()[f'{var_name}invup{num}cb'].grid(row= row_offset, column= col+2+column_offset, sticky=W)
             else:
                 if num < 5:
                     globals()[f'{var_name}invup{num}cbval'] = IntVar()
                     all_CBs.append(globals()[f'{var_name}invup{num}cbval'])
                     globals()[f'{var_name}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{var_name}invup{num}cbval'], cursor='hand2')
-                    globals()[f'{var_name}invup{num}cb'].grid(row= (4*row_offset-3), rowspan= 4, column= (ro*3)+2+column_offset, sticky=W)
+                    globals()[f'{var_name}invup{num}cb'].grid(row= (4*row_offset-3), rowspan= 4, column= col+2+column_offset, sticky=W)
+    col += span_col
 
 
 ##########
@@ -1082,15 +1055,15 @@ def update_data():
         #POA Comms check
         poa_data = max(comm_data[f'{name} POA Data'])[0]
         strtime_poa = poa_data.strftime('%m/%d/%y | %H:%M')
-        if 800 < poa < 2000:
+        if 800 <= poa < 2000:
             poa_color = '#ADD8E6'  # Light Blue
-        elif 800 > poa > 650:
+        elif 800 > poa >= 650:
             poa_color = '#87CEEB'  # Sky Blue
-        elif 650 > poa > 500:
+        elif 650 > poa >= 500:
             poa_color = '#1E90FF'  # Dodger Blue
-        elif 500 > poa > 350:
+        elif 500 > poa >= 350:
             poa_color = '#4682B4'  # Steel Blue
-        elif 350 > poa > 200:
+        elif 350 > poa >= 200:
             poa_color = '#4169E1'  # Royal Blue
         elif poa == 0:
             poa_color = 'black'
@@ -1130,10 +1103,14 @@ def update_data():
                             if breakerconfig != "❌❌" and master_cb_skips_INV_check:
                                 last_operational = last_closed(name)
                                 msg= f"{name} Breaker Tripped Open, Please Investigate! {last_operational}"
+                                ToolTip( globals()[f'{var_name}{two}statusLabel'], f"{name} Breaker {two} is Open\n{last_operational}")
                                 if not textOnly.get():
                                     messagebox.showerror(parent= alertW, title= f"{name}", message= msg)
                                 else:
                                     text_update_Table.append("<br>" + str(msg))
+
+                            last_operational = last_closed(name)
+                            ToolTip( globals()[f'{var_name}{two}statusLabel'], f"{name} Breaker {two} is Open\n{last_operational}")
                             breakerstatus = "❌❌"
                             breakerstatuscolor = 'red'
                         globals()[f'{var_name}{two}statusLabel'].config(text= breakerstatus, bg=breakerstatuscolor)
@@ -1141,6 +1118,8 @@ def update_data():
                         bklbl = globals()[f'{var_name}{two}statusLabel'].cget('bg')
                         globals()[f'{var_name}{two}statusLabel'].config(bg='pink')
                         if bklbl != 'pink' and master_cb_skips_INV_check:
+                            last_operational = last_closed(name)
+                            ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker Lost Comms\n{last_operational}")
                             msg= f"Breaker Comms lost {bk_Ltime} with the Breaker at {name}! Please Investigate!"
                             if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title=f"{name}, Breaker Comms Loss", message=msg)
@@ -1161,17 +1140,24 @@ def update_data():
                                 messagebox.showerror(parent= alertW, title= f"{name}", message= msg)
                             else:
                                 text_update_Table.append("<br>" + str(msg))
+                        
+                        last_operational = last_closed(name)
+                        ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker is Open\n{last_operational}")
                         breakerstatus = "❌❌"
                         breakerstatuscolor = 'red'     
                     else:
                             breakerstatus = "✓✓✓"
                             breakerstatuscolor = 'green'
+                
+                    ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker is Operational")
                     globals()[f'{var_name}statusLabel'].config(text= breakerstatus, bg=breakerstatuscolor)
                 else:
                     metercomms_time = metercomms.strftime('%m/%d/%y | %H:%M')
                     bklbl = globals()[f'{var_name}statusLabel'].cget('bg')
                     globals()[f'{var_name}statusLabel'].config(bg='pink')
                     if bklbl != 'pink' and master_cb_skips_INV_check:
+                        last_operational = last_closed(name)
+                        ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker Lost Comms\n{last_operational}")
                         msg= f"Meter Comms lost {metercomms_time} with the Meter at {name}! Please Investigate!"
                         if not textOnly.get():
                             messagebox.showerror(parent= alertW, title=f"{name}, Meter Comms Loss", message=msg)   
@@ -1187,14 +1173,18 @@ def update_data():
                     if any(breaker_data[f'{name} Breaker Data'][i][0] == True for i in range(breaker_pulls)):
                         breakerstatus = "✓✓✓"
                         breakerstatuscolor = 'green'
+                        ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker is Operational")
                     else:         
                         if breakerconfig != "❌❌" and master_cb_skips_INV_check:
                             last_operational = last_closed(name)
+                            ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker is Open\n{last_operational}")
                             msg= f"{name} Breaker Tripped Open, Please Investigate! {last_operational}"
                             if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title= f"{name}", message= msg)
                             else:
                                 text_update_Table.append("<br>" + str(msg))
+                        last_operational = last_closed(name)
+                        ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker is Open\n{last_operational}")
                         breakerstatus = "❌❌"
                         breakerstatuscolor = 'red'
                     globals()[f'{var_name}statusLabel'].config(text= breakerstatus, bg=breakerstatuscolor)
@@ -1203,6 +1193,8 @@ def update_data():
                     globals()[f'{var_name}statusLabel'].config(bg='pink')
                     if bklbl != 'pink' and master_cb_skips_INV_check:
                         msg= f"Breaker Comms lost {bk_Ltime} with the Breaker at {name}! Please Investigate!"
+                        last_operational = last_closed(name)
+                        ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker Lost Comms\n{last_operational}")
                         if not textOnly.get():
                             messagebox.showerror(parent= alertW, title=f"{name}, Breaker Comms Loss", message= msg)
                         else:
@@ -1263,6 +1255,8 @@ def update_data():
                             globals()[f'{var_name}Label'].config(bg='orange')
 
                         else:
+                            online_last = last_online(name, inv_num, duplin_except)
+                            ToolTip(globals()[f'{var_name}inv{inv_val}cb'], f"Inverter Offline, Bad DC Voltage\n{online_last}")
                             if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
                                 var_key = f'{var_name}statusLabel'
                                 if var_key in globals():
@@ -1339,6 +1333,8 @@ def update_data():
                 if inv_comm > time_date_compare:
                     if all(point[1] < 1 for point in data):
                         if avg_dcv > 100:
+                            online_last = last_online(name, inv_num, duplin_except)
+                            ToolTip(globals()[f'{var_name}inv{inv_val}cb'], f"Inverter Offline, Good DC Voltage\n{online_last}")
                             if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
                                 var_key = f'{var_name}statusLabel'
                                 if var_key in globals():
@@ -1358,6 +1354,8 @@ def update_data():
                                         text_update_Table.append("<br>" + str(msg))
                             globals()[f'{var_name}inv{inv_val}cb'].config(bg='orange')
                         else:
+                            online_last = last_online(name, inv_num, duplin_except)
+                            ToolTip(globals()[f'{var_name}inv{inv_val}cb'], f"Inverter Offline, Bad DC Voltage\n{online_last}")
                             if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
                                 var_key = f'{var_name}statusLabel'
                                 if var_key in globals():
@@ -1380,7 +1378,10 @@ def update_data():
                     else:
                         if check_inv_consecutively_online(point[1] for point in data):
                             globals()[f'{var_name}inv{inv_val}cb'].config(bg='green')
+                            ToolTip(globals()[f'{var_name}inv{inv_val}cb'], "Inverter Online")
                 else:
+                    online_last = last_online(name, inv_num, duplin_except)
+                    ToolTip(globals()[f'{var_name}inv{inv_val}cb'], f"Inverter Comms Lost\n{online_last}")
                     globals()[f'{var_name}inv{inv_val}cb'].config(bg='pink')
                     invlbl = globals()[f'{var_name}inv{inv_val}cb'].cget('bg')
                     if invlbl != 'pink' and cbval == 0 and master_cb_skips_INV_check:
@@ -1388,6 +1389,7 @@ def update_data():
                         if var_key in globals():
                             if globals()[var_key].cget("bg") == 'green':
                                 msg= f"INV Comms lost {inv_Ltime} with Inverter {inv_val} at {name}! Please Investigate!"
+
                                 if not textOnly.get():
                                     messagebox.showerror(parent= alertW, title=f"{name}, Inverter Comms Loss", message=msg)
                                 else:
@@ -1395,6 +1397,8 @@ def update_data():
                         else:
                             msg= f"INV Comms lost {inv_Ltime} with Inverter {inv_val} at {name}! Please Investigate!"
                             if not textOnly.get():
+                                online_last = last_online(name, inv_num, duplin_except)
+                                ToolTip(globals()[f'{var_name}inv{inv_val}cb'], f"Inverter Comms Lost\n{online_last}")
                                 messagebox.showerror(parent= alertW, title=f"{name}, Inverter Comms Loss", message=msg)
                             else:
                                 text_update_Table.append("<br>" + str(msg))
@@ -1407,7 +1411,8 @@ def update_data():
                 meterdataVA= None
                 meterdataVB= None
                 meterdataVC= None 
-                meterdataKW= None 
+                meterdataW= None 
+                meterdataWM= None 
                 meterdataAA= None 
                 meterdataAB= None 
                 meterdataAC= None
@@ -1440,11 +1445,13 @@ def update_data():
                 meterdataAA = all(row[3] < 1 for row in meterdata if row[3] is not None)
                 meterdataAB = all(row[4] < 1 for row in meterdata if row[4] is not None)
                 meterdataAC = all(row[5] < 1 for row in meterdata if row[5] is not None)
-                meterdataKW = np.mean([row[6] for row in meterdata if row[6] is not None and row[6] < erroneous_meter_value])
+                meterdataW = np.mean([row[6] for row in meterdata if row[6] is not None and row[6] < erroneous_meter_value])
+                print(name, " ", meterdataW)
                 if name == "Wellons":
-                    meterdatakWM = max(row[6] for row in meterdata if row[6] is not None and row[6] < erroneous_meter_value) if max(row[6] for row in meterdata if row[6] is not None and row[6] < erroneous_meter_value) else 0
+                    meterdataWM = max(row[6] for row in meterdata if row[6] is not None and row[6] < erroneous_meter_value) if max(row[6] for row in meterdata if row[6] is not None and row[6] < erroneous_meter_value) else 0
                 else:
-                    meterdatakWM = max(row[6] for row in meterdata if row[6] is not None) if max(row[6] for row in meterdata if row[6] is not None) else 0
+                    meterdataWM = max(row[6] for row in meterdata if row[6] is not None) if max(row[6] for row in meterdata if row[6] is not None) else 0
+                print(name, " ", meterdataWM)
 
                 
                 #print(f'{name} |  A: {meterdataAA}, B: {meterdataAB}, C: {meterdataAC}')
@@ -1519,7 +1526,7 @@ def update_data():
 
                 total_invkW = sum(allinv_kW)
                 #Here is where I would check for meterRatio and set the text of the meterRatiolabel
-                meterRatio = meterdatakWM/metermax
+                meterRatio = meterdataWM/metermax
                 if meterRatio > .90:
                     ratio_color = '#ADD8E6'  # Light Blue
                 elif .90 > meterRatio > .80:
@@ -1534,46 +1541,52 @@ def update_data():
                     ratio_color = 'black'
                 else: 
                     ratio_color = 'gray'
-                print(f"{name:<15} | {round(meterRatio*100, 1):<5} | {meterdatakWM:<9} | {metermax}")
+                print(f"{name:<15} | {round(meterRatio*100, 1):<5} | {meterdataWM:<9} | {metermax}")
 
                 globals()[f'{var_name}meterRatioLabel'].config(text= f"{round(meterRatio*100, 1)}%", bg= ratio_color, font=('Tk_defaultFont', 10, 'bold'))
 
 
-                if (meterdataKW < 2 or meterdataAA or meterdataAB or meterdataAC) and begin:
+                if (meterdataW < 2 or meterdataAA or meterdataAB or meterdataAC) and begin:
+                    print(f"Condition Met: {meterdataW}")
                     if name != 'Van Buren': # This if statement and elif pair juke around the VanBuren being down a phase. 
                         meterkWstatus= '❌❌'
                         meterkWstatuscolor= 'red'
                         meterlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
                         if meterlbl != 'red' and master_cb_skips_INV_check and poa > 10:
                             online = meter_last_online(name)
-                            msg= f"Site: {name}\nMeter Production: {round(meterdataKW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}"
+                            msg= f"Site: {name}\nMeter Production: {round(meterdataW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}"
                             if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title=f"{name}, Power Loss", message=msg)
                             else:
                                 text_update_Table.append("<br>" + str(msg))  
-                    elif meterdataAC or meterdataAB or meterdataKW < 2: #This is a continuation of the above 'Juke' The Elif below is yet another continuation as Vanburen gets trapped by the very first if statement
+                    elif meterdataAC or meterdataAB or meterdataW < 2: #This is a continuation of the above 'Juke' The Elif below is yet another continuation as Vanburen gets trapped by the very first if statement
                         meterkWstatus= '❌❌'
                         meterkWstatuscolor= 'red'
                         meterlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
                         if meterlbl != 'red' and master_cb_skips_INV_check and poa > 10:
                             online = meter_last_online(name)
-                            msg= f"Site: {name}\nMeter Production: {round(meterdataKW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}"
+                            msg= f"Site: {name}\nMeter Production: {round(meterdataW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}"
                             if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title=f"{name}, Meter Power Loss", message=msg)
                             else:
                                 text_update_Table.append("<br>" + str(msg))
      
                 else:
-                    meterkWstatus= round(meterdataKW/1000, 1)
-                    meterkWstatuscolor= 'green'
+                    meter_kw = round(meterdataW/1000, 1)
+                    meterkWstatus= meter_kw
+                    if meter_kw < 1:
+                        meterkWstatuscolor= 'red'
+                    else:
+                        meterkWstatuscolor= 'green'
+
                 #Below we update the GUI with the above defined text and color
                 globals()[f'{var_name}meterkWLabel'].config(text= meterkWstatus, bg= meterkWstatuscolor, font=('Tk_defaultFont', 10, 'bold'))
                 
                 #PVSYST Ratio Update
                 try:
                     pysyst_connect()
-                    if meterdatakWM and poa and pvsyst_name:
-                        performance_ratio, degradation, meter_est = pvsyst_est(meterdatakWM, poa, pvsyst_name)
+                    if meterdataWM and poa and pvsyst_name:
+                        performance_ratio, degradation, meter_est = pvsyst_est(meterdataWM, poa, pvsyst_name)
                         if pvsyst_name is not None:
                             print(f'{pvsyst_name:<15} | {round(performance_ratio, 1)}% | {round(degradation*100, 2)}% Loss | {round(meter_est, 2):<13} W or kW?')
                         
@@ -1597,6 +1610,7 @@ def update_data():
                 except Exception as erro:
                     print("Error: ", erro)
                     pass
+                siteSnapShot_Update(name, var_name, inverters, meterdataWM)
 
 
             else:
@@ -1612,12 +1626,9 @@ def update_data():
                 globals()[f'{var_name}meterRatioLabel'].config(bg='pink')
 
 
-            siteSnapShot_Update(name, var_name, inverters, meterdatakWM)
 
     
 
-    if underperf_Maincbvar.get() == True:
-        underperformance_data_update() #Inverter Comparison Type Underperformance Check
     #conetoe_offline()
 
     if textOnly.get():
@@ -1775,8 +1786,7 @@ def update_data():
 
 
     sendTexts.config(state=NORMAL)
-    underperfdaterng.config(state=NORMAL)
-    underperfdaterng2.config(state=NORMAL)
+
 
 def pysyst_connect():
     global cursor_p, connect_pvsystdb
@@ -1839,354 +1849,6 @@ def pvsyst_est(meterval, poa_val, pvsyst_name):
         print(e)
         print("Moving On...")
         return (0,0,0)
-
-
-    # Need to import pvsyst data then regression calc for estimated production, then divide into our groups based on strings per inv to get inverter level underperformance. 
-
-
-
-def underperformance_data_update(): #Inv Comparison Function
-    endhour = underperf_hourend.get()
-    starthour = underperf_hourlimit.get()
-    end_d = underperf_range2.get()
-    start_d = underperf_range.get()
-    start_date = datetime.strptime(start_d, '%m/%d/%Y')
-    end_date = datetime.strptime(end_d, '%m/%d/%Y')
-    timecheck = datetime.now()
-
-    underperformance_data = {}
-    for table in tables:
-        table_name = table.table_name
-        if "INV" in table_name:
-            c.execute(f"""
-            SELECT [Timestamp], [Watts] 
-            FROM [{table_name}] 
-            WHERE [Timestamp] >= ? 
-            AND [Timestamp] <= ?
-            AND DATEPART(HOUR, [Timestamp]) >= ? 
-            AND DATEPART(HOUR, [Timestamp]) < ?
-            ORDER BY [Timestamp]""", (start_date, end_date, starthour, endhour))
-            invkw_rows = c.fetchall()
-            data_list = [list(row) for row in invkw_rows]
-            df = pd.DataFrame(data_list, columns=['Timestamp', 'Watts'])
-            underperformance_data[table_name] = df
-    
-
-
-    coentoe_inv1 = []
-    coentoe_inv2 = []
-    coentoe_inv3 = []
-    coentoe_inv4 = []
-
-    for site, site_dictionary in MAP_SITES_HARDWARE_GUI.items():
-        invdict = site_dictionary['INV_DICT']
-        var_name = site_dictionary['VAR_NAME']
-        custid = site_dictionary['CUST_ID']
-        metermax = site_dictionary['METER_MAX']
-        pvsyst_name = site_dictionary['PVSYST']
-        inv_count = len(invdict)
-        if site == "CDIA":
-            continue
-        for i in range(1, inv_count + 1):
-            if site == "Duplin":
-                if i <= 3:
-                    strVcent = 'Central'
-                    num = i
-                    alt = ''
-                else:
-                    strVcent = 'String'
-                    alt = 's'
-                    num = i - 3
-                table_name = f'{site} {strVcent} INV {num} Data'
-                df = underperformance_data.get(table_name, pd.DataFrame(columns=['Timestamp', 'Watts']))
-                df_filtered = df[df['Watts'] >= 1].copy()
-                df_filtered['Timestamp'] = pd.to_datetime(df_filtered['Timestamp'])
-                df_grouped = df_filtered.groupby('Timestamp').mean().reset_index()
-                df_resampled = df_grouped.set_index('Timestamp').resample('5min').ffill()
-                df_resampled['kWh'] = df_resampled['Watts'] * (2 / 60) / 1000
-                globals()[f'{var_name}{alt}inv{num}daykw'] = df_resampled['kWh'].sum()
-                globals()[f'{var_name}{alt}inv{num}daykwavg'] = df_resampled['Watts'].mean()
-            elif site == "Conetoe":
-                table_name = f'{site} INV {i} Data'
-                df = underperformance_data.get(table_name, pd.DataFrame(columns=['Timestamp', 'Watts']))
-                df_filtered = df[df['Watts'] >= 1].copy()
-                df_filtered['Timestamp'] = pd.to_datetime(df_filtered['Timestamp'])
-                df_grouped = df_filtered.groupby('Timestamp').mean().reset_index()
-                df_resampled = df_grouped.set_index('Timestamp').resample('5min').ffill()
-                df_resampled['kWh'] = df_resampled['Watts'] * (2 / 60) / 1000
-                daily_kw = df_resampled['kWh'].sum()
-                avg_w = df_resampled['Watts'].mean()
-                if i < 5:
-                    coentoe_inv1.append((avg_w, daily_kw))
-                    if i == 4:
-                        globals()[f'{var_name}inv1daykwavg'] = np.mean([item[0] for item in coentoe_inv1])
-                        globals()[f'{var_name}inv1daykw'] = np.mean([item[1] for item in coentoe_inv1])
-
-                elif 4 < i < 9:
-                    coentoe_inv2.append((avg_w, daily_kw))
-                    if i == 8:
-                        globals()[f'{var_name}inv2daykwavg'] = np.mean([item[0] for item in coentoe_inv2])
-                        globals()[f'{var_name}inv2daykw'] = np.mean([item[1] for item in coentoe_inv2])
-
-                elif 8 < i < 13:
-                    coentoe_inv3.append((avg_w, daily_kw))
-                    if i == 12:
-                        globals()[f'{var_name}inv3daykwavg'] = np.mean([item[0] for item in coentoe_inv3])
-                        globals()[f'{var_name}inv3daykw'] = np.mean([item[1] for item in coentoe_inv3])
-
-                else:
-                    coentoe_inv4.append((avg_w, daily_kw))
-                    if i == 16:
-                        globals()[f'{var_name}inv4daykwavg'] = np.mean([item[0] for item in coentoe_inv4])
-                        globals()[f'{var_name}inv4daykw'] = np.mean([item[1] for item in coentoe_inv4])
-
-                
-            else:
-                table_name = f'{site} INV {i} Data'
-                df = underperformance_data.get(table_name, pd.DataFrame(columns=['Timestamp', 'Watts']))
-                df_filtered = df[df['Watts'] >= 1].copy()
-                df_filtered['Timestamp'] = pd.to_datetime(df_filtered['Timestamp'])
-                df_grouped = df_filtered.groupby('Timestamp').mean().reset_index()
-                df_resampled = df_grouped.set_index('Timestamp').resample('5min').ffill()
-                df_resampled['kWh'] = df_resampled['Watts'] * (2 / 60) / 1000
-                globals()[f'{var_name}inv{i}daykw'] = df_resampled['kWh'].sum()
-                globals()[f'{var_name}inv{i}daykwavg'] = df_resampled['Watts'].mean()
-
-
-        
-    bluebirddaykwList = [(bluebirdinv1daykwavg, bluebirdinv1daykw, bluebirdinvup1cb), (bluebirdinv2daykwavg, bluebirdinv2daykw, bluebirdinvup2cb), (bluebirdinv3daykwavg, bluebirdinv3daykw, bluebirdinvup3cb), (bluebirdinv4daykwavg, bluebirdinv4daykw, bluebirdinvup4cb), (bluebirdinv5daykwavg, bluebirdinv5daykw, bluebirdinvup5cb), (bluebirdinv6daykwavg, bluebirdinv6daykw, bluebirdinvup6cb), (bluebirdinv7daykwavg, bluebirdinv7daykw, bluebirdinvup7cb), (bluebirdinv8daykwavg, bluebirdinv8daykw, bluebirdinvup8cb), (bluebirdinv9daykwavg, bluebirdinv9daykw, bluebirdinvup9cb), (bluebirdinv10daykwavg, bluebirdinv10daykw, bluebirdinvup10cb), (bluebirdinv11daykwavg, bluebirdinv11daykw, bluebirdinvup11cb), (bluebirdinv12daykwavg, bluebirdinv12daykw, bluebirdinvup12cb), (bluebirdinv13daykwavg, bluebirdinv13daykw, bluebirdinvup13cb), (bluebirdinv14daykwavg, bluebirdinv14daykw, bluebirdinvup14cb), (bluebirdinv15daykwavg, bluebirdinv15daykw, bluebirdinvup15cb), (bluebirdinv16daykwavg, bluebirdinv16daykw, bluebirdinvup16cb), (bluebirdinv17daykwavg, bluebirdinv17daykw, bluebirdinvup17cb), (bluebirdinv18daykwavg, bluebirdinv18daykw, bluebirdinvup18cb), (bluebirdinv19daykwavg, bluebirdinv19daykw, bluebirdinvup19cb), (bluebirdinv20daykwavg, bluebirdinv20daykw, bluebirdinvup20cb), (bluebirdinv21daykwavg, bluebirdinv21daykw, bluebirdinvup21cb), (bluebirdinv22daykwavg, bluebirdinv22daykw, bluebirdinvup22cb), (bluebirdinv23daykwavg, bluebirdinv23daykw, bluebirdinvup23cb), (bluebirdinv24daykwavg, bluebirdinv24daykw, bluebirdinvup24cb)]
-    cardinal96daykwList = [(cardinalinv1daykwavg, cardinalinv1daykw, cardinalinvup1cb), (cardinalinv2daykwavg, cardinalinv2daykw, cardinalinvup2cb), (cardinalinv3daykwavg, cardinalinv3daykw, cardinalinvup3cb), (cardinalinv4daykwavg, cardinalinv4daykw, cardinalinvup4cb), (cardinalinv5daykwavg, cardinalinv5daykw, cardinalinvup5cb), (cardinalinv6daykwavg, cardinalinv6daykw, cardinalinvup6cb), (cardinalinv7daykwavg, cardinalinv7daykw, cardinalinvup7cb), (cardinalinv22daykwavg, cardinalinv22daykw, cardinalinvup22cb), (cardinalinv23daykwavg, cardinalinv23daykw, cardinalinvup23cb), (cardinalinv24daykwavg, cardinalinv24daykw, cardinalinvup24cb), (cardinalinv25daykwavg, cardinalinv25daykw, cardinalinvup25cb), (cardinalinv26daykwavg, cardinalinv26daykw, cardinalinvup26cb), (cardinalinv27daykwavg, cardinalinv27daykw, cardinalinvup27cb), (cardinalinv28daykwavg, cardinalinv28daykw, cardinalinvup28cb), (cardinalinv43daykwavg, cardinalinv43daykw, cardinalinvup43cb), (cardinalinv44daykwavg, cardinalinv44daykw, cardinalinvup44cb), (cardinalinv45daykwavg, cardinalinv45daykw, cardinalinvup45cb), (cardinalinv46daykwavg, cardinalinv46daykw, cardinalinvup46cb), (cardinalinv47daykwavg, cardinalinv47daykw, cardinalinvup47cb)]
-    cardinal952daykwList = [(cardinalinv8daykwavg, cardinalinv8daykw, cardinalinvup8cb), (cardinalinv9daykwavg, cardinalinv9daykw, cardinalinvup9cb), (cardinalinv10daykwavg, cardinalinv10daykw, cardinalinvup10cb), (cardinalinv11daykwavg, cardinalinv11daykw, cardinalinvup11cb), (cardinalinv12daykwavg, cardinalinv12daykw, cardinalinvup12cb), (cardinalinv13daykwavg, cardinalinv13daykw, cardinalinvup13cb), (cardinalinv14daykwavg, cardinalinv14daykw, cardinalinvup14cb), (cardinalinv29daykwavg, cardinalinv29daykw, cardinalinvup29cb), (cardinalinv30daykwavg, cardinalinv30daykw, cardinalinvup30cb), (cardinalinv31daykwavg, cardinalinv31daykw, cardinalinvup31cb), (cardinalinv32daykwavg, cardinalinv32daykw, cardinalinvup32cb), (cardinalinv33daykwavg, cardinalinv33daykw, cardinalinvup33cb), (cardinalinv34daykwavg, cardinalinv34daykw, cardinalinvup34cb), (cardinalinv35daykwavg, cardinalinv35daykw, cardinalinvup35cb), (cardinalinv48daykwavg, cardinalinv48daykw, cardinalinvup48cb), (cardinalinv49daykwavg, cardinalinv49daykw, cardinalinvup49cb), (cardinalinv50daykwavg, cardinalinv50daykw, cardinalinvup50cb), (cardinalinv51daykwavg, cardinalinv51daykw, cardinalinvup51cb), (cardinalinv52daykwavg, cardinalinv52daykw, cardinalinvup52cb), (cardinalinv53daykwavg, cardinalinv53daykw, cardinalinvup53cb)]
-    cardinal944daykwList = [(cardinalinv15daykwavg, cardinalinv15daykw, cardinalinvup15cb), (cardinalinv16daykwavg, cardinalinv16daykw, cardinalinvup16cb), (cardinalinv17daykwavg, cardinalinv17daykw, cardinalinvup17cb), (cardinalinv18daykwavg, cardinalinv18daykw, cardinalinvup18cb), (cardinalinv19daykwavg, cardinalinv19daykw, cardinalinvup19cb), (cardinalinv20daykwavg, cardinalinv20daykw, cardinalinvup20cb), (cardinalinv21daykwavg, cardinalinv21daykw, cardinalinvup21cb), (cardinalinv36daykwavg, cardinalinv36daykw, cardinalinvup36cb), (cardinalinv37daykwavg, cardinalinv37daykw, cardinalinvup37cb), (cardinalinv38daykwavg, cardinalinv38daykw, cardinalinvup38cb), (cardinalinv39daykwavg, cardinalinv39daykw, cardinalinvup39cb), (cardinalinv40daykwavg, cardinalinv40daykw, cardinalinvup40cb), (cardinalinv41daykwavg, cardinalinv41daykw, cardinalinvup41cb), (cardinalinv42daykwavg, cardinalinv42daykw, cardinalinvup42cb), (cardinalinv54daykwavg, cardinalinv54daykw, cardinalinvup54cb), (cardinalinv55daykwavg, cardinalinv55daykw, cardinalinvup55cb), (cardinalinv56daykwavg, cardinalinv56daykw, cardinalinvup56cb), (cardinalinv57daykwavg, cardinalinv57daykw, cardinalinvup57cb), (cardinalinv58daykwavg, cardinalinv58daykw, cardinalinvup58cb), (cardinalinv59daykwavg, cardinalinv59daykw, cardinalinvup59cb)]
-    cherryblossomdaykwList = [(cherryblossominv1daykwavg, cherryblossominv1daykw, cherryblossominvup1cb), (cherryblossominv2daykwavg, cherryblossominv2daykw, cherryblossominvup2cb), (cherryblossominv3daykwavg, cherryblossominv3daykw, cherryblossominvup3cb), (cherryblossominv4daykwavg, cherryblossominv4daykw, cherryblossominvup4cb)]
-    harrisondaykwList = [(harrisoninv2daykwavg, harrisoninv2daykw, harrisoninvup2cb), (harrisoninv3daykwavg, harrisoninv3daykw, harrisoninvup3cb), (harrisoninv4daykwavg, harrisoninv4daykw, harrisoninvup4cb), (harrisoninv5daykwavg, harrisoninv5daykw, harrisoninvup5cb), (harrisoninv6daykwavg, harrisoninv6daykw, harrisoninvup6cb), (harrisoninv7daykwavg, harrisoninv7daykw, harrisoninvup7cb), (harrisoninv9daykwavg, harrisoninv9daykw, harrisoninvup9cb), (harrisoninv11daykwavg, harrisoninv11daykw, harrisoninvup11cb), (harrisoninv12daykwavg, harrisoninv12daykw, harrisoninvup12cb), (harrisoninv13daykwavg, harrisoninv13daykw, harrisoninvup13cb), (harrisoninv14daykwavg, harrisoninv14daykw, harrisoninvup14cb), (harrisoninv15daykwavg, harrisoninv15daykw, harrisoninvup15cb), (harrisoninv16daykwavg, harrisoninv16daykw, harrisoninvup16cb), (harrisoninv18daykwavg, harrisoninv18daykw, harrisoninvup18cb), (harrisoninv19daykwavg, harrisoninv19daykw, harrisoninvup19cb), (harrisoninv20daykwavg, harrisoninv20daykw, harrisoninvup20cb), (harrisoninv22daykwavg, harrisoninv22daykw, harrisoninvup22cb), (harrisoninv23daykwavg, harrisoninv23daykw, harrisoninvup23cb), (harrisoninv24daykwavg, harrisoninv24daykw, harrisoninvup24cb), (harrisoninv25daykwavg, harrisoninv25daykw, harrisoninvup25cb), (harrisoninv26daykwavg, harrisoninv26daykw, harrisoninvup26cb), (harrisoninv27daykwavg, harrisoninv27daykw, harrisoninvup27cb), (harrisoninv28daykwavg, harrisoninv28daykw, harrisoninvup28cb), (harrisoninv31daykwavg, harrisoninv31daykw, harrisoninvup31cb), (harrisoninv32daykwavg, harrisoninv32daykw, harrisoninvup32cb), (harrisoninv33daykwavg, harrisoninv33daykw, harrisoninvup33cb), (harrisoninv34daykwavg, harrisoninv34daykw, harrisoninvup34cb), (harrisoninv35daykwavg, harrisoninv35daykw, harrisoninvup35cb), (harrisoninv36daykwavg, harrisoninv36daykw, harrisoninvup36cb), (harrisoninv37daykwavg, harrisoninv37daykw, harrisoninvup37cb), (harrisoninv38daykwavg, harrisoninv38daykw, harrisoninvup38cb), (harrisoninv39daykwavg, harrisoninv39daykw, harrisoninvup39cb), (harrisoninv42daykwavg, harrisoninv42daykw, harrisoninvup42cb), (harrisoninv43daykwavg, harrisoninv43daykw, harrisoninvup43cb)]
-    harrison92daykwList = [(harrisoninv1daykwavg, harrisoninv1daykw, harrisoninvup1cb), (harrisoninv8daykwavg, harrisoninv8daykw, harrisoninvup8cb), (harrisoninv10daykwavg, harrisoninv10daykw, harrisoninvup10cb), (harrisoninv17daykwavg, harrisoninv17daykw, harrisoninvup17cb), (harrisoninv21daykwavg, harrisoninv21daykw, harrisoninvup21cb), (harrisoninv29daykwavg, harrisoninv29daykw, harrisoninvup29cb), (harrisoninv30daykwavg, harrisoninv30daykw, harrisoninvup30cb), (harrisoninv40daykwavg, harrisoninv40daykw, harrisoninvup40cb), (harrisoninv41daykwavg, harrisoninv41daykw, harrisoninvup41cb)]
-    hayesdaykwList = [(hayesinv1daykwavg, hayesinv1daykw, hayesinvup1cb), (hayesinv2daykwavg, hayesinv2daykw, hayesinvup2cb), (hayesinv3daykwavg, hayesinv3daykw, hayesinvup3cb), (hayesinv4daykwavg, hayesinv4daykw, hayesinvup4cb), (hayesinv5daykwavg, hayesinv5daykw, hayesinvup5cb), (hayesinv6daykwavg, hayesinv6daykw, hayesinvup6cb), (hayesinv7daykwavg, hayesinv7daykw, hayesinvup7cb), (hayesinv8daykwavg, hayesinv8daykw, hayesinvup8cb), (hayesinv9daykwavg, hayesinv9daykw, hayesinvup9cb), (hayesinv10daykwavg, hayesinv10daykw, hayesinvup10cb), (hayesinv11daykwavg, hayesinv11daykw, hayesinvup11cb), (hayesinv12daykwavg, hayesinv12daykw, hayesinvup12cb), (hayesinv13daykwavg, hayesinv13daykw, hayesinvup13cb), (hayesinv14daykwavg, hayesinv14daykw, hayesinvup14cb), (hayesinv15daykwavg, hayesinv15daykw, hayesinvup15cb), (hayesinv16daykwavg, hayesinv16daykw, hayesinvup16cb), (hayesinv17daykwavg, hayesinv17daykw, hayesinvup17cb), (hayesinv19daykwavg, hayesinv19daykw, hayesinvup19cb), (hayesinv20daykwavg, hayesinv20daykw, hayesinvup20cb), (hayesinv21daykwavg, hayesinv21daykw, hayesinvup21cb), (hayesinv23daykwavg, hayesinv23daykw, hayesinvup23cb), (hayesinv24daykwavg, hayesinv24daykw, hayesinvup24cb), (hayesinv25daykwavg, hayesinv25daykw, hayesinvup25cb), (hayesinv26daykwavg, hayesinv26daykw, hayesinvup26cb)]
-    hayes96daykwList = [(hayesinv22daykwavg, hayesinv22daykw, hayesinvup22cb), (hayesinv18daykwavg, hayesinv18daykw, hayesinvup18cb)]
-    hickorydaykwList = [(hickoryinv1daykwavg, hickoryinv1daykw, hickoryinvup1cb), (hickoryinv2daykwavg, hickoryinv2daykw, hickoryinvup2cb)]
-    vanburendaykwList = [(vanbureninv7daykwavg, vanbureninv7daykw, vanbureninvup7cb), (vanbureninv8daykwavg, vanbureninv8daykw, vanbureninvup8cb), (vanbureninv9daykwavg, vanbureninv9daykw, vanbureninvup9cb), (vanbureninv10daykwavg, vanbureninv10daykw, vanbureninvup10cb), (vanbureninv11daykwavg, vanbureninv11daykw, vanbureninvup11cb), (vanbureninv12daykwavg, vanbureninv12daykw, vanbureninvup12cb), (vanbureninv13daykwavg, vanbureninv13daykw, vanbureninvup13cb), (vanbureninv14daykwavg, vanbureninv14daykw, vanbureninvup14cb), (vanbureninv15daykwavg, vanbureninv15daykw, vanbureninvup15cb), (vanbureninv16daykwavg, vanbureninv16daykw, vanbureninvup16cb), (vanbureninv17daykwavg, vanbureninv17daykw, vanbureninvup17cb)]
-    vanburen93daykwList = [(vanbureninv1daykwavg, vanbureninv1daykw, vanbureninvup1cb), (vanbureninv2daykwavg, vanbureninv2daykw, vanbureninvup2cb), (vanbureninv3daykwavg, vanbureninv3daykw, vanbureninvup3cb), (vanbureninv4daykwavg, vanbureninv4daykw, vanbureninvup4cb), (vanbureninv5daykwavg, vanbureninv5daykw, vanbureninvup5cb), (vanbureninv6daykwavg, vanbureninv6daykw, vanbureninvup6cb)]
-    violetdaykwList = [(violetinv1daykwavg, violetinv1daykw, violetinvup1cb), (violetinv2daykwavg, violetinv2daykw, violetinvup2cb)]
-    wellonsdaykwList = [(wellonsinv1daykwavg, wellonsinv1daykw, wellonsinvup1cb), (wellonsinv2daykwavg, wellonsinv2daykw, wellonsinvup2cb), (wellonsinv3daykwavg, wellonsinv3daykw, wellonsinvup3cb), (wellonsinv4daykwavg, wellonsinv4daykw, wellonsinvup4cb), (wellonsinv5daykwavg, wellonsinv5daykw, wellonsinvup5cb), (wellonsinv6daykwavg, wellonsinv6daykw, wellonsinvup6cb)]
-    bishopvilleIIdaykwList = [(bishopvilleIIinv6daykwavg, bishopvilleIIinv6daykw, bishopvilleIIinvup6cb), (bishopvilleIIinv7daykwavg, bishopvilleIIinv7daykw, bishopvilleIIinvup7cb), (bishopvilleIIinv8daykwavg, bishopvilleIIinv8daykw, bishopvilleIIinvup8cb), (bishopvilleIIinv9daykwavg, bishopvilleIIinv9daykw, bishopvilleIIinvup9cb), (bishopvilleIIinv10daykwavg, bishopvilleIIinv10daykw, bishopvilleIIinvup10cb), (bishopvilleIIinv13daykwavg, bishopvilleIIinv13daykw, bishopvilleIIinvup13cb), (bishopvilleIIinv15daykwavg, bishopvilleIIinv15daykw, bishopvilleIIinvup15cb), (bishopvilleIIinv19daykwavg, bishopvilleIIinv19daykw, bishopvilleIIinvup19cb), (bishopvilleIIinv20daykwavg, bishopvilleIIinv20daykw, bishopvilleIIinvup20cb), (bishopvilleIIinv21daykwavg, bishopvilleIIinv21daykw, bishopvilleIIinvup21cb), (bishopvilleIIinv22daykwavg, bishopvilleIIinv22daykw, bishopvilleIIinvup22cb), (bishopvilleIIinv23daykwavg, bishopvilleIIinv23daykw, bishopvilleIIinvup23cb), (bishopvilleIIinv26daykwavg, bishopvilleIIinv26daykw, bishopvilleIIinvup26cb), (bishopvilleIIinv27daykwavg, bishopvilleIIinv27daykw, bishopvilleIIinvup27cb), (bishopvilleIIinv28daykwavg, bishopvilleIIinv28daykw, bishopvilleIIinvup28cb), (bishopvilleIIinv29daykwavg, bishopvilleIIinv29daykw, bishopvilleIIinvup29cb), (bishopvilleIIinv30daykwavg, bishopvilleIIinv30daykw, bishopvilleIIinvup30cb), (bishopvilleIIinv32daykwavg, bishopvilleIIinv32daykw, bishopvilleIIinvup32cb), (bishopvilleIIinv34daykwavg, bishopvilleIIinv34daykw, bishopvilleIIinvup34cb)]
-    bishopvilleII34strdaykwList = [(bishopvilleIIinv1daykwavg, bishopvilleIIinv1daykw, bishopvilleIIinvup1cb), (bishopvilleIIinv2daykwavg, bishopvilleIIinv2daykw, bishopvilleIIinvup2cb), (bishopvilleIIinv3daykwavg, bishopvilleIIinv3daykw, bishopvilleIIinvup3cb), (bishopvilleIIinv4daykwavg, bishopvilleIIinv4daykw, bishopvilleIIinvup4cb), (bishopvilleIIinv5daykwavg, bishopvilleIIinv5daykw, bishopvilleIIinvup5cb), (bishopvilleIIinv11daykwavg, bishopvilleIIinv11daykw, bishopvilleIIinvup11cb), (bishopvilleIIinv12daykwavg, bishopvilleIIinv12daykw, bishopvilleIIinvup12cb), (bishopvilleIIinv14daykwavg, bishopvilleIIinv14daykw, bishopvilleIIinvup14cb), (bishopvilleIIinv16daykwavg, bishopvilleIIinv16daykw, bishopvilleIIinvup16cb), (bishopvilleIIinv17daykwavg, bishopvilleIIinv17daykw, bishopvilleIIinvup17cb), (bishopvilleIIinv18daykwavg, bishopvilleIIinv18daykw, bishopvilleIIinvup18cb), (bishopvilleIIinv31daykwavg, bishopvilleIIinv31daykw, bishopvilleIIinvup31cb), (bishopvilleIIinv33daykwavg, bishopvilleIIinv33daykw, bishopvilleIIinvup33cb), (bishopvilleIIinv35daykwavg, bishopvilleIIinv35daykw, bishopvilleIIinvup35cb), (bishopvilleIIinv36daykwavg, bishopvilleIIinv36daykw, bishopvilleIIinvup36cb)]
-    bishopvilleII36strdaykwList = [(bishopvilleIIinv24daykwavg, bishopvilleIIinv24daykw, bishopvilleIIinvup24cb), (bishopvilleIIinv25daykwavg, bishopvilleIIinv25daykw, bishopvilleIIinvup25cb)]
-    hicksondaykwList = [(hicksoninv7daykwavg, hicksoninv7daykw, hicksoninvup7cb), (hicksoninv8daykwavg, hicksoninv8daykw, hicksoninvup8cb), (hicksoninv9daykwavg, hicksoninv9daykw, hicksoninvup9cb), (hicksoninv12daykwavg, hicksoninv12daykw, hicksoninvup12cb), (hicksoninv13daykwavg, hicksoninv13daykw, hicksoninvup13cb), (hicksoninv14daykwavg, hicksoninv14daykw, hicksoninvup14cb), (hicksoninv15daykwavg, hicksoninv15daykw, hicksoninvup15cb), (hicksoninv16daykwavg, hicksoninv16daykw, hicksoninvup16cb)]
-    hickson17strdaykwList = [(hicksoninv1daykwavg, hicksoninv1daykw, hicksoninvup1cb), (hicksoninv2daykwavg, hicksoninv2daykw, hicksoninvup2cb), (hicksoninv3daykwavg, hicksoninv3daykw, hicksoninvup3cb), (hicksoninv4daykwavg, hicksoninv4daykw, hicksoninvup4cb), (hicksoninv5daykwavg, hicksoninv5daykw, hicksoninvup5cb), (hicksoninv6daykwavg, hicksoninv6daykw, hicksoninvup6cb), (hicksoninv10daykwavg, hicksoninv10daykw, hicksoninvup10cb), (hicksoninv11daykwavg, hicksoninv11daykw, hicksoninvup11cb)]
-    jeffersondaykwList = [(jeffersoninv5daykwavg, jeffersoninv5daykw, jeffersoninvup5cb), (jeffersoninv7daykwavg, jeffersoninv7daykw, jeffersoninvup7cb), (jeffersoninv8daykwavg, jeffersoninv8daykw, jeffersoninvup8cb), (jeffersoninv9daykwavg, jeffersoninv9daykw, jeffersoninvup9cb), (jeffersoninv10daykwavg, jeffersoninv10daykw, jeffersoninvup10cb), (jeffersoninv11daykwavg, jeffersoninv11daykw, jeffersoninvup11cb), (jeffersoninv12daykwavg, jeffersoninv12daykw, jeffersoninvup12cb), (jeffersoninv15daykwavg, jeffersoninv15daykw, jeffersoninvup15cb), (jeffersoninv16daykwavg, jeffersoninv16daykw, jeffersoninvup16cb), (jeffersoninv19daykwavg, jeffersoninv19daykw, jeffersoninvup19cb), (jeffersoninv24daykwavg, jeffersoninv24daykw, jeffersoninvup24cb), (jeffersoninv26daykwavg, jeffersoninv26daykw, jeffersoninvup26cb), (jeffersoninv27daykwavg, jeffersoninv27daykw, jeffersoninvup27cb), (jeffersoninv28daykwavg, jeffersoninv28daykw, jeffersoninvup28cb), (jeffersoninv29daykwavg, jeffersoninv29daykw, jeffersoninvup29cb), (jeffersoninv30daykwavg, jeffersoninv30daykw, jeffersoninvup30cb), (jeffersoninv31daykwavg, jeffersoninv31daykw, jeffersoninvup31cb), (jeffersoninv32daykwavg, jeffersoninv32daykw, jeffersoninvup32cb), (jeffersoninv33daykwavg, jeffersoninv33daykw, jeffersoninvup33cb), (jeffersoninv34daykwavg, jeffersoninv34daykw, jeffersoninvup34cb), (jeffersoninv35daykwavg, jeffersoninv35daykw, jeffersoninvup35cb), (jeffersoninv36daykwavg, jeffersoninv36daykw, jeffersoninvup36cb), (jeffersoninv37daykwavg, jeffersoninv37daykw, jeffersoninvup37cb), (jeffersoninv38daykwavg, jeffersoninv38daykw, jeffersoninvup38cb), (jeffersoninv39daykwavg, jeffersoninv39daykw, jeffersoninvup39cb), (jeffersoninv48daykwavg, jeffersoninv48daykw, jeffersoninvup48cb), (jeffersoninv57daykwavg, jeffersoninv57daykw, jeffersoninvup57cb), (jeffersoninv58daykwavg, jeffersoninv58daykw, jeffersoninvup58cb), (jeffersoninv59daykwavg, jeffersoninv59daykw, jeffersoninvup59cb), (jeffersoninv60daykwavg, jeffersoninv60daykw, jeffersoninvup60cb), (jeffersoninv61daykwavg, jeffersoninv61daykw, jeffersoninvup61cb), (jeffersoninv62daykwavg, jeffersoninv62daykw, jeffersoninvup62cb), (jeffersoninv63daykwavg, jeffersoninv63daykw, jeffersoninvup63cb), (jeffersoninv64daykwavg, jeffersoninv64daykw, jeffersoninvup64cb)]
-    jefferson18strdaykwList = [(jeffersoninv1daykwavg, jeffersoninv1daykw, jeffersoninvup1cb), (jeffersoninv2daykwavg, jeffersoninv2daykw, jeffersoninvup2cb), (jeffersoninv3daykwavg, jeffersoninv3daykw, jeffersoninvup3cb), (jeffersoninv4daykwavg, jeffersoninv4daykw, jeffersoninvup4cb), (jeffersoninv6daykwavg, jeffersoninv6daykw, jeffersoninvup6cb), (jeffersoninv13daykwavg, jeffersoninv13daykw, jeffersoninvup13cb), (jeffersoninv14daykwavg, jeffersoninv14daykw, jeffersoninvup14cb), (jeffersoninv17daykwavg, jeffersoninv17daykw, jeffersoninvup17cb), (jeffersoninv18daykwavg, jeffersoninv18daykw, jeffersoninvup18cb), (jeffersoninv20daykwavg, jeffersoninv20daykw, jeffersoninvup20cb), (jeffersoninv21daykwavg, jeffersoninv21daykw, jeffersoninvup21cb), (jeffersoninv22daykwavg, jeffersoninv22daykw, jeffersoninvup22cb), (jeffersoninv23daykwavg, jeffersoninv23daykw, jeffersoninvup23cb), (jeffersoninv25daykwavg, jeffersoninv25daykw, jeffersoninvup25cb), (jeffersoninv40daykwavg, jeffersoninv40daykw, jeffersoninvup40cb), (jeffersoninv41daykwavg, jeffersoninv41daykw, jeffersoninvup41cb), (jeffersoninv42daykwavg, jeffersoninv42daykw, jeffersoninvup42cb), (jeffersoninv43daykwavg, jeffersoninv43daykw, jeffersoninvup43cb), (jeffersoninv44daykwavg, jeffersoninv44daykw, jeffersoninvup44cb), (jeffersoninv45daykwavg, jeffersoninv45daykw, jeffersoninvup45cb), (jeffersoninv46daykwavg, jeffersoninv46daykw, jeffersoninvup46cb), (jeffersoninv47daykwavg, jeffersoninv47daykw, jeffersoninvup47cb), (jeffersoninv49daykwavg, jeffersoninv49daykw, jeffersoninvup49cb), (jeffersoninv50daykwavg, jeffersoninv50daykw, jeffersoninvup50cb), (jeffersoninv51daykwavg, jeffersoninv51daykw, jeffersoninvup51cb), (jeffersoninv52daykwavg, jeffersoninv52daykw, jeffersoninvup52cb), (jeffersoninv53daykwavg, jeffersoninv53daykw, jeffersoninvup53cb), (jeffersoninv54daykwavg, jeffersoninv54daykw, jeffersoninvup54cb), (jeffersoninv55daykwavg, jeffersoninv55daykw, jeffersoninvup55cb), (jeffersoninv56daykwavg, jeffersoninv56daykw, jeffersoninvup56cb)]
-    marshalldaykwList = [(marshallinv1daykwavg, marshallinv1daykw, marshallinvup1cb), (marshallinv2daykwavg, marshallinv2daykw, marshallinvup2cb), (marshallinv3daykwavg, marshallinv3daykw, marshallinvup3cb), (marshallinv4daykwavg, marshallinv4daykw, marshallinvup4cb), (marshallinv5daykwavg, marshallinv5daykw, marshallinvup5cb), (marshallinv6daykwavg, marshallinv6daykw, marshallinvup6cb), (marshallinv7daykwavg, marshallinv7daykw, marshallinvup7cb), (marshallinv8daykwavg, marshallinv8daykw, marshallinvup8cb), (marshallinv9daykwavg, marshallinv9daykw, marshallinvup9cb), (marshallinv10daykwavg, marshallinv10daykw, marshallinvup10cb), (marshallinv11daykwavg, marshallinv11daykw, marshallinvup11cb), (marshallinv12daykwavg, marshallinv12daykw, marshallinvup12cb), (marshallinv13daykwavg, marshallinv13daykw, marshallinvup13cb), (marshallinv14daykwavg, marshallinv14daykw, marshallinvup14cb), (marshallinv15daykwavg, marshallinv15daykw, marshallinvup15cb), (marshallinv16daykwavg, marshallinv16daykw, marshallinvup16cb)]
-    ogburndaykwList = [(ogburninv1daykwavg, ogburninv1daykw, ogburninvup1cb), (ogburninv2daykwavg, ogburninv2daykw, ogburninvup2cb), (ogburninv3daykwavg, ogburninv3daykw, ogburninvup3cb), (ogburninv4daykwavg, ogburninv4daykw, ogburninvup4cb), (ogburninv5daykwavg, ogburninv5daykw, ogburninvup5cb), (ogburninv6daykwavg, ogburninv6daykw, ogburninvup6cb), (ogburninv7daykwavg, ogburninv7daykw, ogburninvup7cb), (ogburninv8daykwavg, ogburninv8daykw, ogburninvup8cb), (ogburninv9daykwavg, ogburninv9daykw, ogburninvup9cb), (ogburninv10daykwavg, ogburninv10daykw, ogburninvup10cb), (ogburninv11daykwavg, ogburninv11daykw, ogburninvup11cb), (ogburninv12daykwavg, ogburninv12daykw, ogburninvup12cb), (ogburninv13daykwavg, ogburninv13daykw, ogburninvup13cb), (ogburninv14daykwavg, ogburninv14daykw, ogburninvup14cb), (ogburninv15daykwavg, ogburninv15daykw, ogburninvup15cb), (ogburninv16daykwavg, ogburninv16daykw, ogburninvup16cb)]
-    tedderdaykwList = [(tedderinv5daykwavg, tedderinv5daykw, tedderinvup5cb), (tedderinv6daykwavg, tedderinv6daykw, tedderinvup6cb), (tedderinv7daykwavg, tedderinv7daykw, tedderinvup7cb), (tedderinv9daykwavg, tedderinv9daykw, tedderinvup9cb), (tedderinv10daykwavg, tedderinv10daykw, tedderinvup10cb), (tedderinv11daykwavg, tedderinv11daykw, tedderinvup11cb), (tedderinv12daykwavg, tedderinv12daykw, tedderinvup12cb), (tedderinv13daykwavg, tedderinv13daykw, tedderinvup13cb), (tedderinv14daykwavg, tedderinv14daykw, tedderinvup14cb)]
-    tedder15strdaykwList = [(tedderinv1daykwavg, tedderinv1daykw, tedderinvup1cb), (tedderinv2daykwavg, tedderinv2daykw, tedderinvup2cb), (tedderinv3daykwavg, tedderinv3daykw, tedderinvup3cb), (tedderinv4daykwavg, tedderinv4daykw, tedderinvup4cb), (tedderinv8daykwavg, tedderinv8daykw, tedderinvup8cb), (tedderinv15daykwavg, tedderinv15daykw, tedderinvup15cb), (tedderinv16daykwavg, tedderinv16daykw, tedderinvup16cb)]
-    thunderheaddaykwList = [(thunderheadinv1daykwavg, thunderheadinv1daykw, thunderheadinvup1cb), (thunderheadinv2daykwavg, thunderheadinv2daykw, thunderheadinvup2cb), (thunderheadinv3daykwavg, thunderheadinv3daykw, thunderheadinvup3cb), (thunderheadinv4daykwavg, thunderheadinv4daykw, thunderheadinvup4cb), (thunderheadinv5daykwavg, thunderheadinv5daykw, thunderheadinvup5cb), (thunderheadinv6daykwavg, thunderheadinv6daykw, thunderheadinvup6cb), (thunderheadinv7daykwavg, thunderheadinv7daykw, thunderheadinvup7cb), (thunderheadinv8daykwavg, thunderheadinv8daykw, thunderheadinvup8cb), (thunderheadinv9daykwavg, thunderheadinv9daykw, thunderheadinvup9cb), (thunderheadinv10daykwavg, thunderheadinv10daykw, thunderheadinvup10cb), (thunderheadinv11daykwavg, thunderheadinv11daykw, thunderheadinvup11cb), (thunderheadinv12daykwavg, thunderheadinv12daykw, thunderheadinvup12cb), (thunderheadinv14daykwavg, thunderheadinv14daykw, thunderheadinvup14cb), (thunderheadinv16daykwavg, thunderheadinv16daykw, thunderheadinvup16cb)]
-    thunderhead14strdaykwList = [(thunderheadinv15daykwavg, thunderheadinv15daykw, thunderheadinvup15cb), (thunderheadinv13daykwavg, thunderheadinv13daykw, thunderheadinvup13cb)]
-    bulloch1adaykwList = [(bulloch1ainv7daykwavg, bulloch1ainv7daykw, bulloch1ainvup7cb), (bulloch1ainv8daykwavg, bulloch1ainv8daykw, bulloch1ainvup8cb), (bulloch1ainv9daykwavg, bulloch1ainv9daykw, bulloch1ainvup9cb), (bulloch1ainv10daykwavg, bulloch1ainv10daykw, bulloch1ainvup10cb), (bulloch1ainv11daykwavg, bulloch1ainv11daykw, bulloch1ainvup11cb), (bulloch1ainv12daykwavg, bulloch1ainv12daykw, bulloch1ainvup12cb), (bulloch1ainv13daykwavg, bulloch1ainv13daykw, bulloch1ainvup13cb), (bulloch1ainv14daykwavg, bulloch1ainv14daykw, bulloch1ainvup14cb), (bulloch1ainv15daykwavg, bulloch1ainv15daykw, bulloch1ainvup15cb), (bulloch1ainv16daykwavg, bulloch1ainv16daykw, bulloch1ainvup16cb), (bulloch1ainv17daykwavg, bulloch1ainv17daykw, bulloch1ainvup17cb), (bulloch1ainv18daykwavg, bulloch1ainv18daykw, bulloch1ainvup18cb), (bulloch1ainv19daykwavg, bulloch1ainv19daykw, bulloch1ainvup19cb), (bulloch1ainv20daykwavg, bulloch1ainv20daykw, bulloch1ainvup20cb), (bulloch1ainv21daykwavg, bulloch1ainv21daykw, bulloch1ainvup21cb), (bulloch1ainv22daykwavg, bulloch1ainv22daykw, bulloch1ainvup22cb), (bulloch1ainv23daykwavg, bulloch1ainv23daykw, bulloch1ainvup23cb), (bulloch1ainv24daykwavg, bulloch1ainv24daykw, bulloch1ainvup24cb)]
-    bulloch1a10strdaykwList = [(bulloch1ainv1daykwavg, bulloch1ainv1daykw, bulloch1ainvup1cb), (bulloch1ainv2daykwavg, bulloch1ainv2daykw, bulloch1ainvup2cb), (bulloch1ainv3daykwavg, bulloch1ainv3daykw, bulloch1ainvup3cb), (bulloch1ainv4daykwavg, bulloch1ainv4daykw, bulloch1ainvup4cb), (bulloch1ainv5daykwavg, bulloch1ainv5daykw, bulloch1ainvup5cb), (bulloch1ainv6daykwavg, bulloch1ainv6daykw, bulloch1ainvup6cb)]
-    bulloch1bdaykwList = [(bulloch1binv2daykwavg, bulloch1binv2daykw, bulloch1binvup2cb), (bulloch1binv3daykwavg, bulloch1binv3daykw, bulloch1binvup3cb), (bulloch1binv4daykwavg, bulloch1binv4daykw, bulloch1binvup4cb), (bulloch1binv5daykwavg, bulloch1binv5daykw, bulloch1binvup5cb), (bulloch1binv6daykwavg, bulloch1binv6daykw, bulloch1binvup6cb), (bulloch1binv7daykwavg, bulloch1binv7daykw, bulloch1binvup7cb), (bulloch1binv8daykwavg, bulloch1binv8daykw, bulloch1binvup8cb), (bulloch1binv13daykwavg, bulloch1binv13daykw, bulloch1binvup13cb), (bulloch1binv14daykwavg, bulloch1binv14daykw, bulloch1binvup14cb), (bulloch1binv15daykwavg, bulloch1binv15daykw, bulloch1binvup15cb), (bulloch1binv16daykwavg, bulloch1binv16daykw, bulloch1binvup16cb), (bulloch1binv18daykwavg, bulloch1binv18daykw, bulloch1binvup18cb), (bulloch1binv19daykwavg, bulloch1binv19daykw, bulloch1binvup19cb), (bulloch1binv20daykwavg, bulloch1binv20daykw, bulloch1binvup20cb), (bulloch1binv21daykwavg, bulloch1binv21daykw, bulloch1binvup21cb), (bulloch1binv22daykwavg, bulloch1binv22daykw, bulloch1binvup22cb), (bulloch1binv23daykwavg, bulloch1binv23daykw, bulloch1binvup23cb), (bulloch1binv24daykwavg, bulloch1binv24daykw, bulloch1binvup24cb)]
-    bulloch1b10strdaykwList = [(bulloch1binv1daykwavg, bulloch1binv1daykw, bulloch1binvup1cb), (bulloch1binv9daykwavg, bulloch1binv9daykw, bulloch1binvup9cb), (bulloch1binv10daykwavg, bulloch1binv10daykw, bulloch1binvup10cb), (bulloch1binv11daykwavg, bulloch1binv11daykw, bulloch1binvup11cb), (bulloch1binv12daykwavg, bulloch1binv12daykw, bulloch1binvup12cb), (bulloch1binv17daykwavg, bulloch1binv17daykw, bulloch1binvup17cb)]
-    grayfoxdaykwList = [(grayfoxinv1daykwavg, grayfoxinv1daykw, grayfoxinvup1cb), (grayfoxinv2daykwavg, grayfoxinv2daykw, grayfoxinvup2cb), (grayfoxinv3daykwavg, grayfoxinv3daykw, grayfoxinvup3cb), (grayfoxinv4daykwavg, grayfoxinv4daykw, grayfoxinvup4cb), (grayfoxinv5daykwavg, grayfoxinv5daykw, grayfoxinvup5cb), (grayfoxinv6daykwavg, grayfoxinv6daykw, grayfoxinvup6cb), (grayfoxinv7daykwavg, grayfoxinv7daykw, grayfoxinvup7cb), (grayfoxinv8daykwavg, grayfoxinv8daykw, grayfoxinvup8cb), (grayfoxinv9daykwavg, grayfoxinv9daykw, grayfoxinvup9cb), (grayfoxinv10daykwavg, grayfoxinv10daykw, grayfoxinvup10cb), (grayfoxinv11daykwavg, grayfoxinv11daykw, grayfoxinvup11cb), (grayfoxinv12daykwavg, grayfoxinv12daykw, grayfoxinvup12cb), (grayfoxinv13daykwavg, grayfoxinv13daykw, grayfoxinvup13cb), (grayfoxinv14daykwavg, grayfoxinv14daykw, grayfoxinvup14cb), (grayfoxinv15daykwavg, grayfoxinv15daykw, grayfoxinvup15cb), (grayfoxinv16daykwavg, grayfoxinv16daykw, grayfoxinvup16cb), (grayfoxinv17daykwavg, grayfoxinv17daykw, grayfoxinvup17cb), (grayfoxinv18daykwavg, grayfoxinv18daykw, grayfoxinvup18cb), (grayfoxinv19daykwavg, grayfoxinv19daykw, grayfoxinvup19cb), (grayfoxinv20daykwavg, grayfoxinv20daykw, grayfoxinvup20cb), (grayfoxinv21daykwavg, grayfoxinv21daykw, grayfoxinvup21cb), (grayfoxinv22daykwavg, grayfoxinv22daykw, grayfoxinvup22cb), (grayfoxinv23daykwavg, grayfoxinv23daykw, grayfoxinvup23cb), (grayfoxinv24daykwavg, grayfoxinv24daykw, grayfoxinvup24cb), (grayfoxinv25daykwavg, grayfoxinv25daykw, grayfoxinvup25cb), (grayfoxinv26daykwavg, grayfoxinv26daykw, grayfoxinvup26cb), (grayfoxinv27daykwavg, grayfoxinv27daykw, grayfoxinvup27cb), (grayfoxinv28daykwavg, grayfoxinv28daykw, grayfoxinvup28cb), (grayfoxinv29daykwavg, grayfoxinv29daykw, grayfoxinvup29cb), (grayfoxinv30daykwavg, grayfoxinv30daykw, grayfoxinvup30cb), (grayfoxinv31daykwavg, grayfoxinv31daykw, grayfoxinvup31cb), (grayfoxinv32daykwavg, grayfoxinv32daykw, grayfoxinvup32cb), (grayfoxinv33daykwavg, grayfoxinv33daykw, grayfoxinvup33cb), (grayfoxinv34daykwavg, grayfoxinv34daykw, grayfoxinvup34cb), (grayfoxinv35daykwavg, grayfoxinv35daykw, grayfoxinvup35cb), (grayfoxinv36daykwavg, grayfoxinv36daykw, grayfoxinvup36cb), (grayfoxinv37daykwavg, grayfoxinv37daykw, grayfoxinvup37cb), (grayfoxinv38daykwavg, grayfoxinv38daykw, grayfoxinvup38cb), (grayfoxinv39daykwavg, grayfoxinv39daykw, grayfoxinvup39cb), (grayfoxinv40daykwavg, grayfoxinv40daykw, grayfoxinvup40cb)]
-    hardingdaykwList = [(hardinginv4daykwavg, hardinginv4daykw, hardinginvup4cb), (hardinginv5daykwavg, hardinginv5daykw, hardinginvup5cb), (hardinginv6daykwavg, hardinginv6daykw, hardinginvup6cb), (hardinginv10daykwavg, hardinginv10daykw, hardinginvup10cb), (hardinginv11daykwavg, hardinginv11daykw, hardinginvup11cb), (hardinginv12daykwavg, hardinginv12daykw, hardinginvup12cb), (hardinginv13daykwavg, hardinginv13daykw, hardinginvup13cb), (hardinginv14daykwavg, hardinginv14daykw, hardinginvup14cb), (hardinginv15daykwavg, hardinginv15daykw, hardinginvup15cb), (hardinginv17daykwavg, hardinginv17daykw, hardinginvup17cb), (hardinginv18daykwavg, hardinginv18daykw, hardinginvup18cb), (hardinginv19daykwavg, hardinginv19daykw, hardinginvup19cb)]
-    harding12strdaykwList = [(hardinginv1daykwavg, hardinginv1daykw, hardinginvup1cb), (hardinginv2daykwavg, hardinginv2daykw, hardinginvup2cb), (hardinginv3daykwavg, hardinginv3daykw, hardinginvup3cb), (hardinginv7daykwavg, hardinginv7daykw, hardinginvup7cb), (hardinginv8daykwavg, hardinginv8daykw, hardinginvup8cb), (hardinginv9daykwavg, hardinginv9daykw, hardinginvup9cb), (hardinginv16daykwavg, hardinginv16daykw, hardinginvup16cb), (hardinginv20daykwavg, hardinginv20daykw, hardinginvup20cb), (hardinginv21daykwavg, hardinginv21daykw, hardinginvup21cb), (hardinginv22daykwavg, hardinginv22daykw, hardinginvup22cb), (hardinginv23daykwavg, hardinginv23daykw, hardinginvup23cb), (hardinginv24daykwavg, hardinginv24daykw, hardinginvup24cb)]
-    mcleandaykwList = [(mcleaninv2daykwavg, mcleaninv2daykw, mcleaninvup2cb), (mcleaninv3daykwavg, mcleaninv3daykw, mcleaninvup3cb), (mcleaninv4daykwavg, mcleaninv4daykw, mcleaninvup4cb), (mcleaninv5daykwavg, mcleaninv5daykw, mcleaninvup5cb), (mcleaninv6daykwavg, mcleaninv6daykw, mcleaninvup6cb), (mcleaninv7daykwavg, mcleaninv7daykw, mcleaninvup7cb), (mcleaninv8daykwavg, mcleaninv8daykw, mcleaninvup8cb), (mcleaninv9daykwavg, mcleaninv9daykw, mcleaninvup9cb), (mcleaninv10daykwavg, mcleaninv10daykw, mcleaninvup10cb), (mcleaninv11daykwavg, mcleaninv11daykw, mcleaninvup11cb), (mcleaninv12daykwavg, mcleaninv12daykw, mcleaninvup12cb), (mcleaninv13daykwavg, mcleaninv13daykw, mcleaninvup13cb), (mcleaninv14daykwavg, mcleaninv14daykw, mcleaninvup14cb), (mcleaninv15daykwavg, mcleaninv15daykw, mcleaninvup15cb), (mcleaninv16daykwavg, mcleaninv16daykw, mcleaninvup16cb), (mcleaninv18daykwavg, mcleaninv18daykw, mcleaninvup18cb), (mcleaninv20daykwavg, mcleaninv20daykw, mcleaninvup20cb), (mcleaninv22daykwavg, mcleaninv22daykw, mcleaninvup22cb), (mcleaninv24daykwavg, mcleaninv24daykw, mcleaninvup24cb), (mcleaninv25daykwavg, mcleaninv25daykw, mcleaninvup25cb), (mcleaninv26daykwavg, mcleaninv26daykw, mcleaninvup26cb), (mcleaninv30daykwavg, mcleaninv30daykw, mcleaninvup30cb)]
-    mclean10strdaykwList = [(mcleaninv1daykwavg, mcleaninv1daykw, mcleaninvup1cb), (mcleaninv17daykwavg, mcleaninv17daykw, mcleaninvup17cb), (mcleaninv19daykwavg, mcleaninv19daykw, mcleaninvup19cb), (mcleaninv21daykwavg, mcleaninv21daykw, mcleaninvup21cb), (mcleaninv23daykwavg, mcleaninv23daykw, mcleaninvup23cb), (mcleaninv27daykwavg, mcleaninv27daykw, mcleaninvup27cb), (mcleaninv28daykwavg, mcleaninv28daykw, mcleaninvup28cb), (mcleaninv29daykwavg, mcleaninv29daykw, mcleaninvup29cb), (mcleaninv31daykwavg, mcleaninv31daykw, mcleaninvup31cb), (mcleaninv32daykwavg, mcleaninv32daykw, mcleaninvup32cb), (mcleaninv33daykwavg, mcleaninv33daykw, mcleaninvup33cb), (mcleaninv34daykwavg, mcleaninv34daykw, mcleaninvup34cb), (mcleaninv35daykwavg, mcleaninv35daykw, mcleaninvup35cb), (mcleaninv36daykwavg, mcleaninv36daykw, mcleaninvup36cb), (mcleaninv37daykwavg, mcleaninv37daykw, mcleaninvup37cb), (mcleaninv38daykwavg, mcleaninv38daykw, mcleaninvup38cb), (mcleaninv39daykwavg, mcleaninv39daykw, mcleaninvup39cb), (mcleaninv40daykwavg, mcleaninv40daykw, mcleaninvup40cb)]
-    richmonddaykwList = [(richmondinv1daykwavg, richmondinv1daykw, richmondinvup1cb), (richmondinv2daykwavg, richmondinv2daykw, richmondinvup2cb), (richmondinv3daykwavg, richmondinv3daykw, richmondinvup3cb), (richmondinv4daykwavg, richmondinv4daykw, richmondinvup4cb), (richmondinv5daykwavg, richmondinv5daykw, richmondinvup5cb), (richmondinv6daykwavg, richmondinv6daykw, richmondinvup6cb), (richmondinv7daykwavg, richmondinv7daykw, richmondinvup7cb), (richmondinv11daykwavg, richmondinv11daykw, richmondinvup11cb), (richmondinv12daykwavg, richmondinv12daykw, richmondinvup12cb), (richmondinv13daykwavg, richmondinv13daykw, richmondinvup13cb), (richmondinv14daykwavg, richmondinv14daykw, richmondinvup14cb), (richmondinv15daykwavg, richmondinv15daykw, richmondinvup15cb), (richmondinv16daykwavg, richmondinv16daykw, richmondinvup16cb), (richmondinv17daykwavg, richmondinv17daykw, richmondinvup17cb), (richmondinv18daykwavg, richmondinv18daykw, richmondinvup18cb), (richmondinv19daykwavg, richmondinv19daykw, richmondinvup19cb), (richmondinv20daykwavg, richmondinv20daykw, richmondinvup20cb), (richmondinv21daykwavg, richmondinv21daykw, richmondinvup21cb)]
-    richmond10strdaykwList = [(richmondinv8daykwavg, richmondinv8daykw, richmondinvup8cb), (richmondinv9daykwavg, richmondinv9daykw, richmondinvup9cb), (richmondinv10daykwavg, richmondinv10daykw, richmondinvup10cb), (richmondinv22daykwavg, richmondinv22daykw, richmondinvup22cb), (richmondinv23daykwavg, richmondinv23daykw, richmondinvup23cb), (richmondinv24daykwavg, richmondinv24daykw, richmondinvup24cb)]
-    shorthorndaykwList = [(shorthorninv1daykwavg, shorthorninv1daykw, shorthorninvup1cb), (shorthorninv2daykwavg, shorthorninv2daykw, shorthorninvup2cb), (shorthorninv3daykwavg, shorthorninv3daykw, shorthorninvup3cb), (shorthorninv4daykwavg, shorthorninv4daykw, shorthorninvup4cb), (shorthorninv5daykwavg, shorthorninv5daykw, shorthorninvup5cb), (shorthorninv6daykwavg, shorthorninv6daykw, shorthorninvup6cb), (shorthorninv7daykwavg, shorthorninv7daykw, shorthorninvup7cb), (shorthorninv8daykwavg, shorthorninv8daykw, shorthorninvup8cb), (shorthorninv9daykwavg, shorthorninv9daykw, shorthorninvup9cb), (shorthorninv10daykwavg, shorthorninv10daykw, shorthorninvup10cb), (shorthorninv11daykwavg, shorthorninv11daykw, shorthorninvup11cb), (shorthorninv12daykwavg, shorthorninv12daykw, shorthorninvup12cb), (shorthorninv13daykwavg, shorthorninv13daykw, shorthorninvup13cb), (shorthorninv14daykwavg, shorthorninv14daykw, shorthorninvup14cb), (shorthorninv15daykwavg, shorthorninv15daykw, shorthorninvup15cb), (shorthorninv16daykwavg, shorthorninv16daykw, shorthorninvup16cb), (shorthorninv17daykwavg, shorthorninv17daykw, shorthorninvup17cb), (shorthorninv18daykwavg, shorthorninv18daykw, shorthorninvup18cb), (shorthorninv19daykwavg, shorthorninv19daykw, shorthorninvup19cb), (shorthorninv20daykwavg, shorthorninv20daykw, shorthorninvup20cb), (shorthorninv22daykwavg, shorthorninv22daykw, shorthorninvup22cb), (shorthorninv23daykwavg, shorthorninv23daykw, shorthorninvup23cb), (shorthorninv24daykwavg, shorthorninv24daykw, shorthorninvup24cb), (shorthorninv26daykwavg, shorthorninv26daykw, shorthorninvup26cb), (shorthorninv27daykwavg, shorthorninv27daykw, shorthorninvup27cb), (shorthorninv28daykwavg, shorthorninv28daykw, shorthorninvup28cb), (shorthorninv32daykwavg, shorthorninv32daykw, shorthorninvup32cb), (shorthorninv33daykwavg, shorthorninv33daykw, shorthorninvup33cb), (shorthorninv37daykwavg, shorthorninv37daykw, shorthorninvup37cb), (shorthorninv38daykwavg, shorthorninv38daykw, shorthorninvup38cb), (shorthorninv39daykwavg, shorthorninv39daykw, shorthorninvup39cb), (shorthorninv40daykwavg, shorthorninv40daykw, shorthorninvup40cb), (shorthorninv41daykwavg, shorthorninv41daykw, shorthorninvup41cb), (shorthorninv42daykwavg, shorthorninv42daykw, shorthorninvup42cb), (shorthorninv43daykwavg, shorthorninv43daykw, shorthorninvup43cb), (shorthorninv45daykwavg, shorthorninv45daykw, shorthorninvup45cb), (shorthorninv46daykwavg, shorthorninv46daykw, shorthorninvup46cb), (shorthorninv47daykwavg, shorthorninv47daykw, shorthorninvup47cb), (shorthorninv48daykwavg, shorthorninv48daykw, shorthorninvup48cb), (shorthorninv52daykwavg, shorthorninv52daykw, shorthorninvup52cb), (shorthorninv53daykwavg, shorthorninv53daykw, shorthorninvup53cb), (shorthorninv57daykwavg, shorthorninv57daykw, shorthorninvup57cb), (shorthorninv58daykwavg, shorthorninv58daykw, shorthorninvup58cb), (shorthorninv59daykwavg, shorthorninv59daykw, shorthorninvup59cb), (shorthorninv60daykwavg, shorthorninv60daykw, shorthorninvup60cb), (shorthorninv61daykwavg, shorthorninv61daykw, shorthorninvup61cb), (shorthorninv62daykwavg, shorthorninv62daykw, shorthorninvup62cb), (shorthorninv63daykwavg, shorthorninv63daykw, shorthorninvup63cb), (shorthorninv64daykwavg, shorthorninv64daykw, shorthorninvup64cb), (shorthorninv65daykwavg, shorthorninv65daykw, shorthorninvup65cb), (shorthorninv66daykwavg, shorthorninv66daykw, shorthorninvup66cb)]
-    shorthorn13strdaykwList = [(shorthorninv21daykwavg, shorthorninv21daykw, shorthorninvup21cb), (shorthorninv25daykwavg, shorthorninv25daykw, shorthorninvup25cb), (shorthorninv29daykwavg, shorthorninv29daykw, shorthorninvup29cb), (shorthorninv30daykwavg, shorthorninv30daykw, shorthorninvup30cb), (shorthorninv31daykwavg, shorthorninv31daykw, shorthorninvup31cb), (shorthorninv34daykwavg, shorthorninv34daykw, shorthorninvup34cb), (shorthorninv35daykwavg, shorthorninv35daykw, shorthorninvup35cb), (shorthorninv36daykwavg, shorthorninv36daykw, shorthorninvup36cb), (shorthorninv44daykwavg, shorthorninv44daykw, shorthorninvup44cb), (shorthorninv49daykwavg, shorthorninv49daykw, shorthorninvup49cb), (shorthorninv50daykwavg, shorthorninv50daykw, shorthorninvup50cb), (shorthorninv51daykwavg, shorthorninv51daykw, shorthorninvup51cb), (shorthorninv54daykwavg, shorthorninv54daykw, shorthorninvup54cb), (shorthorninv55daykwavg, shorthorninv55daykw, shorthorninvup55cb), (shorthorninv56daykwavg, shorthorninv56daykw, shorthorninvup56cb), (shorthorninv67daykwavg, shorthorninv67daykw, shorthorninvup67cb), (shorthorninv68daykwavg, shorthorninv68daykw, shorthorninvup68cb), (shorthorninv69daykwavg, shorthorninv69daykw, shorthorninvup69cb), (shorthorninv70daykwavg, shorthorninv70daykw, shorthorninvup70cb), (shorthorninv71daykwavg, shorthorninv71daykw, shorthorninvup71cb), (shorthorninv72daykwavg, shorthorninv72daykw, shorthorninvup72cb)]
-    sunflowerdaykwList = [(sunflowerinv3daykwavg, sunflowerinv3daykw, sunflowerinvup3cb), (sunflowerinv4daykwavg, sunflowerinv4daykw, sunflowerinvup4cb), (sunflowerinv5daykwavg, sunflowerinv5daykw, sunflowerinvup5cb), (sunflowerinv6daykwavg, sunflowerinv6daykw, sunflowerinvup6cb), (sunflowerinv7daykwavg, sunflowerinv7daykw, sunflowerinvup7cb), (sunflowerinv8daykwavg, sunflowerinv8daykw, sunflowerinvup8cb), (sunflowerinv9daykwavg, sunflowerinv9daykw, sunflowerinvup9cb), (sunflowerinv10daykwavg, sunflowerinv10daykw, sunflowerinvup10cb), (sunflowerinv11daykwavg, sunflowerinv11daykw, sunflowerinvup11cb), (sunflowerinv12daykwavg, sunflowerinv12daykw, sunflowerinvup12cb), (sunflowerinv13daykwavg, sunflowerinv13daykw, sunflowerinvup13cb), (sunflowerinv14daykwavg, sunflowerinv14daykw, sunflowerinvup14cb), (sunflowerinv15daykwavg, sunflowerinv15daykw, sunflowerinvup15cb), (sunflowerinv16daykwavg, sunflowerinv16daykw, sunflowerinvup16cb), (sunflowerinv17daykwavg, sunflowerinv17daykw, sunflowerinvup17cb), (sunflowerinv18daykwavg, sunflowerinv18daykw, sunflowerinvup18cb), (sunflowerinv19daykwavg, sunflowerinv19daykw, sunflowerinvup19cb), (sunflowerinv20daykwavg, sunflowerinv20daykw, sunflowerinvup20cb), (sunflowerinv34daykwavg, sunflowerinv34daykw, sunflowerinvup34cb), (sunflowerinv62daykwavg, sunflowerinv62daykw, sunflowerinvup62cb), (sunflowerinv63daykwavg, sunflowerinv63daykw, sunflowerinvup63cb), (sunflowerinv64daykwavg, sunflowerinv64daykw, sunflowerinvup64cb), (sunflowerinv65daykwavg, sunflowerinv65daykw, sunflowerinvup65cb), (sunflowerinv66daykwavg, sunflowerinv66daykw, sunflowerinvup66cb), (sunflowerinv67daykwavg, sunflowerinv67daykw, sunflowerinvup67cb), (sunflowerinv68daykwavg, sunflowerinv68daykw, sunflowerinvup68cb), (sunflowerinv69daykwavg, sunflowerinv69daykw, sunflowerinvup69cb), (sunflowerinv70daykwavg, sunflowerinv70daykw, sunflowerinvup70cb), (sunflowerinv71daykwavg, sunflowerinv71daykw, sunflowerinvup71cb), (sunflowerinv72daykwavg, sunflowerinv72daykw, sunflowerinvup72cb), (sunflowerinv73daykwavg, sunflowerinv73daykw, sunflowerinvup73cb), (sunflowerinv74daykwavg, sunflowerinv74daykw, sunflowerinvup74cb), (sunflowerinv75daykwavg, sunflowerinv75daykw, sunflowerinvup75cb), (sunflowerinv76daykwavg, sunflowerinv76daykw, sunflowerinvup76cb), (sunflowerinv77daykwavg, sunflowerinv77daykw, sunflowerinvup77cb)]
-    sunflower12strdaykwList = [(sunflowerinv1daykwavg, sunflowerinv1daykw, sunflowerinvup1cb), (sunflowerinv2daykwavg, sunflowerinv2daykw, sunflowerinvup2cb), (sunflowerinv21daykwavg, sunflowerinv21daykw, sunflowerinvup21cb), (sunflowerinv22daykwavg, sunflowerinv22daykw, sunflowerinvup22cb), (sunflowerinv23daykwavg, sunflowerinv23daykw, sunflowerinvup23cb), (sunflowerinv24daykwavg, sunflowerinv24daykw, sunflowerinvup24cb), (sunflowerinv25daykwavg, sunflowerinv25daykw, sunflowerinvup25cb), (sunflowerinv26daykwavg, sunflowerinv26daykw, sunflowerinvup26cb), (sunflowerinv27daykwavg, sunflowerinv27daykw, sunflowerinvup27cb), (sunflowerinv28daykwavg, sunflowerinv28daykw, sunflowerinvup28cb), (sunflowerinv29daykwavg, sunflowerinv29daykw, sunflowerinvup29cb), (sunflowerinv30daykwavg, sunflowerinv30daykw, sunflowerinvup30cb), (sunflowerinv31daykwavg, sunflowerinv31daykw, sunflowerinvup31cb), (sunflowerinv32daykwavg, sunflowerinv32daykw, sunflowerinvup32cb), (sunflowerinv33daykwavg, sunflowerinv33daykw, sunflowerinvup33cb), (sunflowerinv35daykwavg, sunflowerinv35daykw, sunflowerinvup35cb), (sunflowerinv36daykwavg, sunflowerinv36daykw, sunflowerinvup36cb), (sunflowerinv37daykwavg, sunflowerinv37daykw, sunflowerinvup37cb), (sunflowerinv38daykwavg, sunflowerinv38daykw, sunflowerinvup38cb), (sunflowerinv39daykwavg, sunflowerinv39daykw, sunflowerinvup39cb), (sunflowerinv40daykwavg, sunflowerinv40daykw, sunflowerinvup40cb), (sunflowerinv41daykwavg, sunflowerinv41daykw, sunflowerinvup41cb), (sunflowerinv42daykwavg, sunflowerinv42daykw, sunflowerinvup42cb), (sunflowerinv43daykwavg, sunflowerinv43daykw, sunflowerinvup43cb), (sunflowerinv44daykwavg, sunflowerinv44daykw, sunflowerinvup44cb), (sunflowerinv45daykwavg, sunflowerinv45daykw, sunflowerinvup45cb), (sunflowerinv46daykwavg, sunflowerinv46daykw, sunflowerinvup46cb), (sunflowerinv47daykwavg, sunflowerinv47daykw, sunflowerinvup47cb), (sunflowerinv48daykwavg, sunflowerinv48daykw, sunflowerinvup48cb), (sunflowerinv49daykwavg, sunflowerinv49daykw, sunflowerinvup49cb), (sunflowerinv50daykwavg, sunflowerinv50daykw, sunflowerinvup50cb), (sunflowerinv51daykwavg, sunflowerinv51daykw, sunflowerinvup51cb), (sunflowerinv52daykwavg, sunflowerinv52daykw, sunflowerinvup52cb), (sunflowerinv53daykwavg, sunflowerinv53daykw, sunflowerinvup53cb), (sunflowerinv54daykwavg, sunflowerinv54daykw, sunflowerinvup54cb), (sunflowerinv55daykwavg, sunflowerinv55daykw, sunflowerinvup55cb), (sunflowerinv56daykwavg, sunflowerinv56daykw, sunflowerinvup56cb), (sunflowerinv57daykwavg, sunflowerinv57daykw, sunflowerinvup57cb), (sunflowerinv58daykwavg, sunflowerinv58daykw, sunflowerinvup58cb), (sunflowerinv59daykwavg, sunflowerinv59daykw, sunflowerinvup59cb), (sunflowerinv60daykwavg, sunflowerinv60daykw, sunflowerinvup60cb), (sunflowerinv61daykwavg, sunflowerinv61daykw, sunflowerinvup61cb), (sunflowerinv78daykwavg, sunflowerinv78daykw, sunflowerinvup78cb), (sunflowerinv79daykwavg, sunflowerinv79daykw, sunflowerinvup79cb), (sunflowerinv80daykwavg, sunflowerinv80daykw, sunflowerinvup80cb)]
-    upsondaykwList = [(upsoninv1daykwavg, upsoninv1daykw, upsoninvup1cb), (upsoninv2daykwavg, upsoninv2daykw, upsoninvup2cb), (upsoninv3daykwavg, upsoninv3daykw, upsoninvup3cb), (upsoninv4daykwavg, upsoninv4daykw, upsoninvup4cb), (upsoninv5daykwavg, upsoninv5daykw, upsoninvup5cb), (upsoninv9daykwavg, upsoninv9daykw, upsoninvup9cb), (upsoninv10daykwavg, upsoninv10daykw, upsoninvup10cb), (upsoninv11daykwavg, upsoninv11daykw, upsoninvup11cb), (upsoninv12daykwavg, upsoninv12daykw, upsoninvup12cb), (upsoninv13daykwavg, upsoninv13daykw, upsoninvup13cb), (upsoninv14daykwavg, upsoninv14daykw, upsoninvup14cb), (upsoninv15daykwavg, upsoninv15daykw, upsoninvup15cb), (upsoninv16daykwavg, upsoninv16daykw, upsoninvup16cb), (upsoninv17daykwavg, upsoninv17daykw, upsoninvup17cb), (upsoninv21daykwavg, upsoninv21daykw, upsoninvup21cb), (upsoninv22daykwavg, upsoninv22daykw, upsoninvup22cb), (upsoninv23daykwavg, upsoninv23daykw, upsoninvup23cb), (upsoninv24daykwavg, upsoninv24daykw, upsoninvup24cb)]
-    upson10strdaykwList = [(upsoninv6daykwavg, upsoninv6daykw, upsoninvup6cb), (upsoninv7daykwavg, upsoninv7daykw, upsoninvup7cb), (upsoninv8daykwavg, upsoninv8daykw, upsoninvup8cb), (upsoninv18daykwavg, upsoninv18daykw, upsoninvup18cb), (upsoninv19daykwavg, upsoninv19daykw, upsoninvup19cb), (upsoninv20daykwavg, upsoninv20daykw, upsoninvup20cb)]
-    warblerdaykwList = [(warblerinv1daykwavg, warblerinv1daykw, warblerinvup1cb), (warblerinv2daykwavg, warblerinv2daykw, warblerinvup2cb), (warblerinv3daykwavg, warblerinv3daykw, warblerinvup3cb), (warblerinv4daykwavg, warblerinv4daykw, warblerinvup4cb), (warblerinv5daykwavg, warblerinv5daykw, warblerinvup5cb), (warblerinv6daykwavg, warblerinv6daykw, warblerinvup6cb), (warblerinv7daykwavg, warblerinv7daykw, warblerinvup7cb), (warblerinv8daykwavg, warblerinv8daykw, warblerinvup8cb), (warblerinv9daykwavg, warblerinv9daykw, warblerinvup9cb), (warblerinv10daykwavg, warblerinv10daykw, warblerinvup10cb), (warblerinv11daykwavg, warblerinv11daykw, warblerinvup11cb), (warblerinv12daykwavg, warblerinv12daykw, warblerinvup12cb), (warblerinv13daykwavg, warblerinv13daykw, warblerinvup13cb), (warblerinv14daykwavg, warblerinv14daykw, warblerinvup14cb), (warblerinv15daykwavg, warblerinv15daykw, warblerinvup15cb), (warblerinv16daykwavg, warblerinv16daykw, warblerinvup16cb), (warblerinv17daykwavg, warblerinv17daykw, warblerinvup17cb), (warblerinv18daykwavg, warblerinv18daykw, warblerinvup18cb), (warblerinv19daykwavg, warblerinv19daykw, warblerinvup19cb), (warblerinv20daykwavg, warblerinv20daykw, warblerinvup20cb), (warblerinv21daykwavg, warblerinv21daykw, warblerinvup21cb), (warblerinv22daykwavg, warblerinv22daykw, warblerinvup22cb), (warblerinv23daykwavg, warblerinv23daykw, warblerinvup23cb), (warblerinv24daykwavg, warblerinv24daykw, warblerinvup24cb), (warblerinv25daykwavg, warblerinv25daykw, warblerinvup25cb), (warblerinv26daykwavg, warblerinv26daykw, warblerinvup26cb), (warblerinv27daykwavg, warblerinv27daykw, warblerinvup27cb), (warblerinv28daykwavg, warblerinv28daykw, warblerinvup28cb), (warblerinv29daykwavg, warblerinv29daykw, warblerinvup29cb), (warblerinv30daykwavg, warblerinv30daykw, warblerinvup30cb), (warblerinv31daykwavg, warblerinv31daykw, warblerinvup31cb), (warblerinv32daykwavg, warblerinv32daykw, warblerinvup32cb)]
-    washingtondaykwList = [(washingtoninv4daykwavg, washingtoninv4daykw, washingtoninvup4cb), (washingtoninv5daykwavg, washingtoninv5daykw, washingtoninvup5cb), (washingtoninv6daykwavg, washingtoninv6daykw, washingtoninvup6cb), (washingtoninv7daykwavg, washingtoninv7daykw, washingtoninvup7cb), (washingtoninv8daykwavg, washingtoninv8daykw, washingtoninvup8cb), (washingtoninv9daykwavg, washingtoninv9daykw, washingtoninvup9cb), (washingtoninv10daykwavg, washingtoninv10daykw, washingtoninvup10cb), (washingtoninv11daykwavg, washingtoninv11daykw, washingtoninvup11cb), (washingtoninv12daykwavg, washingtoninv12daykw, washingtoninvup12cb), (washingtoninv15daykwavg, washingtoninv15daykw, washingtoninvup15cb), (washingtoninv16daykwavg, washingtoninv16daykw, washingtoninvup16cb), (washingtoninv17daykwavg, washingtoninv17daykw, washingtoninvup17cb), (washingtoninv18daykwavg, washingtoninv18daykw, washingtoninvup18cb), (washingtoninv19daykwavg, washingtoninv19daykw, washingtoninvup19cb), (washingtoninv21daykwavg, washingtoninv21daykw, washingtoninvup21cb), (washingtoninv22daykwavg, washingtoninv22daykw, washingtoninvup22cb), (washingtoninv23daykwavg, washingtoninv23daykw, washingtoninvup23cb), (washingtoninv24daykwavg, washingtoninv24daykw, washingtoninvup24cb), (washingtoninv40daykwavg, washingtoninv40daykw, washingtoninvup40cb)]
-    washington12strdaykwList = [(washingtoninv1daykwavg, washingtoninv1daykw, washingtoninvup1cb), (washingtoninv2daykwavg, washingtoninv2daykw, washingtoninvup2cb), (washingtoninv3daykwavg, washingtoninv3daykw, washingtoninvup3cb), (washingtoninv13daykwavg, washingtoninv13daykw, washingtoninvup13cb), (washingtoninv14daykwavg, washingtoninv14daykw, washingtoninvup14cb), (washingtoninv20daykwavg, washingtoninv20daykw, washingtoninvup20cb), (washingtoninv25daykwavg, washingtoninv25daykw, washingtoninvup25cb), (washingtoninv26daykwavg, washingtoninv26daykw, washingtoninvup26cb), (washingtoninv27daykwavg, washingtoninv27daykw, washingtoninvup27cb), (washingtoninv28daykwavg, washingtoninv28daykw, washingtoninvup28cb), (washingtoninv29daykwavg, washingtoninv29daykw, washingtoninvup29cb), (washingtoninv30daykwavg, washingtoninv30daykw, washingtoninvup30cb), (washingtoninv31daykwavg, washingtoninv31daykw, washingtoninvup31cb), (washingtoninv32daykwavg, washingtoninv32daykw, washingtoninvup32cb), (washingtoninv33daykwavg, washingtoninv33daykw, washingtoninvup33cb), (washingtoninv34daykwavg, washingtoninv34daykw, washingtoninvup34cb), (washingtoninv35daykwavg, washingtoninv35daykw, washingtoninvup35cb), (washingtoninv36daykwavg, washingtoninv36daykw, washingtoninvup36cb), (washingtoninv37daykwavg, washingtoninv37daykw, washingtoninvup37cb), (washingtoninv38daykwavg, washingtoninv38daykw, washingtoninvup38cb), (washingtoninv39daykwavg, washingtoninv39daykw, washingtoninvup39cb)]
-    whitehalldaykwList = [(whitehallinv1daykwavg, whitehallinv1daykw, whitehallinvup1cb), (whitehallinv3daykwavg, whitehallinv3daykw, whitehallinvup3cb), (whitehallinv4daykwavg, whitehallinv4daykw, whitehallinvup4cb), (whitehallinv5daykwavg, whitehallinv5daykw, whitehallinvup5cb), (whitehallinv13daykwavg, whitehallinv13daykw, whitehallinvup13cb), (whitehallinv14daykwavg, whitehallinv14daykw, whitehallinvup14cb), (whitehallinv15daykwavg, whitehallinv15daykw, whitehallinvup15cb), (whitehallinv16daykwavg, whitehallinv16daykw, whitehallinvup16cb)]
-    whitehall13strdaykwList = [(whitehallinv2daykwavg, whitehallinv2daykw, whitehallinvup2cb), (whitehallinv6daykwavg, whitehallinv6daykw, whitehallinvup6cb), (whitehallinv7daykwavg, whitehallinv7daykw, whitehallinvup7cb), (whitehallinv8daykwavg, whitehallinv8daykw, whitehallinvup8cb), (whitehallinv9daykwavg, whitehallinv9daykw, whitehallinvup9cb), (whitehallinv10daykwavg, whitehallinv10daykw, whitehallinvup10cb), (whitehallinv11daykwavg, whitehallinv11daykw, whitehallinvup11cb), (whitehallinv12daykwavg, whitehallinv12daykw, whitehallinvup12cb)]
-    whitetaildaykwList = [(whitetailinv1daykwavg, whitetailinv1daykw, whitetailinvup1cb), (whitetailinv2daykwavg, whitetailinv2daykw, whitetailinvup2cb), (whitetailinv3daykwavg, whitetailinv3daykw, whitetailinvup3cb), (whitetailinv5daykwavg, whitetailinv5daykw, whitetailinvup5cb), (whitetailinv6daykwavg, whitetailinv6daykw, whitetailinvup6cb), (whitetailinv7daykwavg, whitetailinv7daykw, whitetailinvup7cb), (whitetailinv8daykwavg, whitetailinv8daykw, whitetailinvup8cb), (whitetailinv9daykwavg, whitetailinv9daykw, whitetailinvup9cb), (whitetailinv10daykwavg, whitetailinv10daykw, whitetailinvup10cb), (whitetailinv11daykwavg, whitetailinv11daykw, whitetailinvup11cb), (whitetailinv12daykwavg, whitetailinv12daykw, whitetailinvup12cb), (whitetailinv22daykwavg, whitetailinv22daykw, whitetailinvup22cb), (whitetailinv23daykwavg, whitetailinv23daykw, whitetailinvup23cb), (whitetailinv24daykwavg, whitetailinv24daykw, whitetailinvup24cb), (whitetailinv25daykwavg, whitetailinv25daykw, whitetailinvup25cb), (whitetailinv32daykwavg, whitetailinv32daykw, whitetailinvup32cb), (whitetailinv33daykwavg, whitetailinv33daykw, whitetailinvup33cb), (whitetailinv35daykwavg, whitetailinv35daykw, whitetailinvup35cb), (whitetailinv36daykwavg, whitetailinv36daykw, whitetailinvup36cb), (whitetailinv37daykwavg, whitetailinv37daykw, whitetailinvup37cb), (whitetailinv38daykwavg, whitetailinv38daykw, whitetailinvup38cb), (whitetailinv39daykwavg, whitetailinv39daykw, whitetailinvup39cb), (whitetailinv40daykwavg, whitetailinv40daykw, whitetailinvup40cb), (whitetailinv41daykwavg, whitetailinv41daykw, whitetailinvup41cb), (whitetailinv42daykwavg, whitetailinv42daykw, whitetailinvup42cb), (whitetailinv49daykwavg, whitetailinv49daykw, whitetailinvup49cb), (whitetailinv50daykwavg, whitetailinv50daykw, whitetailinvup50cb), (whitetailinv51daykwavg, whitetailinv51daykw, whitetailinvup51cb), (whitetailinv57daykwavg, whitetailinv57daykw, whitetailinvup57cb), (whitetailinv61daykwavg, whitetailinv61daykw, whitetailinvup61cb), (whitetailinv62daykwavg, whitetailinv62daykw, whitetailinvup62cb), (whitetailinv63daykwavg, whitetailinv63daykw, whitetailinvup63cb), (whitetailinv65daykwavg, whitetailinv65daykw, whitetailinvup65cb), (whitetailinv66daykwavg, whitetailinv66daykw, whitetailinvup66cb), (whitetailinv67daykwavg, whitetailinv67daykw, whitetailinvup67cb), (whitetailinv68daykwavg, whitetailinv68daykw, whitetailinvup68cb), (whitetailinv69daykwavg, whitetailinv69daykw, whitetailinvup69cb), (whitetailinv70daykwavg, whitetailinv70daykw, whitetailinvup70cb), (whitetailinv71daykwavg, whitetailinv71daykw, whitetailinvup71cb), (whitetailinv72daykwavg, whitetailinv72daykw, whitetailinvup72cb), (whitetailinv73daykwavg, whitetailinv73daykw, whitetailinvup73cb), (whitetailinv74daykwavg, whitetailinv74daykw, whitetailinvup74cb), (whitetailinv75daykwavg, whitetailinv75daykw, whitetailinvup75cb), (whitetailinv76daykwavg, whitetailinv76daykw, whitetailinvup76cb), (whitetailinv77daykwavg, whitetailinv77daykw, whitetailinvup77cb), (whitetailinv78daykwavg, whitetailinv78daykw, whitetailinvup78cb), (whitetailinv79daykwavg, whitetailinv79daykw, whitetailinvup79cb), (whitetailinv80daykwavg, whitetailinv80daykw, whitetailinvup80cb)]
-    whitetail17strdaykwList = [(whitetailinv4daykwavg, whitetailinv4daykw, whitetailinvup4cb), (whitetailinv13daykwavg, whitetailinv13daykw, whitetailinvup13cb), (whitetailinv14daykwavg, whitetailinv14daykw, whitetailinvup14cb), (whitetailinv15daykwavg, whitetailinv15daykw, whitetailinvup15cb), (whitetailinv16daykwavg, whitetailinv16daykw, whitetailinvup16cb), (whitetailinv17daykwavg, whitetailinv17daykw, whitetailinvup17cb), (whitetailinv18daykwavg, whitetailinv18daykw, whitetailinvup18cb), (whitetailinv19daykwavg, whitetailinv19daykw, whitetailinvup19cb), (whitetailinv20daykwavg, whitetailinv20daykw, whitetailinvup20cb), (whitetailinv21daykwavg, whitetailinv21daykw, whitetailinvup21cb), (whitetailinv26daykwavg, whitetailinv26daykw, whitetailinvup26cb), (whitetailinv27daykwavg, whitetailinv27daykw, whitetailinvup27cb), (whitetailinv28daykwavg, whitetailinv28daykw, whitetailinvup28cb), (whitetailinv29daykwavg, whitetailinv29daykw, whitetailinvup29cb), (whitetailinv30daykwavg, whitetailinv30daykw, whitetailinvup30cb), (whitetailinv31daykwavg, whitetailinv31daykw, whitetailinvup31cb), (whitetailinv34daykwavg, whitetailinv34daykw, whitetailinvup34cb), (whitetailinv43daykwavg, whitetailinv43daykw, whitetailinvup43cb), (whitetailinv44daykwavg, whitetailinv44daykw, whitetailinvup44cb), (whitetailinv45daykwavg, whitetailinv45daykw, whitetailinvup45cb), (whitetailinv46daykwavg, whitetailinv46daykw, whitetailinvup46cb), (whitetailinv47daykwavg, whitetailinv47daykw, whitetailinvup47cb), (whitetailinv48daykwavg, whitetailinv48daykw, whitetailinvup48cb), (whitetailinv52daykwavg, whitetailinv52daykw, whitetailinvup52cb), (whitetailinv53daykwavg, whitetailinv53daykw, whitetailinvup53cb), (whitetailinv54daykwavg, whitetailinv54daykw, whitetailinvup54cb), (whitetailinv55daykwavg, whitetailinv55daykw, whitetailinvup55cb), (whitetailinv56daykwavg, whitetailinv56daykw, whitetailinvup56cb), (whitetailinv58daykwavg, whitetailinv58daykw, whitetailinvup58cb), (whitetailinv59daykwavg, whitetailinv59daykw, whitetailinvup59cb), (whitetailinv60daykwavg, whitetailinv60daykw, whitetailinvup60cb), (whitetailinv64daykwavg, whitetailinv64daykw, whitetailinvup64cb)]
-    conetoe1daykwList = [(conetoe1inv1daykwavg, conetoe1inv1daykw, conetoe1invup1cb), (conetoe1inv2daykwavg, conetoe1inv2daykw, conetoe1invup2cb), (conetoe1inv3daykwavg, conetoe1inv3daykw, conetoe1invup3cb), (conetoe1inv4daykwavg, conetoe1inv4daykw, conetoe1invup4cb)]
-    duplindaykwList = [(duplinsinv1daykwavg, duplinsinv1daykw, duplininvup4cb), (duplinsinv2daykwavg, duplinsinv2daykw, duplininvup5cb), (duplinsinv3daykwavg, duplinsinv3daykw, duplininvup6cb), (duplinsinv4daykwavg, duplinsinv4daykw, duplininvup7cb), (duplinsinv5daykwavg, duplinsinv5daykw, duplininvup8cb), (duplinsinv6daykwavg, duplinsinv6daykw, duplininvup9cb), (duplinsinv7daykwavg, duplinsinv7daykw, duplininvup10cb), (duplinsinv8daykwavg, duplinsinv8daykw, duplininvup11cb), (duplinsinv9daykwavg, duplinsinv9daykw, duplininvup12cb), (duplinsinv10daykwavg, duplinsinv10daykw, duplininvup13cb), (duplinsinv11daykwavg, duplinsinv11daykw, duplininvup14cb), (duplinsinv12daykwavg, duplinsinv12daykw, duplininvup15cb), (duplinsinv13daykwavg, duplinsinv13daykw, duplininvup16cb), (duplinsinv14daykwavg, duplinsinv14daykw, duplininvup17cb), (duplinsinv15daykwavg, duplinsinv15daykw, duplininvup18cb), (duplinsinv16daykwavg, duplinsinv16daykw, duplininvup19cb), (duplinsinv17daykwavg, duplinsinv17daykw, duplininvup20cb), (duplinsinv18daykwavg, duplinsinv18daykw, duplininvup21cb)]
-    duplinCentraldaykwList = [(duplininv1daykwavg, duplininv1daykw, duplininvup1cb), (duplininv2daykwavg, duplininv2daykw, duplininvup2cb), (duplininv3daykwavg, duplininv3daykw, duplininvup3cb)]
-    wayne11000daykwList = [(wayne1inv1daykwavg, wayne1inv1daykw, wayne1invup1cb), (wayne1inv4daykwavg, wayne1inv4daykw, wayne1invup4cb)]
-    wayne1daykwList = [(wayne1inv2daykwavg, wayne1inv2daykw, wayne1invup2cb), (wayne1inv3daykwavg, wayne1inv3daykw, wayne1invup3cb)]
-    wayne21000daykwList = [(wayne2inv3daykwavg, wayne2inv3daykw, wayne2invup3cb), (wayne2inv4daykwavg, wayne2inv4daykw, wayne2invup4cb)]
-    wayne2daykwList = [(wayne2inv1daykwavg, wayne2inv1daykw, wayne2invup1cb), (wayne2inv2daykwavg, wayne2inv2daykw, wayne2invup2cb)]
-    wayne31000daykwList = [(wayne3inv1daykwavg, wayne3inv1daykw, wayne3invup1cb), (wayne3inv2daykwavg, wayne3inv2daykw, wayne3invup2cb)]
-    wayne3daykwList = [(wayne3inv3daykwavg, wayne3inv3daykw, wayne3invup3cb), (wayne3inv4daykwavg, wayne3inv4daykw, wayne3invup4cb)]
-    freightlinedaykwList = [(freightlinerinv1daykwavg, freightlinerinv1daykw, freightlinerinvup1cb), (freightlinerinv3daykwavg, freightlinerinv3daykw, freightlinerinvup3cb), (freightlinerinv4daykwavg, freightlinerinv4daykw, freightlinerinvup4cb), (freightlinerinv5daykwavg, freightlinerinv5daykw, freightlinerinvup5cb), (freightlinerinv8daykwavg, freightlinerinv8daykw, freightlinerinvup8cb), (freightlinerinv9daykwavg, freightlinerinv9daykw, freightlinerinvup9cb), (freightlinerinv10daykwavg, freightlinerinv10daykw, freightlinerinvup10cb), (freightlinerinv11daykwavg, freightlinerinv11daykw, freightlinerinvup11cb), (freightlinerinv12daykwavg, freightlinerinv12daykw, freightlinerinvup12cb), (freightlinerinv15daykwavg, freightlinerinv15daykw, freightlinerinvup15cb), (freightlinerinv16daykwavg, freightlinerinv16daykw, freightlinerinvup16cb), (freightlinerinv17daykwavg, freightlinerinv17daykw, freightlinerinvup17cb), (freightlinerinv18daykwavg, freightlinerinv18daykw, freightlinerinvup18cb)]
-    freightline66daykwList = [(freightlinerinv2daykwavg, freightlinerinv2daykw, freightlinerinvup2cb), (freightlinerinv6daykwavg, freightlinerinv6daykw, freightlinerinvup6cb), (freightlinerinv7daykwavg, freightlinerinv7daykw, freightlinerinvup7cb), (freightlinerinv13daykwavg, freightlinerinv13daykw, freightlinerinvup13cb), (freightlinerinv14daykwavg, freightlinerinv14daykw, freightlinerinvup14cb)]
-    hollyswampdaykwList = [(hollyswampinv1daykwavg, hollyswampinv1daykw, hollyswampinvup1cb), (hollyswampinv2daykwavg, hollyswampinv2daykw, hollyswampinvup2cb), (hollyswampinv3daykwavg, hollyswampinv3daykw, hollyswampinvup3cb), (hollyswampinv4daykwavg, hollyswampinv4daykw, hollyswampinvup4cb), (hollyswampinv5daykwavg, hollyswampinv5daykw, hollyswampinvup5cb), (hollyswampinv6daykwavg, hollyswampinv6daykw, hollyswampinvup6cb), (hollyswampinv7daykwavg, hollyswampinv7daykw, hollyswampinvup7cb), (hollyswampinv8daykwavg, hollyswampinv8daykw, hollyswampinvup8cb), (hollyswampinv9daykwavg, hollyswampinv9daykw, hollyswampinvup9cb), (hollyswampinv10daykwavg, hollyswampinv10daykw, hollyswampinvup10cb), (hollyswampinv11daykwavg, hollyswampinv11daykw, hollyswampinvup11cb), (hollyswampinv12daykwavg, hollyswampinv12daykw, hollyswampinvup12cb), (hollyswampinv14daykwavg, hollyswampinv14daykw, hollyswampinvup14cb), (hollyswampinv16daykwavg, hollyswampinv16daykw, hollyswampinvup16cb)]
-    hollyswamp18strdaykwList = [(hollyswampinv15daykwavg, hollyswampinv15daykw, hollyswampinvup15cb), (hollyswampinv13daykwavg, hollyswampinv13daykw, hollyswampinvup13cb)]
-    pgdaykwList = [(pginv7daykwavg, pginv7daykw, pginvup7cb), (pginv8daykwavg, pginv8daykw, pginvup8cb), (pginv9daykwavg, pginv9daykw, pginvup9cb), (pginv10daykwavg, pginv10daykw, pginvup10cb), (pginv11daykwavg, pginv11daykw, pginvup11cb), (pginv12daykwavg, pginv12daykw, pginvup12cb), (pginv13daykwavg, pginv13daykw, pginvup13cb), (pginv14daykwavg, pginv14daykw, pginvup14cb), (pginv15daykwavg, pginv15daykw, pginvup15cb), (pginv16daykwavg, pginv16daykw, pginvup16cb), (pginv17daykwavg, pginv17daykw, pginvup17cb), (pginv18daykwavg, pginv18daykw, pginvup18cb)]
-    pg66daykwList = [(pginv1daykwavg, pginv1daykw, pginvup1cb), (pginv2daykwavg, pginv2daykw, pginvup2cb), (pginv3daykwavg, pginv3daykw, pginvup3cb), (pginv4daykwavg, pginv4daykw, pginvup4cb), (pginv5daykwavg, pginv5daykw, pginvup5cb), (pginv6daykwavg, pginv6daykw, pginvup6cb)]
-    cougar14strList = [(cougarinv1daykwavg, cougarinv1daykw, cougarinvup1cb), (cougarinv2daykwavg, cougarinv2daykw, cougarinvup2cb), (cougarinv3daykwavg, cougarinv3daykw, cougarinvup3cb), (cougarinv4daykwavg, cougarinv4daykw, cougarinvup4cb), (cougarinv5daykwavg, cougarinv5daykw, cougarinvup5cb), (cougarinv6daykwavg, cougarinv6daykw, cougarinvup6cb), (cougarinv7daykwavg, cougarinv7daykw, cougarinvup7cb), (cougarinv8daykwavg, cougarinv8daykw, cougarinvup8cb), (cougarinv9daykwavg, cougarinv9daykw, cougarinvup9cb), (cougarinv10daykwavg, cougarinv10daykw, cougarinvup10cb), (cougarinv11daykwavg, cougarinv11daykw, cougarinvup11cb), (cougarinv12daykwavg, cougarinv12daykw, cougarinvup12cb), (cougarinv13daykwavg, cougarinv13daykw, cougarinvup13cb), (cougarinv14daykwavg, cougarinv14daykw, cougarinvup14cb), (cougarinv15daykwavg, cougarinv15daykw, cougarinvup15cb), (cougarinv16daykwavg, cougarinv16daykw, cougarinvup16cb), (cougarinv17daykwavg, cougarinv17daykw, cougarinvup17cb), (cougarinv18daykwavg, cougarinv18daykw, cougarinvup18cb), (cougarinv19daykwavg, cougarinv19daykw, cougarinvup19cb), (cougarinv20daykwavg, cougarinv20daykw, cougarinvup20cb), (cougarinv21daykwavg, cougarinv21daykw, cougarinvup21cb), (cougarinv22daykwavg, cougarinv22daykw, cougarinvup22cb), (cougarinv25daykwavg, cougarinv25daykw, cougarinvup25cb), (cougarinv26daykwavg, cougarinv26daykw, cougarinvup26cb), (cougarinv27daykwavg, cougarinv27daykw, cougarinvup27cb), (cougarinv28daykwavg, cougarinv28daykw, cougarinvup28cb), (cougarinv29daykwavg, cougarinv29daykw, cougarinvup29cb), (cougarinv30daykwavg, cougarinv30daykw, cougarinvup30cb), (cougarinv31daykwavg, cougarinv31daykw, cougarinvup31cb)]
-    cougar13strList = [(cougarinv23daykwavg, cougarinv23daykw, cougarinvup23cb), (cougarinv24daykwavg, cougarinv24daykw, cougarinvup24cb)]
-    elk10strList = [(elkinv9daykwavg, elkinv9daykw, elkinvup9cb), (elkinv10daykwavg, elkinv10daykw, elkinvup10cb), (elkinv11daykwavg, elkinv11daykw, elkinvup11cb), (elkinv12daykwavg, elkinv12daykw, elkinvup12cb), (elkinv13daykwavg, elkinv13daykw, elkinvup13cb), (elkinv21daykwavg, elkinv21daykw, elkinvup21cb), (elkinv22daykwavg, elkinv22daykw, elkinvup22cb), (elkinv25daykwavg, elkinv25daykw, elkinvup25cb), (elkinv26daykwavg, elkinv26daykw, elkinvup26cb), (elkinv27daykwavg, elkinv27daykw, elkinvup27cb), (elkinv28daykwavg, elkinv28daykw, elkinvup28cb), (elkinv29daykwavg, elkinv29daykw, elkinvup29cb)]
-    elk11strList = [(elkinv1daykwavg, elkinv1daykw, elkinvup1cb), (elkinv2daykwavg, elkinv2daykw, elkinvup2cb), (elkinv3daykwavg, elkinv3daykw, elkinvup3cb), (elkinv4daykwavg, elkinv4daykw, elkinvup4cb), (elkinv5daykwavg, elkinv5daykw, elkinvup5cb), (elkinv6daykwavg, elkinv6daykw, elkinvup6cb), (elkinv7daykwavg, elkinv7daykw, elkinvup7cb), (elkinv8daykwavg, elkinv8daykw, elkinvup8cb), (elkinv14daykwavg, elkinv14daykw, elkinvup14cb), (elkinv15daykwavg, elkinv15daykw, elkinvup15cb), (elkinv16daykwavg, elkinv16daykw, elkinvup16cb), (elkinv17daykwavg, elkinv17daykw, elkinvup17cb), (elkinv18daykwavg, elkinv18daykw, elkinvup18cb), (elkinv19daykwavg, elkinv19daykw, elkinvup19cb), (elkinv20daykwavg, elkinv20daykw, elkinvup20cb), (elkinv23daykwavg, elkinv23daykw, elkinvup23cb), (elkinv24daykwavg, elkinv24daykw, elkinvup24cb), (elkinv30daykwavg, elkinv30daykw, elkinvup30cb), (elkinv31daykwavg, elkinv31daykw, elkinvup31cb), (elkinv32daykwavg, elkinv32daykw, elkinvup32cb), (elkinv33daykwavg, elkinv33daykw, elkinvup33cb), (elkinv34daykwavg, elkinv34daykw, elkinvup34cb), (elkinv35daykwavg, elkinv35daykw, elkinvup35cb), (elkinv36daykwavg, elkinv36daykw, elkinvup36cb), (elkinv37daykwavg, elkinv37daykw, elkinvup37cb), (elkinv38daykwavg, elkinv38daykw, elkinvup38cb), (elkinv39daykwavg, elkinv39daykw, elkinvup39cb), (elkinv40daykwavg, elkinv40daykw, elkinvup40cb), (elkinv41daykwavg, elkinv41daykw, elkinvup41cb), (elkinv42daykwavg, elkinv42daykw, elkinvup42cb), (elkinv43daykwavg, elkinv43daykw, elkinvup43cb)]
-
-    site_under_Lists = {
-        "Duplin Central Inverters": duplinCentraldaykwList,
-        "Bulloch 1A 11 String Inverters": bulloch1adaykwList,
-        "Bulloch 1A 10 String Inverters": bulloch1a10strdaykwList,
-        "Bulloch 1B 11 String Inverters": bulloch1bdaykwList,
-        "Bulloch 1B 10 String Inverters": bulloch1b10strdaykwList,
-        "Cougar 13 String Inverters": cougar13strList,
-        "Cougar 14 String Inverters": cougar14strList,
-        "Elk 10 String Inverters": elk10strList,
-        "Elk 11 String Inverters": elk11strList,
-
-        "Gray Fox Inverters": grayfoxdaykwList,
-        #Is seperate groups but I don't know how to split them based on As Builts
-
-        "Harding 13 String Inverters": hardingdaykwList,
-        "Harding 12 String Inverters": harding12strdaykwList,
-        "McLean Inverters": mcleandaykwList,
-        "McLean 10 String Inverters": mclean10strdaykwList,
-        "Richmond 11 String Inverters": richmonddaykwList,
-        "Richmond 10 String Inverters": richmond10strdaykwList,
-        "Shorthorn 12 String Inverters": shorthorndaykwList,
-        "Shorthorn 13 String Inverters": shorthorn13strdaykwList,
-        "Sunflower 13 String Inverters": sunflowerdaykwList,
-        "Sunflower 12 String Inverters": sunflower12strdaykwList,
-        "Upson 11 String Inverters": upsondaykwList,
-        "Upson 10 String Inverters": upson10strdaykwList,
-        "WarblerInverters": warblerdaykwList,
-        "Washington 13 String Inverters": washingtondaykwList,
-        "Washington 12 String Inverters": washington12strdaykwList,
-        "Whitehall 12 String Inverters": whitehalldaykwList,
-        "Whitehall 13 String Inverters": whitehall13strdaykwList,
-        "Whitetail 16 String Inverters": whitetaildaykwList,
-        "Whitetail 17 String Inverters": whitetail17strdaykwList,
-        "Conetoe Inverters": conetoe1daykwList,
-        "Duplin String Inverters": duplindaykwList, 
-        "Wayne 1 Inverters": wayne1daykwList,
-        "Wayne 1 1000's": wayne11000daykwList, 
-        "Wayne 2 Inverters": wayne2daykwList,
-        "Wayne 2 1000's": wayne21000daykwList, 
-        "Wayne 3 Inverters": wayne3daykwList,
-        "Wayne 3 1000's": wayne31000daykwList, 
-        "Freight Line 100% Inverters": freightlinedaykwList,
-        "Freight Line 66% Inverters": freightline66daykwList,
-        "Holly Swamp 19 String Inverters": hollyswampdaykwList,
-        "Holly Swamp 18 String Inverters": hollyswamp18strdaykwList,
-        "PG 100% Inverters": pgdaykwList,
-        "PG 66% Inverters": pg66daykwList,
-        "Thunderhead 15 & 1, 16 String Inverters": thunderheaddaykwList,
-        "Thunderhead 14 String Inverters": thunderhead14strdaykwList,
-        "Tedder 16 String Inverters": tedderdaykwList,
-        "Tedder 15 String Inverters": tedder15strdaykwList,
-        "Ogburn Inverters": ogburndaykwList,
-        "Marshall Inverters": marshalldaykwList,
-        "Jefferson 17 String Inverters": jeffersondaykwList,
-        "Jefferson 18 String Inverters": jefferson18strdaykwList,
-        "Hickson 18 String Inverters": hicksondaykwList,
-        "Hickson 17 String Inverters": hickson17strdaykwList,
-        "Bishopville II 32 String Inverters": bishopvilleIIdaykwList,
-        "Bishopville II 34 String Inverters": bishopvilleII34strdaykwList,
-        "Bishopville II 36 String Inverters": bishopvilleII36strdaykwList,
-        "Bluebird Inverters": bluebirddaykwList,
-        "Wellons Inverters": wellonsdaykwList,
-        "Violet Inverters": violetdaykwList,
-        "Van Buren 94.4% Inverters": vanburendaykwList,
-        "Van Buren 93.6% Inverters": vanburen93daykwList,
-        "Hickory Inverters": hickorydaykwList,
-        "Hayes 92% Inverters": hayesdaykwList,
-        "Hayes 96% Inverters": hayes96daykwList,
-        "Harrison 93.6% Inverters": harrisondaykwList,
-        "Harrison 92% & 91.2% Inverters": harrison92daykwList,
-        "Cherry Blossom Inverters": cherryblossomdaykwList,
-        "Cardinal 96.6% Inverters": cardinal96daykwList,
-        "Cardinal 95.2% Inverters": cardinal952daykwList,
-        "Cardinal 94.4% Inverters": cardinal944daykwList
-    }
-
-
-    for inv_group_name, underperformance_list in site_under_Lists.items():
-        if inv_group_name in {"Duplin String Inverters", "Cardinal 96.6% Inverters", "Cardinal 95.2% Inverters", "Cardinal 94.4% Inverters"}:
-            avgvalues = [value for value, _, _ in underperformance_list]
-            totalvalues = [value for _, value, _ in underperformance_list]
-            max_val = max(avgvalues)
-            total_max_val = max(totalvalues)
-            print(inv_group_name, max_val, avgvalues)
-            print(inv_group_name, total_max_val, totalvalues)
-
-        calculate_percentages(underperformance_list) #Updates GUI widgets with new percentages
-    
-
-
-def get_color_for_percentage(percentage):
-    """Returns a color string based on a percentage value."""
-    if np.isnan(percentage) or percentage < 50:
-        return "red"
-    elif 50 <= percentage < 75:
-        return "orange"
-    elif 75 <= percentage < 85:
-        return "yellow"
-    elif 85 <= percentage < 95:
-        return "#FEEAA5"  # paleyellow
-    elif percentage >= 95:
-        return "#90EE90"  # lightgreen
-    else:
-        return "#EE82EE"  # violet
-
-def create_dual_color_image(c1, c2, width=60, height=15):
-    """Creates a PhotoImage with two background colors."""
-    img = Image.new('RGB', (width, height))
-    draw = ImageDraw.Draw(img)
-    draw.rectangle([0, 0, width // 2, height], fill=c1)
-    draw.rectangle([width // 2, 0, width, height], fill=c2)
-    return ImageTk.PhotoImage(img)
-    
-    
-
-
-def calculate_percentages(data_list):
-    """
-    Calculates percentages based on the maximum value in the input list
-    and assigns these percentages to the 'text' attribute of the Tkinter variable.
-
-    Args:
-        data_list: A list of tuples, where each tuple contains:
-            - avg kw (float).
-            - total kwh (float)
-            - The Tkinter Checkbutton variable to update.
-    """
-    if not data_list:
-        return  # Handle empty list case
-    avg_values = [value for value, _, _ in data_list]
-    total_values = [value for _, value, _ in data_list]
-    maxavg_value = max(avg_values)
-    maxtotal_value = max(total_values)
-    if (maxavg_value == 0 or np.isnan(maxavg_value)) and (maxtotal_value == 0 or np.isnan(maxtotal_value)):
-        for _, _, var in data_list:
-            try:
-                var.config(text="0% | 0%", bg='red')  # Update the 'text' attribute
-            except AttributeError:
-                pass #  The variable does not have a text attribute.
-        return
-
-    for avg, total_kwh, var in data_list:
-        avg_percentage = (avg / maxavg_value) * 100
-        total_percentage = (total_kwh / maxtotal_value) * 100
-        avg_color = get_color_for_percentage(avg_percentage)
-        total_color = get_color_for_percentage(total_percentage)
-
-        try:
-            # Create the dual-color image
-            dual_color_image = create_dual_color_image(avg_color, total_color)
-            
-            # Configure the checkbutton
-            var.config(
-                text=f"{avg_percentage:.0f}% | {total_percentage:.0f}%",
-                image=dual_color_image,
-                compound="center",  # Place text on top of the image
-                fg="black" # Set a contrasting text color
-            )
-            # IMPORTANT: Keep a reference to the image to prevent it from being garbage collected
-            var.image = dual_color_image
-        except AttributeError:
-             pass #  The variable does not have a text attribute.
 
 
 def checkin():
@@ -2315,8 +1977,7 @@ def db_to_dict():
 
     query_start = ty.perf_counter()
     sendTexts.config(state=DISABLED)
-    underperfdaterng.config(state=DISABLED)
-    underperfdaterng2.config(state=DISABLED)
+
 
     connect_db()
     global tables, inv_data, breaker_data, meter_data, comm_data, POA_data, begin
