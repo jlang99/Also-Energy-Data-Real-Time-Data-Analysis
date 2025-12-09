@@ -22,24 +22,18 @@ import os, sys
 # This allows us to import the 'PythonTools' package from there.
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
-from PythonTools import CREDS, EMAILS, PausableTimer #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
+from PythonTools import CREDS, EMAILS, AE_HARDWARE_MAP, PausableTimer #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
 
 
 
 #Number of Data points to check
 breaker_pulls = 10
 meter_pulls = 15
-voltage_check = 5 
-master_List_Sites = {'Bishopville II', 'Bluebird', 'Bulloch 1A', 'Bulloch 1B', 'Cardinal',
-                     'Cherry Blossom', 'Conetoe', 'Cougar', 'Duplin', 'Elk', 'Freightliner', 'Gray Fox',
-                     'Harding', 'Harrison', 'Hayes', 'Hickory', 'Hickson', 'Holly Swamp',
-                     'Jefferson', 'Marshall', 'McLean', 'Ogburn', 'PG', 'Richmond',
-                     'Shorthorn', 'Sunflower', 'Tedder', 'Thunderhead', 'Upson',
-                     'Van Buren', 'Violet', 'Warbler', 'Washington', 'Wayne 1',
-                     'Wayne 2', 'Wayne 3', 'Wellons', 'Whitehall', 'Whitetail'}
+voltage_check = 5
 
-has_breaker = {'Bishopville II', 'Cardinal', 'Cherry Blossom', 'Elk', 'Gray Fox', 'Harding', 'Harrison', 'Hayes', 'Hickory', 'Hickson', 'Jefferson', 'Marshall', 'McLean', 'Ogburn', 
-               'Shorthorn', 'Sunflower', 'Tedder', 'Thunderhead', 'Warbler', 'Washington', 'Whitehall', 'Whitetail'}
+master_List_Sites = {site for site in AE_HARDWARE_MAP.keys() if site != 'CDIA'}
+has_breaker = {site for site, data in AE_HARDWARE_MAP.items() if 'breakers' in data}
+
 
 
 tables = []
@@ -47,7 +41,21 @@ breaker_data = {}
 meter_data = {}
 poa_data = {}
 all_CBs = []
+site_widgets = {}
 
+
+
+def notification_period():
+    now = datetime.now()
+    # weekday() returns 5 for Saturday and 6 for Sunday
+    is_weekend = now.weekday() in {5, 6}
+
+    # Check if the time is after 3 PM (15:00) or before 7 AM (07:00)
+    is_after_hours = now.hour >= 15 or now.hour < 7
+
+    if is_weekend and is_after_hours:
+        return True
+    return False
 
 def email_notification(SiteName, status, device, poa, amps):
     sender_email = EMAILS['NCC Desk']
@@ -115,29 +123,36 @@ def email_notification(SiteName, status, device, poa, amps):
 def connect_db():
     global c, dbconn_str, dbconnection
     hostname = socket.gethostname()
-    if hostname == "NAR-OMOPSXPS":
-        server = "SQLEXPRESS01"
+    if hostname == "NAR-OMOps-SQL":
+        dbconn_str = (
+            r'DRIVER={ODBC Driver 18 for SQL Server};'
+            r'SERVER=localhost\SQLEXPRESS;'
+            r'DATABASE=NARENCO_O&M_AE;'
+            r'Trusted_Connection=yes;'
+            r'Encrypt=no;'
+        )
     else:
-        server = "SQLEXPRESS"
-    # Create a connection to the Access database
-    dbconn_str = (
-        r'DRIVER={ODBC Driver 18 for SQL Server};'
-        fr'SERVER=localhost\{server};'
-        r'DATABASE=NARENCO_O&M_AE;'
-        r'Trusted_Connection=yes;'
-        r'Encrypt=no;'
-    )
+        dbconn_str = (
+            r'DRIVER={ODBC Driver 18 for SQL Server};'
+            fr'SERVER={CREDS['DB_IP']}\SQLEXPRESS;'
+            r'DATABASE=NARENCO_O&M_AE;'
+            fr'UID={CREDS['DB_UID']};'
+            fr'PWD={CREDS['DB_PWD']};'
+            r'Encrypt=no;'
+        )
     dbconnection = pyodbc.connect(dbconn_str)
     c = dbconnection.cursor()
 
 
 def update_breaker_status():    
+    period_check = notification_period()
     #ic(breaker_data)
     curtime = datetime.now()
     compare_time = curtime - timedelta(hours=4)   
     h_time = curtime.hour
-    for site in master_List_Sites:
-        var = site.lower().replace(" ", "")
+    for site, site_data_dict in site_widgets.items():
+        if site == 'Violet 2':
+            continue
         try: #Defining POA for meter KW notification
             poa = max(poa_data[f'{site} POA Data'])[0]
         except Exception:
@@ -145,16 +160,19 @@ def update_breaker_status():
                 poa = 9999
             else:
                 poa = -1
-        metercomms = max(meter_data[f'{site} Meter Data'][i][6] for i in range(meter_pulls))
+        site_meter_data = meter_data.get(f'{site} Meter Data', [])
+        metercomms = max(row[6] for row in site_meter_data) if site_meter_data else None
         if site == "Violet":
             #Meter Check
             data = np.array(meter_data[f'{site} Meter Data'])
+            if data.ndim < 2:
+                continue
             lastUpload_col = data[:, 6]
             amps_columns = data[:, 3:6]  # Extract Amps Columns
             if all(tim > compare_time for tim in lastUpload_col):
                 if any(np.all(amps_columns[:, j] == 0) for j in range(amps_columns.shape[1])):
                     amp_data = [amps_columns[:,j] for j in range(amps_columns.shape[1])]
-                    if globals()[f'{var}MeterOnOffval'].get() == False:
+                    if not site_data_dict['meter_var'].get():
                         if metercomms > compare_time:
                             if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
                                 status = "currently within parameters, but may have been lost briefly"
@@ -165,11 +183,12 @@ def update_breaker_status():
                         else:
                             status = "Unknown, Lost Comms with Meter"
                             device = "Meter"
-                        globals()[f'{var}MeterOnOff'].select()
-                        globals()[f'{var}MeterOnOff'].config(bg='Red')
-                        email_notification(site, status, device, poa, amp_data)
+                        site_data_dict['meter_cb'].select()
+                        site_data_dict['meter_cb'].config(bg='Red')
+                        if period_check:
+                            email_notification(site, status, device, poa, amp_data)
                 elif np.mean([row[7] for row in data if row[7] is not None]) < 2:
-                    if globals()[f'{var}MeterOnOffval'].get() == False:
+                    if not site_data_dict['meter_var'].get():
                         if metercomms > compare_time:
                             if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
                                 status = "currently within parameters, but may have been lost briefly"
@@ -180,54 +199,65 @@ def update_breaker_status():
                         else:
                             status = "Unknown, Lost Comms with Meter"
                             device = "Meter kW"
-                        globals()[f'{var}MeterOnOff'].select()
-                        globals()[f'{var}MeterOnOff'].config(bg='Red')
+                        site_data_dict['meter_cb'].select()
+                        site_data_dict['meter_cb'].config(bg='Red')
                         if device == "Meter kW" and status == "currently within parameters, but may have been lost briefly":
                             if poa > 100:
-                                email_notification(site, status, device, poa, None)
+                                if period_check:
+                                    email_notification(site, status, device, poa, None)
                         else:
-                            email_notification(site, status, device, poa, None)
+                            if period_check:
+                                email_notification(site, status, device, poa, None)
                 else:
-                    globals()[f'{var}MeterOnOff'].deselect()
-                    globals()[f'{var}MeterOnOff'].config(bg='Green')
+                    site_data_dict['meter_cb'].deselect()
+                    site_data_dict['meter_cb'].config(bg='Green')
             else:
-                globals()[f'{var}MeterOnOff'].select()
-                globals()[f'{var}MeterOnOff'].config(bg='Red')
-                if globals()[f'{var}MeterOnOffval'].get() == False:
+                site_data_dict['meter_cb'].select()
+                site_data_dict['meter_cb'].config(bg='Red')
+                if not site_data_dict['meter_var'].get():
                     status = "Unknown, Comms consistently reporting last good data Upload as 4+ hrs ago."
                     device = "Meter"
-                    email_notification(site, status, device, poa, None)
+                    if period_check:
+                        email_notification(site, status, device, poa, None)
 
             #Breaker Check
             if all(not breaker_data['Violet Breaker Data 1'][i][0] for i in range(breaker_pulls)):
-                if violetBreakerOnOffval.get() == False:
+                if 'breaker_var' in site_widgets.get('Violet', {}) and not site_widgets['Violet']['breaker_var'].get():
                     device = "Breaker"
-                    email_notification("Violet 1", status, device, poa, None)
-                    violetBreakerOnOff.select()
-                    globals()[f'{var}BreakerOnOff'].config(bg='Red')
+                    if period_check:
+                        email_notification("Violet 1", status, device, poa, None)
+                    if 'breaker_cb' in site_widgets.get('Violet', {}):
+                        site_widgets['Violet']['breaker_cb'].select()
+                        site_widgets['Violet']['breaker_cb'].config(bg='Red')
             else:
-                violetBreakerOnOff.deselect()
-                globals()[f'{var}BreakerOnOff'].config(bg='Green')
+                if 'breaker_cb' in site_widgets.get('Violet', {}):
+                    site_widgets['Violet']['breaker_cb'].deselect()
+                    site_widgets['Violet']['breaker_cb'].config(bg='Green')
             #Breaker 2 Check
             if all(not breaker_data['Violet Breaker Data 2'][i][0] for i in range(breaker_pulls)):
-                if violet2BreakerOnOffval.get() == False:
+                if 'breaker_var' in site_widgets.get('Violet 2', {}) and not site_widgets['Violet 2']['breaker_var'].get():
                     device = "Breaker"
-                    email_notification("Violet 2", status, device, poa, None)
-                    violet2BreakerOnOff.select()
-                    globals()[f'{var}2BreakerOnOff'].config(bg='Red')
+                    if period_check:
+                        email_notification("Violet 2", status, device, poa, None)
+                    if 'breaker_cb' in site_widgets.get('Violet 2', {}):
+                        site_widgets['Violet 2']['breaker_cb'].select()
+                        site_widgets['Violet 2']['breaker_cb'].config(bg='Red')
 
             else:
-                violet2BreakerOnOff.deselect()
-                globals()[f'{var}2BreakerOnOff'].config(bg='Green')
+                if 'breaker_cb' in site_widgets.get('Violet 2', {}):
+                    site_widgets['Violet 2']['breaker_cb'].deselect()
+                    site_widgets['Violet 2']['breaker_cb'].config(bg='Green')
 
         else: #Meter Check for all other Sites besides Violet
             data = np.array(meter_data[f'{site} Meter Data'])
+            if data.ndim < 2:
+                continue
             lastUpload_col = data[:, 6]
             amps_columns = data[:, 3:6]  # Extract Amps Columns
             if all(tim > compare_time for tim in lastUpload_col):
                 if any(np.all(amps_columns[:, j] == 0) for j in range(amps_columns.shape[1])):
                     amp_data = [amps_columns[:,j] for j in range(amps_columns.shape[1])]
-                    if globals()[f'{var}MeterOnOffval'].get() == False:
+                    if not site_data_dict['meter_var'].get():
                         if metercomms > compare_time:
                             if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
                                 status = "currently within parameters, but may have been lost briefly"
@@ -238,11 +268,12 @@ def update_breaker_status():
                         else:
                             status = "Unknown, Lost Comms with Meter"
                             device = "Meter Amps"
-                        globals()[f'{var}MeterOnOff'].select()
-                        globals()[f'{var}MeterOnOff'].config(bg='Red')
-                        email_notification(site, status, device, poa, amp_data)
+                        site_data_dict['meter_cb'].select()
+                        site_data_dict['meter_cb'].config(bg='Red')
+                        if period_check:
+                            email_notification(site, status, device, poa, amp_data)
                 elif np.mean([row[7] for row in data if row[7] is not None]) < 2:
-                    if globals()[f'{var}MeterOnOffval'].get() == False:
+                    if not site_data_dict['meter_var'].get():
                         if metercomms > compare_time:
                             if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
                                 status = "currently within parameters, but may have been lost briefly"
@@ -253,27 +284,30 @@ def update_breaker_status():
                         else:
                             status = "Unknown, Lost Comms with Meter"
                             device = "Meter kW"
-                        globals()[f'{var}MeterOnOff'].select()
-                        globals()[f'{var}MeterOnOff'].config(bg='Red')
+                        site_data_dict['meter_cb'].select()
+                        site_data_dict['meter_cb'].config(bg='Red')
                         if device == "Meter kW" and status == "currently within parameters, but may have been lost briefly":
                             if poa > 100:
-                                email_notification(site, status, device, poa, None)
+                                if period_check:
+                                    email_notification(site, status, device, poa, None)
                         else:
-                            email_notification(site, status, device, poa, None)
+                            if period_check:
+                                email_notification(site, status, device, poa, None)
                 else:
-                    globals()[f'{var}MeterOnOff'].deselect()
-                    globals()[f'{var}MeterOnOff'].config(bg='Green')
+                    site_data_dict['meter_cb'].deselect()
+                    site_data_dict['meter_cb'].config(bg='Green')
             else:
-                globals()[f'{var}MeterOnOff'].select()
-                globals()[f'{var}MeterOnOff'].config(bg='Red')
-                if globals()[f'{var}MeterOnOffval'].get() == False:
+                site_data_dict['meter_cb'].select()
+                site_data_dict['meter_cb'].config(bg='Red')
+                if not site_data_dict['meter_var'].get():
                     status = "Unknown, Comms consistently reporting last good data Upload as 4+ hrs ago."
                     device = "Meter"
-                    email_notification(site, status, device, poa, None)
+                    if period_check:
+                        email_notification(site, status, device, poa, None)
 
-        if site in has_breaker: #Breaker Check
+        if site in has_breaker and site != "Violet": #Breaker Check
             if all(not breaker_data[f'{site} Breaker Data'][i][0] for i in range(breaker_pulls)):
-                if globals()[f'{var}BreakerOnOffval'].get() == False:
+                if 'breaker_var' in site_data_dict and not site_data_dict['breaker_var'].get():
                     if metercomms > compare_time:
                         print(meter_data[f'{site} Meter Data'][i][3] for i in range(5))
                         if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
@@ -285,13 +319,15 @@ def update_breaker_status():
                     else:
                         status = "Unknown, Lost Comms with Meter"
                         device = "Breaker"
-                    email_notification(site, status, device, poa, None)
-                    globals()[f'{var}BreakerOnOff'].select()
-                    globals()[f'{var}BreakerOnOff'].config(bg='Red')
+                    if period_check:
+                        email_notification(site, status, device, poa, None)
+                    site_data_dict['breaker_cb'].select()
+                    site_data_dict['breaker_cb'].config(bg='Red')
 
             else:
-                globals()[f'{var}BreakerOnOff'].deselect()  
-                globals()[f'{var}BreakerOnOff'].config(bg='Green')
+                if 'breaker_cb' in site_data_dict:
+                    site_data_dict['breaker_cb'].deselect()
+                    site_data_dict['breaker_cb'].config(bg='Green')
 
     print("Finished")
     ctime = datetime.now()
@@ -384,64 +420,75 @@ guiframe = Frame(root)
 guiframe.pack()
 
 num_columns = 4
-# Initialize row and column counters
-row = 0
-column = 0
 
-for site in master_List_Sites:
-    var = site.lower().replace(" ", "")
-    if site != "Violet":
-        # Create a Label for the site
-        site_label = Label(guiframe, text=site)
-        site_label.grid(row=row, column=column)
-        
-        # Create BooleanVars for Meter and Breaker Checkbuttons
-        globals()[f'{var}MeterOnOffval'] = BooleanVar(value=True)
-        globals()[f'{var}BreakerOnOffval'] = BooleanVar(value=True)
-        
-        # Create Meter Checkbutton
-        globals()[f'{var}MeterOnOff'] = Checkbutton(guiframe, text='M', variable=globals()[f'{var}MeterOnOffval'])
-        globals()[f'{var}MeterOnOff'].grid(row=row+1, column=column)
-        all_CBs.append(globals()[f'{var}MeterOnOffval'])
-        
-        # Create Breaker Checkbutton
-        if site in has_breaker:
-            globals()[f'{var}BreakerOnOff'] = Checkbutton(guiframe, text='B', variable=globals()[f'{var}BreakerOnOffval'])
-            globals()[f'{var}BreakerOnOff'].grid(row=row+2, column=column)
-            all_CBs.append(globals()[f'{var}BreakerOnOffval'])
+# Create a list of sites to display, excluding 'Violet' which is handled separately
+sites_to_display = sorted([site for site in master_List_Sites if site != "Violet"])
 
-        
-        
-        # Update row and column counters
-        row += 3  # Move to the next set of rows for the next site
-        if row >= len(master_List_Sites) // num_columns * 3:
-            row = 0
-            column += 1
+for i, site_name in enumerate(sites_to_display):
+    # Use divmod to elegantly calculate row and column
+    row, col = divmod(i, (len(sites_to_display) + num_columns - 1) // num_columns)
+
+    # Each site's widgets will occupy 3 rows, so we multiply the base row by 3
+    base_row = row * 3
+
+    # Store all widgets and variables for a site in a dictionary
+    site_widgets[site_name] = {}
+
+    # --- Site Label ---
+    site_label = Label(guiframe, text=site_name)
+    site_label.grid(row=base_row, column=col)
+    site_widgets[site_name]['label'] = site_label
+
+    # --- Meter Checkbutton ---
+    meter_var = BooleanVar(value=True)
+    meter_cb = Checkbutton(guiframe, text='M', variable=meter_var)
+    meter_cb.grid(row=base_row + 1, column=col)
+    all_CBs.append(meter_var)
+    site_widgets[site_name]['meter_var'] = meter_var
+    site_widgets[site_name]['meter_cb'] = meter_cb
+
+    # --- Breaker Checkbutton (if applicable) ---
+    if site_name in has_breaker:
+        breaker_var = BooleanVar(value=True)
+        breaker_cb = Checkbutton(guiframe, text='B', variable=breaker_var)
+        breaker_cb.grid(row=base_row + 2, column=col)
+        all_CBs.append(breaker_var)
+        site_widgets[site_name]['breaker_var'] = breaker_var
+        site_widgets[site_name]['breaker_cb'] = breaker_cb
 
 # Handle the special case for Violet
+# This logic remains separate as it has a unique layout
+violet_label = Label(guiframe, text="Violet 1")
+violet_label.grid(row=28, column=0, sticky=W)
 violet2_label = Label(guiframe, text="Violet 2")
 violet2_label.grid(row=28, column=1, sticky=W)
 
-violet2BreakerOnOffval = BooleanVar(value=True)
-all_CBs.append(violet2BreakerOnOffval)
+# --- Violet 1 Breaker ---
+site_widgets['Violet'] = {}
+v1_breaker_var = BooleanVar(value=True)
+v1_breaker_cb = Checkbutton(guiframe, text="B", variable=v1_breaker_var)
+v1_breaker_cb.grid(row=29, column=0)
+all_CBs.append(v1_breaker_var)
+site_widgets['Violet']['breaker_var'] = v1_breaker_var
+site_widgets['Violet']['breaker_cb'] = v1_breaker_cb
 
+# --- Violet 2 Breaker ---
+site_widgets['Violet 2'] = {}
+v2_breaker_var = BooleanVar(value=True)
+v2_breaker_cb = Checkbutton(guiframe, text="B", variable=v2_breaker_var)
+v2_breaker_cb.grid(row=29, column=1)
+all_CBs.append(v2_breaker_var)
+site_widgets['Violet 2']['breaker_var'] = v2_breaker_var
+site_widgets['Violet 2']['breaker_cb'] = v2_breaker_cb
 
-violet2BreakerOnOff = Checkbutton(guiframe, text="B", variable=violet2BreakerOnOffval)
-violet2BreakerOnOff.grid(row=29, column=1)
+# --- Violet Meter (shared) ---
+v_meter_var = BooleanVar(value=True)
+v_meter_cb = Checkbutton(guiframe, text='Meter', variable=v_meter_var)
+v_meter_cb.grid(row=30, column=0, columnspan=2)
+all_CBs.append(v_meter_var)
+site_widgets['Violet']['meter_var'] = v_meter_var
+site_widgets['Violet']['meter_cb'] = v_meter_cb
 
-violet_label = Label(guiframe, text="Violet")
-violet_label.grid(row=28, column=0)
-
-violetBreakerOnOffval = BooleanVar(value=True)
-all_CBs.append(violetBreakerOnOffval)
-
-violetBreakerOnOff = Checkbutton(guiframe, text="B", variable=violet2BreakerOnOffval)
-violetBreakerOnOff.grid(row=29, column=0)
-
-violetMeterOnOffval = BooleanVar(value=True)
-all_CBs.append(violetMeterOnOffval)
-violetMeterOnOff = Checkbutton(guiframe, text='Meter', variable=violetMeterOnOffval)
-violetMeterOnOff.grid(row=30, column=0, columnspan=2)
 
 
 root.after(1000, db_to_dict)

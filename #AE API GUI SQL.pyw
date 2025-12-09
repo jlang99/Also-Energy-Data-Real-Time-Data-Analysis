@@ -25,8 +25,7 @@ from bs4 import BeautifulSoup
 # This allows us to import the 'PythonTools' package from there.
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
-from PythonTools import CREDS, EMAILS, sql_date_validation, PausableTimer, restart_pc #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
-from PythonTools import CREDS, EMAILS, sql_date_validation, PausableTimer, restart_pc, ToolTip #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
+from PythonTools import CREDS, EMAILS, sql_date_validation, PausableTimer, restart_pc, ToolTip, get_hostname #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
 
 
 import pandas as pd
@@ -41,6 +40,12 @@ meter_pulls = 8
 start = ty.perf_counter()
 myappid = 'AE.API.Data.GUI'
 ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+
+
+
+
+HOSTNAME = get_hostname()
+sql_pc = TRUE if HOSTNAME == "NAR-OMOPSXPS" else FALSE
 
 main_color = '#ADD8E6'
 root = Tk()
@@ -127,6 +132,9 @@ try:
 except Exception as e:
     print(f"Error loading icon: {e}")
 
+
+
+
 #Top Labels Main Window
 siteLabel = Label(root, bg="#ADD8E6", text= "Sites", font=('Tk_defaultFont', 10, 'bold'))
 siteLabel.grid(row=0, column= 0, sticky=W)
@@ -143,68 +151,95 @@ meterpvsystLabel.grid(row=0, column= 6)
 POALabel = Label(root, bg="#ADD8E6", text= "POA", font=('Tk_defaultFont', 10, 'bold'))
 POALabel.grid(row=0, column= 7)
 SSSLabel = Label(root, bg="#ADD8E6", text= "Site Snap Shot", font=('Tk_defaultFont', 10, 'bold'))
-
 # Configure column 8 to expand, allowing the snapshot frame to fill the available space
 root.columnconfigure(8, weight=1)
 SSSLabel.grid(row=0, column= 8)
 
-#Windows with multiple pages of Site inv data
-solrvr_win = Toplevel(root)
-solrvr_win.title("Sol River's Portfolio")
-try:
-    solrvr_win.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-except Exception as e:
-    print(f"Error loading icon: {e}")
-solrvrnotebook = ttk.Notebook(solrvr_win)
-style = ttk.Style(root)
-style.configure("TNotebook.Tab", padding=[90, 2], font=('Tk_defaultFont', 12, 'bold'))
-solrvr = ttk.Frame(solrvrnotebook)
-solrvr2 = ttk.Frame(solrvrnotebook)
 
-solrvrnotebook.add(solrvr, text="Bulloch 1A - Sunflower")
-solrvrnotebook.add(solrvr2, text="Upson - Williams")
 
-solrvrnotebook.pack(expand=True, fill='both')
+if sql_pc:
+    #Windows with multiple pages of Site inv data
+    solrvr_win = Toplevel(root)
+    solrvr_win.title("Sol River's Portfolio")
+    try:
+        solrvr_win.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
+    except Exception as e:
+        print(f"Error loading icon: {e}")
+    solrvrnotebook = ttk.Notebook(solrvr_win)
+    style = ttk.Style(root)
+    style.configure("TNotebook.Tab", padding=[90, 2], font=('Tk_defaultFont', 12, 'bold'))
+    solrvr = ttk.Frame(solrvrnotebook)
+    solrvr2 = ttk.Frame(solrvrnotebook)
 
-hst_win = Toplevel(root)
-hst_win.title("Harrison Street's Portfolio")
-try:
-    hst_win.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-except Exception as e:
-    print(f"Error loading icon: {e}")
-hstnotebook = ttk.Notebook(hst_win)
-hst = ttk.Frame(hstnotebook)
-hstnotebook.add(hst, text="Bishopville II - Van Buren")
-hstnotebook.pack(expand=True, fill='both')
+    solrvrnotebook.add(solrvr, text="Bulloch 1A - Sunflower")
+    solrvrnotebook.add(solrvr2, text="Upson - Williams")
 
-nar_win = Toplevel(root)
-nar_win.title("NARENCO's Portfolio")
-try:
-    nar_win.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-except Exception as e:
-    print(f"Error loading icon: {e}")
-narnotebook = ttk.Notebook(nar_win)
-nar = ttk.Frame(narnotebook)
-narnotebook.add(nar, text="Bluebird - Violet")
-narnotebook.pack(expand=True, fill='both')
+    solrvrnotebook.pack(expand=True, fill='both')
 
-#Static Inv Windows
-soltage = Toplevel(root)
-soltage.title("Soltage")
-soltage.wm_attributes("-topmost", True)
+    hst_win = Toplevel(root)
+    hst_win.title("Harrison Street's Portfolio")
+    try:
+        hst_win.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
+    except Exception as e:
+        print(f"Error loading icon: {e}")
+    hstnotebook = ttk.Notebook(hst_win)
+    hst = ttk.Frame(hstnotebook)
+    hstnotebook.add(hst, text="Bishopville II - Van Buren")
+    hstnotebook.pack(expand=True, fill='both')
 
-try:
-    soltage.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-except Exception as e:
-    print(f"Error loading icon: {e}")
-ncemc = Toplevel(root)
-ncemc.title("NCEMC")
-ncemc.wm_attributes("-topmost", True)
-try:
-    ncemc.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-except Exception as e:
-    print(f"Error loading icon: {e}")
-#Inverter Windows created
+    nar_win = Toplevel(root)
+    nar_win.title("NARENCO's Portfolio")
+    try:
+        nar_win.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
+    except Exception as e:
+        print(f"Error loading icon: {e}")
+    narnotebook = ttk.Notebook(nar_win)
+    nar = ttk.Frame(narnotebook)
+    narnotebook.add(nar, text="Bluebird - Violet")
+    narnotebook.pack(expand=True, fill='both')
+
+    #Static Inv Windows
+    soltage = Toplevel(root)
+    soltage.title("Soltage")
+    soltage.wm_attributes("-topmost", True)
+
+    try:
+        soltage.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
+    except Exception as e:
+        print(f"Error loading icon: {e}")
+    ncemc = Toplevel(root)
+    ncemc.title("NCEMC")
+    ncemc.wm_attributes("-topmost", True)
+    try:
+        ncemc.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
+    except Exception as e:
+        print(f"Error loading icon: {e}")
+    #Inverter Windows created
+else:
+    #Windows with multiple pages of Site inv data
+    inv_win = Toplevel(root)
+    inv_win.title("Inverter's Portfolio")
+    try:
+        inv_win.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
+    except Exception as e:
+        print(f"Error loading icon: {e}")
+    notebook = ttk.Notebook(inv_win)
+
+    solrvr = ttk.Frame(notebook)
+    solrvr2 = ttk.Frame(notebook)
+    hst = ttk.Frame(notebook)
+    nar = ttk.Frame(notebook)
+    ncemc = ttk.Frame(notebook)
+    soltage = ttk.Frame(notebook)
+
+    notebook.add(nar, text="NARENCO")
+    notebook.add(hst, text="Harrison Street")
+    notebook.add(soltage, text="Soltage")
+    notebook.add(ncemc, text="NCEMC")
+    notebook.add(solrvr, text="Bulloch 1A - Shorthorn")
+    notebook.add(solrvr2, text="Sunflower - Whitetail")
+
+    notebook.pack(expand=True, fill='both')
 
 
 MAP_SITES_HARDWARE_GUI = {
@@ -596,7 +631,40 @@ MAP_SITES_HARDWARE_GUI = {
 }
 
 
+
+
+
+
+
+
+if len(MAP_SITES_HARDWARE_GUI) > 22 and not sql_pc:
+    siteLabel1 = Label(root, bg="#ADD8E6", text= "Sites", font=('Tk_defaultFont', 10, 'bold'))
+    siteLabel1.grid(row=0, column= 9, sticky=W)
+    breakerstatusLabel1= Label(root, bg="#ADD8E6", text= "Breaker Status", font=('Tk_defaultFont', 10, 'bold'))
+    breakerstatusLabel1.grid(row=0, column=10)
+    meterVLabel1 = Label(root, bg="#ADD8E6", text= "Utility V", font=('Tk_defaultFont', 10, 'bold'))
+    meterVLabel1.grid(row= 0, column=11)
+    meterkWLabel1 = Label(root, bg="#ADD8E6", text="Meter kW", font=('Tk_defaultFont', 10, 'bold'))
+    meterkWLabel1.grid(row=0, column=13)
+    meterratioLabel1 = Label(root, bg="#ADD8E6", text= "% of Max", font=('Tk_defaultFont', 10, 'bold'))
+    meterratioLabel1.grid(row=0, column= 14)
+    meterpvsystLabel1 = Label(root, bg="#ADD8E6", text= "% of PvSyst", font=('Tk_defaultFont', 10, 'bold'))
+    meterpvsystLabel1.grid(row=0, column= 15)
+    POALabel1 = Label(root, bg="#ADD8E6", text= "POA", font=('Tk_defaultFont', 10, 'bold'))
+    POALabel1.grid(row=0, column= 16)
+    SSSLabel1 = Label(root, bg="#ADD8E6", text= "Site Snap Shot", font=('Tk_defaultFont', 10, 'bold'))
+    # Configure column 8 to expand, allowing the snapshot frame to fill the available space
+    root.columnconfigure(17, weight=1)
+    SSSLabel1.grid(row=0, column= 17)
+
+
+
+
+
+
+
 all_CBs = []
+#This is used to track the column for the inverter widgets
 normal_numbering = {'Bluebird', 'Cardinal', 'Cherry Blossom', 'Cougar', 'Harrison', 'Hayes', 'Hickory', 'Violet', 'HICKSON',
                     'JEFFERSON', 'Marshall', 'OGBURN', 'Tedder', 'Thunderhead', 'Van Buren', 'Bulloch 1A', 'Bulloch 1B', 'Elk', 'Duplin',
                     'Harding', 'Mclean', 'Richmond Cadle', 'Shorthorn', 'Sunflower', 'Upson', 'Warbler', 'Washington', 'Whitehall', 'Whitetail',
@@ -629,9 +697,31 @@ def open_wo_tracking(name):
         os.startfile(file)
     except FileNotFoundError:
         print(f"File Not Found: {file}")
+BUTTON_STATE_FILE = r"G:\Shared drives\O&M\NCC Automations\Notification System\CheckBoxState.json"
+
+def save_cb_state():
+    state = [var.get() for var in all_CBs]
+    with open(BUTTON_STATE_FILE, 'w') as f:
+        json.dump(state, f)
+
+def load_cb_state():
+    if os.path.exists(BUTTON_STATE_FILE):
+        with open(BUTTON_STATE_FILE, 'r') as f:
+            try:
+                state = json.load(f)
+                for var, value in zip(all_CBs, state):
+                    var.set(value)
+            except json.decoder.JSONDecodeError as e:
+                print(f"Error decoding JSON data: {e}")
+                # Handle the error or provide appropriate fallback behavior
+    else:
+        print(f"File {BUTTON_STATE_FILE} does not exist.")
+
+
 
 #This loop creates all the tkinter widgets for the GUI
 col = 1
+
 for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), start=1):
     invdict = site_dictionary['INV_DICT']
     var_name = site_dictionary['VAR_NAME']
@@ -642,45 +732,76 @@ for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), sta
     #Site Info
     #Main Color
     globals()[f'{var_name}Label'] = Label(root, bg=main_color, text=name, fg= 'black', font=('Tk_defaultFont', 10, 'bold'))
-    globals()[f'{var_name}Label'].grid(row=ro, column= 0, sticky=W)
+    if ro > 22 and not sql_pc:
+        globals()[f'{var_name}Label'].grid(row=ro-22, column= 9, sticky=W)
+    else:
+        globals()[f'{var_name}Label'].grid(row=ro, column= 0, sticky=W)
     if breakertf:
         if name == 'Violet':
             vio_excep = 1
         else:
             vio_excep = ''
         globals()[f'{var_name}{vio_excep}statusLabel'] = Label(root, bg=main_color, text='❌', fg= 'black')
-        globals()[f'{var_name}{vio_excep}statusLabel'].grid(row=ro, column= 1)
+        if ro > 22 and not sql_pc:
+            globals()[f'{var_name}{vio_excep}statusLabel'].grid(row=ro-22, column= 10)
+        else:
+            globals()[f'{var_name}{vio_excep}statusLabel'].grid(row=ro, column= 1)
         if name == 'Violet':
             violet2statusLabel = Label(root, bg=main_color, text='❌', fg= 'black')
-            violet2statusLabel.grid(row=ro+1, column= 1)
+            if ro > 22 and not sql_pc:
+                violet2statusLabel.grid(row=ro-21, column= 10)
+            else:
+                violet2statusLabel.grid(row=ro+1, column= 1)
 
     if name != 'CDIA':
         #Site Voltage Boolean
         globals()[f'{var_name}meterVLabel'] = Label(root, bg=main_color, text='V', fg= 'black')
-        globals()[f'{var_name}meterVLabel'].grid(row=ro, column= 2)
+        if ro > 22 and not sql_pc:
+            globals()[f'{var_name}meterVLabel'].grid(row=ro-22, column= 11)
+        else:
+            globals()[f'{var_name}meterVLabel'].grid(row=ro, column= 2)
 
     globals()[f'{var_name}metercbval'] = IntVar()
     all_CBs.append(globals()[f'{var_name}metercbval'])
-    globals()[f'{var_name}metercb'] = Checkbutton(root, bg=main_color, variable=globals()[f'{var_name}metercbval'], fg= 'black', cursor='hand2')
-    globals()[f'{var_name}metercb'].grid(row=ro, column= 3)
+    globals()[f'{var_name}metercb'] = Checkbutton(root, bg=main_color, variable=globals()[f'{var_name}metercbval'], fg= 'black', cursor='hand2', command=save_cb_state)
+    if ro > 22 and not sql_pc:
+        globals()[f'{var_name}metercb'].grid(row=ro-22, column= 12)
+    else:
+        globals()[f'{var_name}metercb'].grid(row=ro, column= 3)
     #Meter Producing Boolean
     globals()[f'{var_name}meterkWLabel'] = Label(root, bg=main_color, text='kW', fg= 'black')
-    globals()[f'{var_name}meterkWLabel'].grid(row=ro, column= 4)
+    if ro > 22 and not sql_pc:
+        globals()[f'{var_name}meterkWLabel'].grid(row=ro-22, column= 13)
+    else:
+        globals()[f'{var_name}meterkWLabel'].grid(row=ro, column= 4)
     #Meter % of Max capability
     globals()[f'{var_name}meterRatioLabel'] = Label(root, bg=main_color, text='Ratio', fg= 'black')
-    globals()[f'{var_name}meterRatioLabel'].grid(row=ro, column= 5)
+    if ro > 22 and not sql_pc:
+        globals()[f'{var_name}meterRatioLabel'].grid(row=ro-22, column= 14)
+    else:
+        globals()[f'{var_name}meterRatioLabel'].grid(row=ro, column= 5)
     #PVSyst Value
     globals()[f'{var_name}meterPvSystLabel'] = Label(root, bg=main_color, text='Ratio', fg= 'black')
-    globals()[f'{var_name}meterPvSystLabel'].grid(row=ro, column= 6)
+    if ro > 22 and not sql_pc:
+        globals()[f'{var_name}meterPvSystLabel'].grid(row=ro-22, column= 15)
+    else:
+        globals()[f'{var_name}meterPvSystLabel'].grid(row=ro, column= 6)
 
     globals()[f'{var_name}POAcbval'] = IntVar()
     all_CBs.append(globals()[f'{var_name}POAcbval'])
-    globals()[f'{var_name}POAcb'] = Checkbutton(root, bg=main_color, text='X', variable=globals()[f'{var_name}POAcbval'], fg= 'black', cursor='hand2')
-    globals()[f'{var_name}POAcb'].grid(row=ro, column= 7)
+    globals()[f'{var_name}POAcb'] = Checkbutton(root, bg=main_color, text='X', variable=globals()[f'{var_name}POAcbval'], fg= 'black', cursor='hand2', command=save_cb_state)
+    
+    if ro > 22 and not sql_pc:
+        globals()[f'{var_name}POAcb'].grid(row=ro-22, column= 16)
+    else:
+        globals()[f'{var_name}POAcb'].grid(row=ro, column= 7)
     
     # Create a frame for the site snapshot data
     globals()[f'{var_name}kwdata_frame'] = Frame(root, bg=main_color, bd=1, relief="solid")
-    globals()[f'{var_name}kwdata_frame'].grid(row=ro, column=8, sticky='ew')
+    if ro > 22 and not sql_pc:
+        globals()[f'{var_name}kwdata_frame'].grid(row=ro-22, column= 17, sticky='ew')
+    else:
+        globals()[f'{var_name}kwdata_frame'].grid(row=ro, column=8, sticky='ew')
 
     # Configure columns to have equal weight, allowing them to share space
     globals()[f'{var_name}kwdata_frame'].columnconfigure(0, weight=1)
@@ -715,44 +836,89 @@ for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), sta
     site_widgets[var_name]['invs_total'] = globals()[f'{var_name}_invs_total']
     
     #End
-    #INVERTER INFO
-    length_limit = 73
-    if name != 'CDIA':
-        if invnum > length_limit:
-            span_col = 6
-        else:
-            span_col = 3
-        globals()[f'{var_name}invsLabel'] = Button(custid, text=name, command=lambda name=name: open_wo_tracking(name), bg=main_color, font=("Tk_defaultFont", 12, 'bold'), cursor='hand2')
-        globals()[f'{var_name}invsLabel'].grid(row= 0, column= col, columnspan= span_col, sticky='ew')
-    for num in range(1, invnum+1):
-        column_offset = 0 if num <= length_limit else 3
-        row_offset = num if num <= length_limit else num - length_limit
+    if sql_pc:          
+        #INVERTER INFO
+        length_limit = 73
         if name != 'CDIA':
-            if num in invdict:  # Check if the key exists in the dictionary
-                inv_val = invdict[num]
+            if invnum > length_limit:
+                span_col = 6
             else:
-                inv_val = str(num)
+                span_col = 3
+            globals()[f'{var_name}invsLabel'] = Button(custid, text=name, command=lambda name=name: open_wo_tracking(name), bg=main_color, font=("Tk_defaultFont", 12, 'bold'), cursor='hand2')
+            globals()[f'{var_name}invsLabel'].grid(row=0, column=col, columnspan=span_col, sticky='ew')
+        for num in range(1, invnum+1):
+            column_offset = 0 if num <= length_limit else 3
+            row_offset = num if num <= length_limit else num - length_limit
+            if name != 'CDIA':
+                if num in invdict:  # Check if the key exists in the dictionary
+                    inv_val = str(invdict[num])
+                else:
+                    inv_val = str(num)
 
-            globals()[f'{var_name}inv{inv_val}cbval'] = IntVar()
-            all_CBs.append(globals()[f'{var_name}inv{inv_val}cbval'])
-            globals()[f'{var_name}inv{inv_val}cb'] = Checkbutton(custid, text=str(inv_val), variable=globals()[f'{var_name}inv{inv_val}cbval'], cursor='hand2')
-            globals()[f'{var_name}inv{inv_val}cb'].grid(row= row_offset, column= col+column_offset, sticky=W)
+                globals()[f'{var_name}inv{inv_val}cbval'] = IntVar()
+                all_CBs.append(globals()[f'{var_name}inv{inv_val}cbval'])
+                globals()[f'{var_name}inv{inv_val}cb'] = Checkbutton(custid, text=str(inv_val), variable=globals()[f'{var_name}inv{inv_val}cbval'], cursor='hand2', command=save_cb_state)
+                globals()[f'{var_name}inv{inv_val}cb'].grid(row=row_offset, column=col + column_offset, sticky=W)
 
-            globals()[f'{var_name}inv{num}WOLabel'] = Label(custid, text='⬜') #intial Setup of WO Placeholder. 
-            globals()[f'{var_name}inv{num}WOLabel'].grid(row= row_offset, column= col+1+column_offset)
+                globals()[f'{var_name}inv{num}WOLabel'] = Label(custid, text='⬜') #intial Setup of WO Placeholder. 
+                globals()[f'{var_name}inv{num}WOLabel'].grid(row=row_offset, column=col + 1 + column_offset)
 
-            if name != "Conetoe":
-                globals()[f'{var_name}invup{num}cbval'] = IntVar()
-                all_CBs.append(globals()[f'{var_name}invup{num}cbval'])
-                globals()[f'{var_name}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{var_name}invup{num}cbval'], cursor='hand2')
-                globals()[f'{var_name}invup{num}cb'].grid(row= row_offset, column= col+2+column_offset, sticky=W)
-            else:
-                if num < 5:
+                if name != "Conetoe":
                     globals()[f'{var_name}invup{num}cbval'] = IntVar()
                     all_CBs.append(globals()[f'{var_name}invup{num}cbval'])
-                    globals()[f'{var_name}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{var_name}invup{num}cbval'], cursor='hand2')
-                    globals()[f'{var_name}invup{num}cb'].grid(row= (4*row_offset-3), rowspan= 4, column= col+2+column_offset, sticky=W)
-    col += span_col
+                    globals()[f'{var_name}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{var_name}invup{num}cbval'], cursor='hand2', command=save_cb_state)
+                    globals()[f'{var_name}invup{num}cb'].grid(row=row_offset, column=col + 2 + column_offset, sticky=W)
+                else:
+                    if num < 5:
+                        globals()[f'{var_name}invup{num}cbval'] = IntVar()
+                        all_CBs.append(globals()[f'{var_name}invup{num}cbval'])
+                        globals()[f'{var_name}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{var_name}invup{num}cbval'], cursor='hand2', command=save_cb_state)
+                        globals()[f'{var_name}invup{num}cb'].grid(row=(4 * row_offset - 3), rowspan=4, column=col + 2 + column_offset, sticky=W)
+        col += span_col
+    else:
+        #INVERTER INFO
+        length_limit = 38
+        if name != 'CDIA':
+            if invnum > length_limit*2:
+                span_col = 9
+            elif length_limit*2 > invnum > length_limit:
+                span_col = 6
+            else:
+                span_col = 3
+            print(f"{name} | Invs: {invnum} | {length_limit*2} | {span_col}")
+
+            globals()[f'{var_name}invsLabel'] = Button(custid, text=name, command=lambda name=var_name: open_wo_tracking(name), bg=main_color, font=("Tk_defaultFont", 12, 'bold'), cursor='hand2')
+            globals()[f'{var_name}invsLabel'].grid(row=0, column=col, columnspan=span_col, sticky='ew')
+        for num in range(1, invnum+1):
+            block_number = (num - 1) // length_limit
+            column_offset = block_number * 3
+            row_offset = (num - 1) % length_limit + 1
+            if name != 'CDIA':
+                if num in invdict:  # Check if the key exists in the dictionary
+                    inv_val = str(invdict[num])
+                else:
+                    inv_val = str(num)
+
+                globals()[f'{var_name}inv{inv_val}cbval'] = IntVar()
+                all_CBs.append(globals()[f'{var_name}inv{inv_val}cbval'])
+                globals()[f'{var_name}inv{inv_val}cb'] = Checkbutton(custid, text=str(inv_val), variable=globals()[f'{var_name}inv{inv_val}cbval'], cursor='hand2', command=save_cb_state)
+                globals()[f'{var_name}inv{inv_val}cb'].grid(row=row_offset, column=col + column_offset, sticky=W)
+
+                globals()[f'{var_name}inv{num}WOLabel'] = Label(custid, text='⬜') #intial Setup of WO Placeholder. 
+                globals()[f'{var_name}inv{num}WOLabel'].grid(row=row_offset, column=col + 1 + column_offset)
+
+                if name != "Conetoe":
+                    globals()[f'{var_name}invup{num}cbval'] = IntVar()
+                    all_CBs.append(globals()[f'{var_name}invup{num}cbval'])
+                    globals()[f'{var_name}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{var_name}invup{num}cbval'], cursor='hand2', command=save_cb_state)
+                    globals()[f'{var_name}invup{num}cb'].grid(row=row_offset, column=col + 2 + column_offset, sticky=W)
+                else:
+                    if num < 5:
+                        globals()[f'{var_name}invup{num}cbval'] = IntVar()
+                        all_CBs.append(globals()[f'{var_name}invup{num}cbval'])
+                        globals()[f'{var_name}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{var_name}invup{num}cbval'], cursor='hand2', command=save_cb_state)
+                        globals()[f'{var_name}invup{num}cb'].grid(row=(4 * row_offset - 3), rowspan=4, column=col + 2 + column_offset, sticky=W)
+        col += span_col
 
 
 ##########
@@ -766,8 +932,8 @@ conetoe_check = False
 def conetoe_offline():
     global conetoe_check
     try:
-        if int(hardingPOAcb.cget("text")) >= 400 and datetime.now().hour >= 9:
-            msg= "Call Conetoe Utilities:\nWO 29980, 35307\n757-857-2888\nID: 710R41"
+        if int(hardingPOAcb.cget("text")) >= 400 and datetime.now().hour >= 9 and not conetoe_check:
+            msg= "Call Conetoe Utilities:\nWO 43079\n757-857-2888\nID: 710R41"
             if not textOnly.get():
                 messagebox.showinfo(title="Comm Outage", parent=alertW, message=msg)
             else:
@@ -784,20 +950,19 @@ def conetoe_offline():
 ##########
 ##########
 def connect_Logbook():
-    global cur, lbconnection
-
-    lbconn_str = r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=G:\Shared drives\Narenco Projects\O&M Projects\NCC\NCC\NCC 039.accdb;'
-    lbconnection = pyodbc.connect(lbconn_str)
-    cur = lbconnection.cursor()
+    lbconn_str = r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=G:\Shared drives\O&M\NCC\NCC 039.accdb;'
+    globals()['lbconnection'] = pyodbc.connect(lbconn_str)
+    globals()['cur'] = lbconnection.cursor()
 
 
 def connect_db():
     # Create a connection to the Access database
     globals()['dbconn_str'] = (
                 r'DRIVER={ODBC Driver 18 for SQL Server};'
-                r'SERVER=localhost\SQLEXPRESS01;'
+                fr'SERVER={CREDS['DB_IP']}\SQLEXPRESS;'
                 r'DATABASE=NARENCO_O&M_AE;'
-                r'Trusted_Connection=yes;'
+                fr'UID={CREDS['DB_UID']};'
+                fr'PWD={CREDS['DB_PWD']};'
                 r'Encrypt=no;'
             )
     globals()['dbconnection'] = pyodbc.connect(dbconn_str)
@@ -972,7 +1137,7 @@ def siteSnapShot_Update(site, var_name, inv_num, meterkW):
 
 def update_data():
     global text_update_Table
-    save_cb_state()
+    load_cb_state()
     update_data_start = ty.perf_counter()
 
     now = datetime.now()
@@ -1201,109 +1366,111 @@ def update_data():
                             text_update_Table.append("<br>" + str(msg))
         #INVERTER CHECKS            
         if name == "CDIA":
-                data = inv_data[f'{name} INV 1 Data']
-                current_config = globals()[f'{var_name}meterkWLabel'].cget("bg")
-                cbval = globals()[f'{var_name}metercbval'].get()
-                duplin_except = ''
-                r = 1
-                
-                #Meter Ratio Check for CDIA
-                avg_kW = np.mean([row[1] for row in data])
-                meterRatio = avg_kW/metermax
-                if meterRatio > .90:
-                    ratio_color = '#ADD8E6'  # Light Blue
-                elif .90 > meterRatio > .80:
-                    ratio_color = '#87CEEB'  # Sky Blue
-                elif .80 > meterRatio > .70:
-                    ratio_color = '#1E90FF'  # Dodger Blue
-                elif .70 > meterRatio > .60:
-                    ratio_color = '#4682B4'  # Steel Blue
-                elif .60 > meterRatio > .50:
-                    ratio_color = '#4169E1'  # Royal Blue
-                elif meterRatio < 0.001:
-                    ratio_color = 'black'
-                else: 
-                    ratio_color = 'gray'
-                globals()[f'{var_name}meterRatioLabel'].config(text= f"{round(meterRatio*100, 1)}%", bg= ratio_color, font=('Tk_defaultFont', 10, 'bold'))
+            #print(name, ': In CDIA Section')
+            data = inv_data[f'{name} INV 1 Data']
+            current_config = globals()[f'{var_name}meterkWLabel'].cget("bg")
+            cbval = globals()[f'{var_name}metercbval'].get()
+            duplin_except = ''
+            r = 1
+            
+            #Meter Ratio Check for CDIA
+            avg_kW = np.mean([row[1] for row in data])
+            meterRatio = avg_kW/metermax
+            if meterRatio > .90:
+                ratio_color = '#ADD8E6'  # Light Blue
+            elif .90 > meterRatio > .80:
+                ratio_color = '#87CEEB'  # Sky Blue
+            elif .80 > meterRatio > .70:
+                ratio_color = '#1E90FF'  # Dodger Blue
+            elif .70 > meterRatio > .60:
+                ratio_color = '#4682B4'  # Steel Blue
+            elif .60 > meterRatio > .50:
+                ratio_color = '#4169E1'  # Royal Blue
+            elif meterRatio < 0.001:
+                ratio_color = 'black'
+            else: 
+                ratio_color = 'gray'
+            globals()[f'{var_name}meterRatioLabel'].config(text= f"{round(meterRatio*100, 1)}%", bg= ratio_color, font=('Tk_defaultFont', 10, 'bold'))
 
-                avg_dcv = np.mean([row[0] for row in data])
-                inv_comm = max(comm_data[f'{name} INV 1 Data'])[0]
-                
-                inv_Ltime = inv_comm.strftime('%m/%d/%y | %H:%M')
-                if inv_comm > time_date_compare:
-                    if all(point[1] <= 1 for point in data):
-                        if avg_dcv > 100:
-                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
-                                var_key = f'{var_name}statusLabel'
-                                if var_key in globals():
-                                    if globals()[var_key].cget("bg") == 'green':
-                                        online_last = last_online(name, r, duplin_except)
-                                        msg= f"{name} | Inverter Offline, Good DC Voltage | {online_last}"
-                                        if not textOnly.get():
-                                            messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
-                                        else:
-                                            text_update_Table.append("<br>" + str(msg))
-                                else:
+            avg_dcv = np.mean([row[0] for row in data])
+            inv_comm = max(comm_data[f'{name} INV 1 Data'])[0]
+            
+            inv_Ltime = inv_comm.strftime('%m/%d/%y | %H:%M')
+            if inv_comm > time_date_compare:
+                if all(point[1] <= 1 for point in data):
+                    if avg_dcv > 100:
+                        if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
+                            var_key = f'{var_name}statusLabel'
+                            if var_key in globals():
+                                if globals()[var_key].cget("bg") == 'green':
                                     online_last = last_online(name, r, duplin_except)
                                     msg= f"{name} | Inverter Offline, Good DC Voltage | {online_last}"
                                     if not textOnly.get():
                                         messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                     else:
                                         text_update_Table.append("<br>" + str(msg))
-
-                            globals()[f'{var_name}meterkWLabel'].config(text="X✓", bg='orange', font=('Tk_defaultFont', 10, 'bold'))
-                            globals()[f'{var_name}Label'].config(bg='orange')
-
-                        else:
-                            online_last = last_online(name, inv_num, duplin_except)
-                            ToolTip(globals()[f'{var_name}inv{inv_val}cb'], f"Inverter Offline, Bad DC Voltage\n{online_last}")
-                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
-                                var_key = f'{var_name}statusLabel'
-                                if var_key in globals():
-                                    if globals()[var_key].cget("bg") == 'green':
-                                        online_last = last_online(name, r, duplin_except)
-                                        msg= f"{name} | Inverter Offline, Bad DC Voltage | {online_last}"
-                                        if not textOnly.get():
-                                            messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
-                                        else:
-                                            text_update_Table.append("<br>" + str(msg))
+                            else:
+                                online_last = last_online(name, r, duplin_except)
+                                msg= f"{name} | Inverter Offline, Good DC Voltage | {online_last}"
+                                if not textOnly.get():
+                                    messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                 else:
+                                    text_update_Table.append("<br>" + str(msg))
+
+                        globals()[f'{var_name}meterkWLabel'].config(text="X✓", bg='orange', font=('Tk_defaultFont', 10, 'bold'))
+                        globals()[f'{var_name}Label'].config(bg='orange')
+
+                    else:
+                        online_last = last_online(name, r, duplin_except)
+                        ToolTip(globals()[f'{var_name}meterkWLabel'], f"Inverter Offline, Bad DC Voltage\n{online_last}")
+                        if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
+                            var_key = f'{var_name}statusLabel'
+                            if var_key in globals():
+                                if globals()[var_key].cget("bg") == 'green':
                                     online_last = last_online(name, r, duplin_except)
                                     msg= f"{name} | Inverter Offline, Bad DC Voltage | {online_last}"
                                     if not textOnly.get():
                                         messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                     else:
                                         text_update_Table.append("<br>" + str(msg))
-
-                            globals()[f'{var_name}meterkWLabel'].config(text="❌❌", bg='red')
-                            globals()[f'{var_name}Label'].config(bg='red')
-
-                    else:
-                        if check_inv_consecutively_online(point[1] for point in data):
-                            globals()[f'{var_name}meterkWLabel'].config(text=round(avg_kW/1000, 1), bg='green', font=('Tk_defaultFont', 10, 'bold'))
-                            globals()[f'{var_name}Label'].config(bg='#ADD8E6')
-
-                else:
-                    invlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
-                    globals()[f'{var_name}meterkWLabel'].config(bg='pink')
-                    globals()[f'{var_name}meterRatioLabel'].config(bg='pink')
-
-                    if invlbl != 'pink' and cbval == 0 and master_cb_skips_INV_check:
-                        var_key = f'{var_name}statusLabel'
-                        if var_key in globals():
-                            if globals()[var_key].cget("bg") == 'green':
-                                msg= f"INV Comms lost {inv_Ltime} with Inverter {r} at {name}! Please Investigate!"
+                            else:
+                                online_last = last_online(name, r, duplin_except)
+                                msg= f"{name} | Inverter Offline, Bad DC Voltage | {online_last}"
                                 if not textOnly.get():
-                                    messagebox.showerror(parent= alertW, title=f"{name}, Inverter Comms Loss", message=msg)
+                                    messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                 else:
                                     text_update_Table.append("<br>" + str(msg))
-                        else:
+
+                        globals()[f'{var_name}meterkWLabel'].config(text="❌❌", bg='red')
+                        globals()[f'{var_name}Label'].config(bg='red')
+
+                else:
+                    if check_inv_consecutively_online(point[1] for point in data):
+                        globals()[f'{var_name}meterkWLabel'].config(text=round(avg_kW/1000, 1), bg='green', font=('Tk_defaultFont', 10, 'bold'))
+                        globals()[f'{var_name}Label'].config(bg='#ADD8E6')
+
+            else:
+                invlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
+                globals()[f'{var_name}meterkWLabel'].config(bg='pink')
+                globals()[f'{var_name}meterRatioLabel'].config(bg='pink')
+
+                if invlbl != 'pink' and cbval == 0 and master_cb_skips_INV_check:
+                    var_key = f'{var_name}statusLabel'
+                    if var_key in globals():
+                        if globals()[var_key].cget("bg") == 'green':
                             msg= f"INV Comms lost {inv_Ltime} with Inverter {r} at {name}! Please Investigate!"
                             if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title=f"{name}, Inverter Comms Loss", message=msg)
                             else:
                                 text_update_Table.append("<br>" + str(msg))
+                    else:
+                        msg= f"INV Comms lost {inv_Ltime} with Inverter {r} at {name}! Please Investigate!"
+                        if not textOnly.get():
+                            messagebox.showerror(parent= alertW, title=f"{name}, Inverter Comms Loss", message=msg)
+                        else:
+                            text_update_Table.append("<br>" + str(msg))
         else:
+            #print(name, ': In Else Section')
             for r in range(1, inverters + 1):
                 if r in invdict:  # Check if the key exists in the dictionary
                     inv_val = invdict[r]
@@ -1650,17 +1817,17 @@ def update_data():
         else:
             print("No New Updates | Email Passed")
 
-
     dbconnection.close()
+    load_cb_state()
 
 
     def allinv_message_update(num, state):
-        with open(f"C:\\Users\\OMOPS\\OneDrive - Narenco\\Documents\\APISiteStat\\Site {num} All INV Msg Stat.txt", "w+") as outfile:
+        with open(f"G:\\Shared drives\\O&M\\NCC Automations\\Notification System\\APISiteStat\\Site {num} All INV Msg Stat.txt", "w+") as outfile:
                 outfile.write(str(state))
 
     def allinv_message_check(num):
         global text_update_Table
-        file_path = f"C:\\Users\\OMOPS\\OneDrive - Narenco\\Documents\\APISiteStat\\Site {num} All INV Msg Stat.txt"
+        file_path = f"G:\\Shared drives\\O&M\\NCC Automations\\Notification System\\APISiteStat\\Site {num} All INV Msg Stat.txt"
         try:
             with open(file_path, "r+") as rad:
                 allinvstat = rad.read()
@@ -1879,11 +2046,10 @@ def checkin():
                     wsize = 23
                 label = Label(checkIns, text=value, font=("Calibri", 14), borderwidth=1, relief="solid", width=wsize, bg=bg_color)
                 label.grid(row=row_index, column=col_index)
-
-    except pyobdc.Error as err:
+        lbconnection.close()
+    except pyodbc.Error as err:
         print("Logbook Error: ", err)
 
-    lbconnection.close()
     update_data()
 
 
@@ -1943,8 +2109,7 @@ def time_window():
     timecompare = timecurrent - timedelta(minutes=db_update_time)
     recent_update = last_update()
     if recent_update < timecompare and comms_delay.get() == False:
-        os.startfile(r"G:\Shared drives\O&M\NCC Automations\Notification System\API Data Pull, Multi SQL.py")
-        msg = f"The Database has not been updated in {str(db_update_time)} Minutes and usually updates every 2\nLaunching Data Pull Script in response."
+        msg = f"The Database has not been updated in {str(db_update_time)} Minutes and usually updates every 2\nPlease check the SQL Server pc and verify the data pull script is operating as expected."
         if not textOnly.get():
             messagebox.showerror(parent=timeW, title="Notification System/GUI", message=msg)
         else:
@@ -1954,7 +2119,7 @@ def time_window():
                 pass
             except NameError:
                 pass
-        ty.sleep(180)
+
 
     tupdate = timecurrent.strftime('%H:%M')
 
@@ -1964,16 +2129,11 @@ def time_window():
 
 def db_to_dict():
     day_of_week = datetime.today().weekday()
-    if day_of_week > 4:
-        now = datetime.now()
-        if (now.hour == 14 and now.minute >= 55) or (now.hour > 14):
-            os.startfile(r"G:\Shared drives\O&M\NCC Automations\Notification System\Email Notification (Breaker).py")
-            ty.sleep(5)
-            os.startfile(r"G:\Shared drives\O&M\NCC Automations\Emails\Close AE GUI.ahk")
-    else:
-        now = datetime.now()
-        if now.hour >= 20:
-            restart_pc()
+    now = datetime.now()
+
+    if (day_of_week > 4 and now.hour > 15) or now.hour > 20:
+        restart_pc()
+
 
     query_start = ty.perf_counter()
     sendTexts.config(state=DISABLED)
@@ -2153,25 +2313,7 @@ def parse_wo():
                 with open(txt_file_path, 'a+') as file:
                     file.write(f'{inv_num:<5}|  WO: {wo_num:<8}|  {wo_date}  |  {wo_summary}\n')
 
-STATE_FILE = r"G:\Shared drives\O&M\NCC Automations\Notification System\CheckBoxState.json"
 
-def save_cb_state():
-    state = [var.get() for var in all_CBs]
-    with open(STATE_FILE, 'w') as f:
-        json.dump(state, f)
-
-def load_cb_state():
-    if os.path.exists(STATE_FILE):
-        with open(STATE_FILE, 'r') as f:
-            try:
-                state = json.load(f)
-                for var, value in zip(all_CBs, state):
-                    var.set(value)
-            except json.decoder.JSONDecodeError as e:
-                print(f"Error decoding JSON data: {e}")
-                # Handle the error or provide appropriate fallback behavior
-    else:
-        print(f"File {STATE_FILE} does not exist.")
 def check_button_notes():
     messagebox.showinfo(parent=alertW, title="Checkbutton Info", message= """The First column of CheckButtons in the Site Data Window turns off all notifications associated with that Site.
                         \nThe POA CB will change the value to 9999 so that no inv outages are filtered by the POA
@@ -2209,10 +2351,10 @@ notificationFrame = Frame(alertW)
 notificationFrame.grid(row=0, column=1, sticky=N)
 notificationNotes = Label(notificationFrame, text="Notification Settings", font=("Calibiri", 14))
 notificationNotes.pack()
-textOnly = IntVar()
-sendTexts = Checkbutton(notificationFrame, text="Send Emails\n(Disable Local MsgBox's)", cursor='hand2', variable=textOnly)
+textOnly = IntVar(value=0)
+sendTexts = Checkbutton(notificationFrame, text="Send Emails\n(Disable Local MsgBox's)", cursor='hand2', variable=textOnly, command=save_cb_state)
 sendTexts.pack(padx=2)
-adminTexts = StringVar()
+adminTexts = StringVar(value="Joseph Lang")
 optionTexts = ttk.Combobox(notificationFrame, textvariable=adminTexts, values=["Joseph Lang", "Brandon Arrowood", "Jacob Budd", "Administrators + NCC", "Administrators Only"], state="readonly")
 optionTexts.pack()
 optionTexts.current(0)
@@ -2220,7 +2362,7 @@ notes_settings = Label(notificationFrame, text="\nSelect from the Dropdown\nBefo
 notes_settings.pack()
 
 comms_delay = BooleanVar()
-comms_AE_delay = Checkbutton(notificationFrame, text="Select to pause\nrestart of Data Pull Script\nDo so if AE is in a\nmajor comms delay", variable= comms_delay, cursor='hand2')
+comms_AE_delay = Checkbutton(notificationFrame, text="Select to pause\nrestart of Data Pull Script\nDo so if AE is in a\nmajor comms delay", variable= comms_delay, cursor='hand2', command=save_cb_state)
 comms_AE_delay.pack()
 
 

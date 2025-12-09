@@ -7,90 +7,34 @@ import pyodbc
 import re
 import sys
 import subprocess
-import socket
 from tkinter import messagebox
 import tkinter as tk
 import multiprocessing
 from multiprocessing import Manager
 from icecream import ic
 import urllib3
+import ctypes
 
 # Add the parent directory ('NCC Automations') to the Python path
 # This allows us to import the 'PythonTools' package from there.
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
-from PythonTools import CREDS, EMAILS, AE_HARDWARE_MAP, PausableTimer 
-
-
-def check_sql_server_status(service_name):
-    """
-    Checks if the SQL Server service is installed and running.
-    Returns:
-        'running': if the service is running.
-        'stopped': if the service is installed but not running.
-        'not_installed': if the service is not installed.
-        'error': for other errors.
-    """
-    try:
-        # Use CREATE_NO_WINDOW flag to prevent console window from appearing
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        
-        output = subprocess.check_output(
-            ['sc', 'query', service_name], 
-            text=True, 
-            stderr=subprocess.STDOUT,
-            startupinfo=startupinfo
-        )
-        if "RUNNING" in output:
-            return 'running'
-        elif "STOPPED" in output:
-            return 'stopped'
-        else:
-            return 'error'
-    except subprocess.CalledProcessError as e:
-        if "The specified service does not exist as an installed service." in e.output:
-            return 'not_installed'
-        else:
-            if "STOPPED" in e.output: # Sometimes sc query can return error on stopped service
-                return 'stopped'
-            return 'error'
-    except FileNotFoundError:
-        # This would happen if 'sc.exe' is not in the system's PATH.
-        return 'error'
-
-def check_and_handle_sql_server():
-    """Checks for SQL Server and prompts user if needed."""
-    # Create a temporary root for message boxes and hide it.
-    temp_root = tk.Tk()
-    temp_root.withdraw()
-
-    sql_service_names = ['MSSQL$SQLEXPRESS001', 'MSSQL$SQLEXPRESS']
-    status = None
-    for service_name in sql_service_names:
-        status = check_sql_server_status(service_name)
-        if status == 'running':
-            break  # If one is running, stop checking
-
-    if status == 'running':
-        temp_root.destroy()
-        return # SQL Server is running, proceed with app
-    
-    messagebox.showerror("SQL Server Not Found", 
-                         f"SQL Server Express (SQLEXPRESS) is not installed or the service 'MSSQL$SQLEXPRESS' cannot be found.\n\n{status}\n\nPlease install SQL Server Express Edition 2022 and then run the DB Table Creation Tool and try again.", parent=temp_root)
-    
-    temp_root.destroy()
-    sys.exit(1)
+from PythonTools import CREDS, EMAILS, AE_HARDWARE_MAP, PausableTimer, get_hostname
 
 
 urllib3.disable_warnings()
+
+# Set the title of the console window
+ctypes.windll.kernel32.SetConsoleTitleW("AE API Data Pull")
 #Attmepted
 #os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 #os.environ['SSL_CERT_FILE'] = certifi.where()
 dataPullTime = 1
 
+HOSTNAME = get_hostname()
 
-
+if HOSTNAME not in {"NAR-OMOPSXPS", "NAR-OMOps-SQL"}:
+    messagebox.showwarning(message="Make sure to be connected to the NARENCO Office VPN if you are not on the nar-wifi network.")
 
 email = EMAILS['NCC Desk']
 password = CREDS['AlsoEnergy']
@@ -178,19 +122,19 @@ def get_data_for_site(site, site_data, api_data, AE_HARDWARE_MAP, start, base_ur
 
 
                 # AE Register Names
-                breaker_register_names = ['Status', 'Breaker Open/Closed', 'Status Closed']
-                inverterKW_register_names = ['Grid power', 'Line kW', 'AC Real Power', '3phase Power', 'Active Power', 'Total Active Power', 'Pac', 'AC Power']
-                inverterDC_register_names = ['DC Power Total', 'DC Voltage1', 'DC Input Voltage', 'DC voltage (average)', 'DC Voltage Average', 'Bus Voltage', 'Total DC Power', 'DC Voltage', 'Input Voltage', 'Vpv']
-                amps_a_register_names = ['Phase current, A', 'AC Current A', 'Current A', 'Amps A', 'AC Phase A Current']
-                amps_b_register_names = ['Phase current, B', 'AC Current B', 'Current B', 'Amps B', 'AC Phase B Current']
-                amps_c_register_names = ['Phase current, C', 'AC Current C', 'Current C', 'Amps C', 'AC Phase C Current']
+                breaker_register_names = {'Status', 'Breaker Open/Closed', 'Status Closed'}
+                inverterKW_register_names = {'Grid power', 'Line kW', 'AC Real Power', '3phase Power', 'Active Power', 'Total Active Power', 'Pac', 'AC Power'}
+                inverterDC_register_names = {'DC Power Total', 'DC Voltage1', 'DC Input Voltage', 'DC voltage (average)', 'DC Voltage Average', 'Bus Voltage', 'Total DC Power', 'DC Voltage', 'Input Voltage', 'Vpv'}
+                amps_a_register_names = {'Phase current, A', 'AC Current A', 'Current A', 'Amps A', 'AC Phase A Current'}
+                amps_b_register_names = {'Phase current, B', 'AC Current B', 'Current B', 'Amps B', 'AC Phase B Current'}
+                amps_c_register_names = {'Phase current, C', 'AC Current C', 'Current C', 'Amps C', 'AC Phase C Current'}
 
-                volts_a_register_names = ['Volts A-N', 'Volts A', 'AC Voltage A', 'Voltage AN', 'AC Voltage A (Line-Neutral)', 'Voltage, A-N', 'AC Phase A Voltage', 'AC Voltage AN']
-                volts_b_register_names = ['Volts B-N', 'Volts B', 'AC Voltage B', 'Voltage BN', 'AC Voltage B (Line-Neutral)', 'Voltage, B-N', 'AC Phase B Voltage', 'AC Voltage BN']
-                volts_c_register_names = ['Volts C-N', 'Volts C', 'AC Voltage C', 'Voltage CN', 'AC Voltage C (Line-Neutral)', 'Voltage, C-N', 'AC Phase C Voltage', 'AC Voltage CN']
-                meterkw_register_names = ['Active Power', 'Real power', 'Real Power', 'Total power']    #Real Power is probably not used but lowercase power is.            
+                volts_a_register_names = {'Volts A-N', 'Volts A', 'AC Voltage A', 'Voltage AN', 'AC Voltage A (Line-Neutral)', 'Voltage, A-N', 'AC Phase A Voltage', 'AC Voltage AN'}
+                volts_b_register_names = {'Volts B-N', 'Volts B', 'AC Voltage B', 'Voltage BN', 'AC Voltage B (Line-Neutral)', 'Voltage, B-N', 'AC Phase B Voltage', 'AC Voltage BN'}
+                volts_c_register_names = {'Volts C-N', 'Volts C', 'AC Voltage C', 'Voltage CN', 'AC Voltage C (Line-Neutral)', 'Voltage, C-N', 'AC Phase C Voltage', 'AC Voltage CN'}
+                meterkw_register_names = {'Active Power', 'Real power', 'Real Power', 'Total power'}    #Real Power is probably not used but lowercase power is.            
                 
-                weather_station_register_names = ['POA Irradiance', 'Plane of Array Irradiance',  'GHI Irradiance', 'Sun (GHI)', 'Sun (POA Temp comp)', 'GHI', 'POA', 'POA irradiance', 'Sun (POA)']
+                weather_station_register_names = {'POA Irradiance', 'Plane of Array Irradiance',  'GHI Irradiance', 'Sun (GHI)', 'Sun (POA Temp comp)', 'GHI', 'POA', 'POA irradiance', 'Sun (POA)'}
 
                 # Iterate over register groups for the current hardware
                 for register_group in hardware_data_response.get('registerGroups', []):
@@ -288,19 +232,24 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
             #    json.dump(api_data_dict, outfile, indent=2)
             
             #print(api_data_dict)
-            hostname = socket.gethostname()
-            if hostname == "NAR-OMOPSXPS":
-                server = "SQLEXPRESS01"
+
+            if HOSTNAME == "NAR-OMOps-SQL":
+                connection_string = (
+                    r'DRIVER={ODBC Driver 18 for SQL Server};'
+                    r'SERVER=localhost\SQLEXPRESS;'
+                    r'DATABASE=NARENCO_O&M_AE;'
+                    r'Trusted_Connection=yes;'
+                    r'Encrypt=no;'
+                )
             else:
-                server = "SQLEXPRESS"
-            # Create a connection to the Access database
-            connection_string = (
-                r'DRIVER={ODBC Driver 18 for SQL Server};'
-                fr'SERVER=localhost\{server};'
-                r'DATABASE=NARENCO_O&M_AE;'
-                r'Trusted_Connection=yes;'
-                r'Encrypt=no;'
-            )
+                connection_string = (
+                    r'DRIVER={ODBC Driver 18 for SQL Server};'
+                    fr'SERVER={CREDS['DB_IP']}\SQLEXPRESS;'
+                    r'DATABASE=NARENCO_O&M_AE;'
+                    fr'UID={CREDS['DB_UID']};'
+                    fr'PWD={CREDS['DB_PWD']};'
+                    r'Encrypt=no;'
+                )
             dbconnection = pyodbc.connect(connection_string)
             cursor = dbconnection.cursor()
 
@@ -449,9 +398,6 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
 
     loop_exit_file = r"G:\Shared drives\O&M\NCC Automations\Notification System\APISiteStat\Exiting Loop due to Failed Authentications.txt"
     auth_file = open(loop_exit_file, "r+")
-    
-    #Checks for Instacne of SQL Server and if Running. If not installed locally, it will close program.
-    check_and_handle_sql_server()
 
 
     my_main()
