@@ -51,15 +51,26 @@ def notification_period():
     is_weekend = now.weekday() in {5, 6}
 
     # Check if the time is after 3 PM (15:00) or before 7 AM (07:00)
-    is_after_hours = now.hour >= 15 or now.hour < 7
+    is_after_weekend_hours = now.hour >= 15 or now.hour < 7
 
-    if is_weekend and is_after_hours:
+    # For September, October, November, December, and January
+    if now.month in {9, 10, 11, 12, 1}:
+        weekday_hours = now.hour >= 17 or now.hour < 7
+    # For February, March, and April
+    elif now.month in {2, 3, 4}:
+        weekday_hours = now.hour >= 18 or now.hour < 7
+    # For May, June, July, and August
+    else:
+        weekday_hours = now.hour >= 19 or now.hour < 7
+
+    # Return True if it's off-hours on a weekend OR off-hours on a weekday
+    if (is_weekend and is_after_weekend_hours) or (not is_weekend and weekday_hours):
         return True
     return False
 
 def email_notification(SiteName, status, device, poa, amps):
     sender_email = EMAILS['NCC Desk']
-    admin = [EMAILS['Newman Segars'],  EMAILS['Brandon Arrowood'], EMAILS['Jayme Orrock'], EMAILS['Joseph Lang']]
+    admin = EMAILS['Administrators + NCC']
     smtp_server = 'smtp.gmail.com'
     smtp_port = 587
 
@@ -67,7 +78,7 @@ def email_notification(SiteName, status, device, poa, amps):
 
     msg = MIMEMultipart()
     msg['From'] = sender_email
-    msg['To'] = ' , '.join(admin)
+    msg['To'] = ', '.join(admin)
     #msg['To'] = test
 
     msg['Subject'] = f"{SiteName}, Outage"
@@ -171,6 +182,15 @@ def update_breaker_status():
             amps_columns = data[:, 3:6]  # Extract Amps Columns
             if all(tim > compare_time for tim in lastUpload_col):
                 if any(np.all(amps_columns[:, j] == 0) for j in range(amps_columns.shape[1])):
+                    
+                    phases_to_check = []
+                    if not site_widgets['Violet']['amp_a_var'].get():
+                        phases_to_check.append(0)
+                    if not site_widgets['Violet']['amp_b_var'].get():
+                        phases_to_check.append(1)
+                    if not site_widgets['Violet']['amp_c_var'].get():
+                        phases_to_check.append(2)
+
                     amp_data = [amps_columns[:,j] for j in range(amps_columns.shape[1])]
                     if not site_data_dict['meter_var'].get():
                         if metercomms > compare_time:
@@ -255,7 +275,15 @@ def update_breaker_status():
             lastUpload_col = data[:, 6]
             amps_columns = data[:, 3:6]  # Extract Amps Columns
             if all(tim > compare_time for tim in lastUpload_col):
-                if any(np.all(amps_columns[:, j] == 0) for j in range(amps_columns.shape[1])):
+                phases_to_check = []
+                if not site_data_dict['amp_a_var'].get():
+                    phases_to_check.append(0)
+                if not site_data_dict['amp_b_var'].get():
+                    phases_to_check.append(1)
+                if not site_data_dict['amp_c_var'].get():
+                    phases_to_check.append(2)
+
+                if any(np.all(amps_columns[:, j] == 0) for j in phases_to_check):
                     amp_data = [amps_columns[:,j] for j in range(amps_columns.shape[1])]
                     if not site_data_dict['meter_var'].get():
                         if metercomms > compare_time:
@@ -375,15 +403,6 @@ def db_to_dict():
             poa_data[table_name] = poadatap
 
     #ic(breaker_data)
-    comptime = meter_data['Freightliner Meter Data'][0][6]
-    comptime2 = meter_data['Harding Meter Data'][0][6]
-    db_update_time = 15
-    timecompare = current_time - timedelta(minutes=db_update_time)
-    print(f"Times: {timecompare} | {comptime} | {comptime2}")
-    if timecompare > comptime:
-        if timecompare > comptime2:
-            os.startfile(r"G:\Shared drives\O&M\NCC Automations\Notification System\API Data Pull, Multi SQL.py")
-            time.sleep(120)
     print("Pulled Data calling check to send")
     update_breaker_status()
 
@@ -419,75 +438,82 @@ timeLabel.grid(row=2, column=0)
 guiframe = Frame(root)
 guiframe.pack()
 
-num_columns = 4
+num_columns = 7
 
 # Create a list of sites to display, excluding 'Violet' which is handled separately
-sites_to_display = sorted([site for site in master_List_Sites if site != "Violet"])
+sites_to_display = sorted([site for site in master_List_Sites])
 
 for i, site_name in enumerate(sites_to_display):
     # Use divmod to elegantly calculate row and column
-    row, col = divmod(i, (len(sites_to_display) + num_columns - 1) // num_columns)
-
-    # Each site's widgets will occupy 3 rows, so we multiply the base row by 3
-    base_row = row * 3
+    # The quotient of the site index and number of columns gives the `row`.
+    # The remainder gives the `col`. This creates a grid with `num_columns` columns.
+    row, col = divmod(i, num_columns)
+    base_row = row * 4
 
     # Store all widgets and variables for a site in a dictionary
     site_widgets[site_name] = {}
 
-    # --- Site Label ---
-    site_label = Label(guiframe, text=site_name)
-    site_label.grid(row=base_row, column=col)
-    site_widgets[site_name]['label'] = site_label
+    device_frame = Frame(guiframe, border=2, relief='ridge')
+    device_frame.grid(row=base_row + 1, column=col, sticky='n')
+
+    if site_name == 'Violet':
+        violet_label = Label(guiframe, text="Violet 1 | Violet 2")
+        violet_label.grid(row=base_row, column=col)
+
+        # --- Violet 2 Breaker ---
+        site_widgets['Violet 2'] = {}
+        v2_breaker_var = BooleanVar(value=True)
+        v2_breaker_cb = Checkbutton(device_frame, text="B", variable=v2_breaker_var)
+        v2_breaker_cb.grid(row=0, column=1)
+        all_CBs.append(v2_breaker_var)
+        site_widgets['Violet 2']['breaker_var'] = v2_breaker_var
+        site_widgets['Violet 2']['breaker_cb'] = v2_breaker_cb
+
+        col_span_val = 2
+
+    else:
+        # --- Site Label ---
+        site_label = Label(guiframe, text=site_name)
+        site_label.grid(row=base_row, column=col)
+        site_widgets[site_name]['label'] = site_label
+        col_span_val = 1
 
     # --- Meter Checkbutton ---
     meter_var = BooleanVar(value=True)
-    meter_cb = Checkbutton(guiframe, text='M', variable=meter_var)
-    meter_cb.grid(row=base_row + 1, column=col)
+    meter_cb = Checkbutton(device_frame, text='M', variable=meter_var)
+    meter_cb.grid(row=1, column=0, columnspan=col_span_val)
     all_CBs.append(meter_var)
     site_widgets[site_name]['meter_var'] = meter_var
     site_widgets[site_name]['meter_cb'] = meter_cb
 
+    # --- Amp Phase Checkbuttons ---
+    amp_frame = Frame(device_frame)
+    amp_frame.grid(row=2, column=0, columnspan=col_span_val)
+    
+    amp_a_var = BooleanVar(value=False)
+    amp_a_cb = Checkbutton(amp_frame, text='A', variable=amp_a_var)
+    amp_a_cb.grid(row=0, column=0)
+    site_widgets[site_name]['amp_a_var'] = amp_a_var
+    
+    amp_b_var = BooleanVar(value=False)
+    amp_b_cb = Checkbutton(amp_frame, text='B', variable=amp_b_var)
+    amp_b_cb.grid(row=0, column=1)
+    site_widgets[site_name]['amp_b_var'] = amp_b_var
+
+    amp_c_var = BooleanVar(value=False)
+    amp_c_cb = Checkbutton(amp_frame, text='C', variable=amp_c_var)
+    amp_c_cb.grid(row=0, column=2)
+    site_widgets[site_name]['amp_c_var'] = amp_c_var
+
+    all_CBs.extend([amp_a_var, amp_b_var, amp_c_var])
     # --- Breaker Checkbutton (if applicable) ---
     if site_name in has_breaker:
         breaker_var = BooleanVar(value=True)
-        breaker_cb = Checkbutton(guiframe, text='B', variable=breaker_var)
-        breaker_cb.grid(row=base_row + 2, column=col)
+        breaker_cb = Checkbutton(device_frame, text='B', variable=breaker_var)
+        breaker_cb.grid(row=0, column=0)
         all_CBs.append(breaker_var)
         site_widgets[site_name]['breaker_var'] = breaker_var
         site_widgets[site_name]['breaker_cb'] = breaker_cb
-
-# Handle the special case for Violet
-# This logic remains separate as it has a unique layout
-violet_label = Label(guiframe, text="Violet 1")
-violet_label.grid(row=28, column=0, sticky=W)
-violet2_label = Label(guiframe, text="Violet 2")
-violet2_label.grid(row=28, column=1, sticky=W)
-
-# --- Violet 1 Breaker ---
-site_widgets['Violet'] = {}
-v1_breaker_var = BooleanVar(value=True)
-v1_breaker_cb = Checkbutton(guiframe, text="B", variable=v1_breaker_var)
-v1_breaker_cb.grid(row=29, column=0)
-all_CBs.append(v1_breaker_var)
-site_widgets['Violet']['breaker_var'] = v1_breaker_var
-site_widgets['Violet']['breaker_cb'] = v1_breaker_cb
-
-# --- Violet 2 Breaker ---
-site_widgets['Violet 2'] = {}
-v2_breaker_var = BooleanVar(value=True)
-v2_breaker_cb = Checkbutton(guiframe, text="B", variable=v2_breaker_var)
-v2_breaker_cb.grid(row=29, column=1)
-all_CBs.append(v2_breaker_var)
-site_widgets['Violet 2']['breaker_var'] = v2_breaker_var
-site_widgets['Violet 2']['breaker_cb'] = v2_breaker_cb
-
-# --- Violet Meter (shared) ---
-v_meter_var = BooleanVar(value=True)
-v_meter_cb = Checkbutton(guiframe, text='Meter', variable=v_meter_var)
-v_meter_cb.grid(row=30, column=0, columnspan=2)
-all_CBs.append(v_meter_var)
-site_widgets['Violet']['meter_var'] = v_meter_var
-site_widgets['Violet']['meter_cb'] = v_meter_cb
 
 
 

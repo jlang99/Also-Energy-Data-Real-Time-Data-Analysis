@@ -3,12 +3,19 @@ import datetime
 import os
 import sys
 import time as ty
+import ctypes
 
 # Add the parent directory ('NCC Automations') to the Python path
 # This allows us to import the 'PythonTools' package from there.
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
 from PythonTools import CREDS, get_hostname, AE_HARDWARE_MAP
+
+ctypes.windll.kernel32.SetConsoleTitleW("Data Pull Maintainer")
+
+
+DATA_PULL_SCRIPT = r"G:\Shared drives\O&M\NCC Automations\Notification System\API Data Pull, Multi SQL.py"
+CLOSE_DATA_SCRIPT = r"G:\Shared drives\O&M\NCC Automations\Notification System\Close Data Pull.ahk"
 
 
 def has_recent_writes(minutes=5):
@@ -54,9 +61,18 @@ def has_recent_writes(minutes=5):
         return False
 
 if __name__ == '__main__':
-    if has_recent_writes(5):
-        print(True)
-        ty.sleep(5)
-    else:
-        print(False)
-        ty.sleep(5)
+    while True:
+        if has_recent_writes(10):
+            print(True, "\nWaiting 60 Seconds")
+            ty.sleep(60)
+            print("Looping")
+        else:
+            print(False, "\nWaiting 10 Minutes so that during this data delay we ensure the script has plenty of time to cycle atleast once before this would close it again.")
+            #Run the Close terminal Script.
+            os.startfile(CLOSE_DATA_SCRIPT)
+            ty.sleep(5)
+            #Run Data Pull Script
+            os.startfile(DATA_PULL_SCRIPT)
+            ty.sleep(60*10)
+            print("Looping")
+

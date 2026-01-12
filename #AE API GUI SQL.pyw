@@ -611,7 +611,7 @@ MAP_SITES_HARDWARE_GUI = {
 
     },
     'Williams': {
-        'INV_DICT': {i: f"{'A' if i <= 20 else 'B'}{i}" for i in range(1, 41)},
+        'INV_DICT': {i: f"{'A' if i <= 20 else 'B'}{i-20 if i > 20 else i}" for i in range(1, 41)},
         'METER_MAX': 5000000,
         'VAR_NAME': 'williams',
         'CUST_ID': solrvr2,
@@ -1115,11 +1115,11 @@ def siteSnapShot_Update(site, var_name, inv_num, meterkW):
     total_INVkW = sum(no_0s_invs_values)
     communicating_INVs = len(invs_ON) #Count of inverters who's bg is green
 
-    if len(no_0s_invs_values) == 0 or meterkW <= 0:
+    if len(no_0s_invs_values) == 0 and meterkW <= 0:
         color = 'black'
     elif communicating_INVs == inv_num: #If all inverters are communicating
         color = main_color
-    elif communicating_INVs < inv_num and meterkW >= total_INVkW + ((total_INVkW/len(no_0s_invs_values)) * 0.75)*(inv_num-communicating_INVs): #If theres a non-communicating INV and the Meter value is greater than Total of reporting INV's kW value (plus the avg of the inverters - 10 kW) * # of non Communicating inverters
+    elif len(no_0s_invs_values) > 0 and communicating_INVs < inv_num and meterkW >= total_INVkW + ((total_INVkW/len(no_0s_invs_values)) * 0.75)*(inv_num-communicating_INVs): #If theres a non-communicating INV and the Meter value is greater than Total of reporting INV's kW value (plus the avg of the inverters - 10 kW) * # of non Communicating inverters
         color = 'green'
     else: #Otherwise show yellow that theres a none communicating Inverter and it is offline according to meter
         color = 'yellow'
@@ -1236,7 +1236,7 @@ def update_data():
             poa_color = 'gray'
         
 
-        if poa_data < time_date_compare:
+        if poa_data < time_date_compare or poa_data == None:
             poalbl = globals()[f'{var_name}POAcb'].cget('bg')
             if poalbl != 'pink' and poa_noti:
                 msg = f"{name} lost comms with POA sensor at {strtime_poa}"
@@ -1259,7 +1259,7 @@ def update_data():
                 for two in range(1, 3):
                     breakercomm = max(comm_data[f'{name} Breaker Data {two}'])[0]
                     bk_Ltime = breakercomm.strftime('%m/%d/%y | %H:%M')
-                    if breakercomm > time_date_compare:
+                    if breakercomm > time_date_compare and breakercomm != None:
                         breakerconfig = globals()[f'{var_name}{two}statusLabel'].cget("text")
                         if any(breaker_data[f'{name} Breaker Data {two}'][i][0] == True for i in range(breaker_pulls)):
                             breakerstatus = "✓✓✓"
@@ -1291,7 +1291,7 @@ def update_data():
                             else:
                                 text_update_Table.append("<br>" + str(msg))
             elif name in {'Cardinal', 'Harrison', 'Hayes', 'Warbler', 'Hickory'}:
-                if metercomms > time_date_compare:
+                if metercomms > time_date_compare and metercomms != None:
                     rows_w_zeros = 0
                     for i in range(meter_pulls):
                         if any(meter_data[f'{name} Meter Data'][i][j] == 0 for j in range(3,6)):
@@ -1396,7 +1396,7 @@ def update_data():
             inv_comm = max(comm_data[f'{name} INV 1 Data'])[0]
             
             inv_Ltime = inv_comm.strftime('%m/%d/%y | %H:%M')
-            if inv_comm > time_date_compare:
+            if inv_comm > time_date_compare and inv_comm != None:
                 if all(point[1] <= 1 for point in data):
                     if avg_dcv > 100:
                         if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
@@ -1573,7 +1573,7 @@ def update_data():
         erroneous_meter_value = 760000000
         if name != "CDIA":
             meter_Ltime = metercomms.strftime('%m/%d/%y | %H:%M')
-            if metercomms > time_date_compare:
+            if metercomms > time_date_compare and metercomms != None:
                 meterdata = meter_data[f'{name} Meter Data']
                 meterdataVA= None
                 meterdataVB= None
@@ -1791,6 +1791,7 @@ def update_data():
                 globals()[f'{var_name}meterkWLabel'].config(bg='pink')
                 globals()[f'{var_name}meterVLabel'].config(bg='pink')
                 globals()[f'{var_name}meterRatioLabel'].config(bg='pink')
+                siteSnapShot_Update(name, var_name, inverters, 0)
 
 
 
@@ -2066,11 +2067,7 @@ def last_update():
 
 
 
-
-
-
 def time_window():
-
     global timecurrent, text_update_Table
     #SELECT 15 = 30 Mins
     c.execute("SELECT TOP 16 [Timestamp] FROM [Ogburn Meter Data] ORDER BY [Timestamp] DESC")
@@ -2108,7 +2105,7 @@ def time_window():
     db_update_time = 10
     timecompare = timecurrent - timedelta(minutes=db_update_time)
     recent_update = last_update()
-    if recent_update < timecompare and comms_delay.get() == False:
+    if recent_update < timecompare:
         msg = f"The Database has not been updated in {str(db_update_time)} Minutes and usually updates every 2\nPlease check the SQL Server pc and verify the data pull script is operating as expected."
         if not textOnly.get():
             messagebox.showerror(parent=timeW, title="Notification System/GUI", message=msg)
@@ -2360,10 +2357,6 @@ optionTexts.pack()
 optionTexts.current(0)
 notes_settings = Label(notificationFrame, text="\nSelect from the Dropdown\nBefore turning the function on\nwith the Checkbox\n")
 notes_settings.pack()
-
-comms_delay = BooleanVar()
-comms_AE_delay = Checkbutton(notificationFrame, text="Select to pause\nrestart of Data Pull Script\nDo so if AE is in a\nmajor comms delay", variable= comms_delay, cursor='hand2', command=save_cb_state)
-comms_AE_delay.pack()
 
 
 
