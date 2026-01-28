@@ -17,6 +17,8 @@ ctypes.windll.kernel32.SetConsoleTitleW("Data Pull Maintainer")
 DATA_PULL_SCRIPT = r"G:\Shared drives\O&M\NCC Automations\Notification System\API Data Pull, Multi SQL.py"
 CLOSE_DATA_SCRIPT = r"G:\Shared drives\O&M\NCC Automations\Notification System\Close Data Pull.ahk"
 
+CLOSE_ERRORS = r"G:\Shared drives\O&M\NCC Automations\Notification System\Close Error Window.ahk"
+
 
 def has_recent_writes(minutes=5):
     """
@@ -70,9 +72,13 @@ if __name__ == '__main__':
             print(False, "\nWaiting 10 Minutes so that during this data delay we ensure the script has plenty of time to cycle atleast once before this would close it again.")
             #Run the Close terminal Script.
             os.startfile(CLOSE_DATA_SCRIPT)
+            ty.sleep(2)
+            os.startfile(CLOSE_ERRORS)
             ty.sleep(5)
             #Run Data Pull Script
             os.startfile(DATA_PULL_SCRIPT)
             ty.sleep(60*10)
             print("Looping")
-
+        
+        if datetime.datetime.now().minute % 5 == 0:
+            os.startfile(CLOSE_ERRORS)

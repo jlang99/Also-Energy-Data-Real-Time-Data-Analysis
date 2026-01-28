@@ -45,7 +45,7 @@ ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
 
 HOSTNAME = get_hostname()
-sql_pc = TRUE if HOSTNAME == "NAR-OMOPSXPS" else FALSE
+sql_pc = True if HOSTNAME == "NAR-OMOPSXPS" else False
 
 main_color = '#ADD8E6'
 root = Tk()
@@ -734,24 +734,30 @@ for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), sta
     globals()[f'{var_name}Label'] = Label(root, bg=main_color, text=name, fg= 'black', font=('Tk_defaultFont', 10, 'bold'))
     if ro > 22 and not sql_pc:
         globals()[f'{var_name}Label'].grid(row=ro-22, column= 9, sticky=W)
+        breaker_col = 10
     else:
         globals()[f'{var_name}Label'].grid(row=ro, column= 0, sticky=W)
+        breaker_col = 1
+
     if breakertf:
         if name == 'Violet':
-            vio_excep = 1
-        else:
-            vio_excep = ''
-        globals()[f'{var_name}{vio_excep}statusLabel'] = Label(root, bg=main_color, text='❌', fg= 'black')
-        if ro > 22 and not sql_pc:
-            globals()[f'{var_name}{vio_excep}statusLabel'].grid(row=ro-22, column= 10)
-        else:
-            globals()[f'{var_name}{vio_excep}statusLabel'].grid(row=ro, column= 1)
-        if name == 'Violet':
-            violet2statusLabel = Label(root, bg=main_color, text='❌', fg= 'black')
+            # Create a frame specifically for Violet's two breakers
+            violet_breaker_frame = Frame(root, bg=main_color)
             if ro > 22 and not sql_pc:
-                violet2statusLabel.grid(row=ro-21, column= 10)
+                violet_breaker_frame.grid(row=ro-22, column=breaker_col, sticky='nsew')
             else:
-                violet2statusLabel.grid(row=ro+1, column= 1)
+                violet_breaker_frame.grid(row=ro, column=breaker_col, sticky='nsew')
+
+            globals()[f'{var_name}1statusLabel'] = Label(violet_breaker_frame, bg=main_color, text='❌', fg= 'black')
+            globals()[f'{var_name}1statusLabel'].grid(row=0, column=0, sticky='nsew')
+            globals()[f'{var_name}2statusLabel'] = Label(violet_breaker_frame, bg=main_color, text='❌', fg= 'black')
+            globals()[f'{var_name}2statusLabel'].grid(row=1, column=0, sticky='nsew')
+        else: # For all other sites with breakers
+            globals()[f'{var_name}statusLabel'] = Label(root, bg=main_color, text='❌', fg= 'black')
+            if ro > 22 and not sql_pc:
+                globals()[f'{var_name}statusLabel'].grid(row=ro-22, column=breaker_col)
+            else:
+                globals()[f'{var_name}statusLabel'].grid(row=ro, column=breaker_col)
 
     if name != 'CDIA':
         #Site Voltage Boolean
@@ -1284,7 +1290,7 @@ def update_data():
                         globals()[f'{var_name}{two}statusLabel'].config(bg='pink')
                         if bklbl != 'pink' and master_cb_skips_INV_check:
                             last_operational = last_closed(name)
-                            ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker Lost Comms\n{last_operational}")
+                            ToolTip( globals()[f'{var_name}{two}statusLabel'], f"{name} Breaker Lost Comms\n{last_operational}")
                             msg= f"Breaker Comms lost {bk_Ltime} with the Breaker at {name}! Please Investigate!"
                             if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title=f"{name}, Breaker Comms Loss", message=msg)

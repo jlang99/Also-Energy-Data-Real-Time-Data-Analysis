@@ -227,8 +227,6 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
             pool = multiprocessing.Pool()
 
             for site, site_data in AE_HARDWARE_MAP.items():
-                if site == "CDIA":
-                    continue
                 pool.apply_async(get_data_for_site, args=(site, site_data, api_data, AE_HARDWARE_MAP, start, base_url, access_token), error_callback=error_callback)
                 time.sleep(0.5) #Again added to reduce strain on AE API Server
             pool.close()
