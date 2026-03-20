@@ -47,6 +47,11 @@ ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 HOSTNAME = get_hostname()
 sql_pc = True if HOSTNAME == "NAR-OMOPSXPS" else False
 
+if HOSTNAME == 'NAR-JosephLang':
+    LOCAL_YN = messagebox.askyesno(title="SQL Server Selection", message="Yes for Localhost, No for VPN and Server Connection.")
+else:
+    LOCAL_YN = False
+
 main_color = '#ADD8E6'
 root = Tk()
 root.title("Site Data")
@@ -336,12 +341,7 @@ MAP_SITES_HARDWARE_GUI = {
 
     },
     'Elk': {
-        'INV_DICT': {
-            1: '1', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 8: '8', 9: '1-3', 10: '10', 11: '11', 12: '12', 13: '13',
-            14: '14', 15: '3-3', 16: '16', 17: '17', 18: '18', 19: '19', 20: '20', 21: '21', 22: '22', 23: '23', 24: '24',
-            25: '25', 26: '26', 27: '27', 28: '28', 29: '2-8', 30: '30', 31: '31', 32: '32', 33: '2-13', 34: '34', 35: '3-7',
-            36: '3-8', 37: '37', 38: '38', 39: '3-11', 40: '40', 41: '41', 42: '42', 43: '43'
-        },
+        'INV_DICT': {i: f"1-{i}" if i <= 15 else (f"2-{i-15}" if i <= 29 else f"3-{i-29}") for i in range(1, 44)},
         'METER_MAX': 5380000,
         'VAR_NAME': 'elk',
         'CUST_ID': solrvr,
@@ -637,7 +637,7 @@ MAP_SITES_HARDWARE_GUI = {
 
 
 
-if len(MAP_SITES_HARDWARE_GUI) > 22 and not sql_pc:
+if len(MAP_SITES_HARDWARE_GUI) > 22:
     siteLabel1 = Label(root, bg="#ADD8E6", text= "Sites", font=('Tk_defaultFont', 10, 'bold'))
     siteLabel1.grid(row=0, column= 9, sticky=W)
     breakerstatusLabel1= Label(root, bg="#ADD8E6", text= "Breaker Status", font=('Tk_defaultFont', 10, 'bold'))
@@ -732,7 +732,7 @@ for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), sta
     #Site Info
     #Main Color
     globals()[f'{var_name}Label'] = Label(root, bg=main_color, text=name, fg= 'black', font=('Tk_defaultFont', 10, 'bold'))
-    if ro > 22 and not sql_pc:
+    if ro > 22:
         globals()[f'{var_name}Label'].grid(row=ro-22, column= 9, sticky=W)
         breaker_col = 10
     else:
@@ -743,7 +743,7 @@ for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), sta
         if name == 'Violet':
             # Create a frame specifically for Violet's two breakers
             violet_breaker_frame = Frame(root, bg=main_color)
-            if ro > 22 and not sql_pc:
+            if ro > 22:
                 violet_breaker_frame.grid(row=ro-22, column=breaker_col, sticky='nsew')
             else:
                 violet_breaker_frame.grid(row=ro, column=breaker_col, sticky='nsew')
@@ -754,7 +754,7 @@ for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), sta
             globals()[f'{var_name}2statusLabel'].grid(row=1, column=0, sticky='nsew')
         else: # For all other sites with breakers
             globals()[f'{var_name}statusLabel'] = Label(root, bg=main_color, text='❌', fg= 'black')
-            if ro > 22 and not sql_pc:
+            if ro > 22:
                 globals()[f'{var_name}statusLabel'].grid(row=ro-22, column=breaker_col)
             else:
                 globals()[f'{var_name}statusLabel'].grid(row=ro, column=breaker_col)
@@ -762,7 +762,7 @@ for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), sta
     if name != 'CDIA':
         #Site Voltage Boolean
         globals()[f'{var_name}meterVLabel'] = Label(root, bg=main_color, text='V', fg= 'black')
-        if ro > 22 and not sql_pc:
+        if ro > 22:
             globals()[f'{var_name}meterVLabel'].grid(row=ro-22, column= 11)
         else:
             globals()[f'{var_name}meterVLabel'].grid(row=ro, column= 2)
@@ -770,25 +770,25 @@ for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), sta
     globals()[f'{var_name}metercbval'] = IntVar()
     all_CBs.append(globals()[f'{var_name}metercbval'])
     globals()[f'{var_name}metercb'] = Checkbutton(root, bg=main_color, variable=globals()[f'{var_name}metercbval'], fg= 'black', cursor='hand2', command=save_cb_state)
-    if ro > 22 and not sql_pc:
+    if ro > 22:
         globals()[f'{var_name}metercb'].grid(row=ro-22, column= 12)
     else:
         globals()[f'{var_name}metercb'].grid(row=ro, column= 3)
     #Meter Producing Boolean
     globals()[f'{var_name}meterkWLabel'] = Label(root, bg=main_color, text='kW', fg= 'black')
-    if ro > 22 and not sql_pc:
+    if ro > 22:
         globals()[f'{var_name}meterkWLabel'].grid(row=ro-22, column= 13)
     else:
         globals()[f'{var_name}meterkWLabel'].grid(row=ro, column= 4)
     #Meter % of Max capability
     globals()[f'{var_name}meterRatioLabel'] = Label(root, bg=main_color, text='Ratio', fg= 'black')
-    if ro > 22 and not sql_pc:
+    if ro > 22:
         globals()[f'{var_name}meterRatioLabel'].grid(row=ro-22, column= 14)
     else:
         globals()[f'{var_name}meterRatioLabel'].grid(row=ro, column= 5)
     #PVSyst Value
     globals()[f'{var_name}meterPvSystLabel'] = Label(root, bg=main_color, text='Ratio', fg= 'black')
-    if ro > 22 and not sql_pc:
+    if ro > 22:
         globals()[f'{var_name}meterPvSystLabel'].grid(row=ro-22, column= 15)
     else:
         globals()[f'{var_name}meterPvSystLabel'].grid(row=ro, column= 6)
@@ -797,14 +797,14 @@ for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), sta
     all_CBs.append(globals()[f'{var_name}POAcbval'])
     globals()[f'{var_name}POAcb'] = Checkbutton(root, bg=main_color, text='X', variable=globals()[f'{var_name}POAcbval'], fg= 'black', cursor='hand2', command=save_cb_state)
     
-    if ro > 22 and not sql_pc:
+    if ro > 22:
         globals()[f'{var_name}POAcb'].grid(row=ro-22, column= 16)
     else:
         globals()[f'{var_name}POAcb'].grid(row=ro, column= 7)
     
     # Create a frame for the site snapshot data
     globals()[f'{var_name}kwdata_frame'] = Frame(root, bg=main_color, bd=1, relief="solid")
-    if ro > 22 and not sql_pc:
+    if ro > 22:
         globals()[f'{var_name}kwdata_frame'].grid(row=ro-22, column= 17, sticky='ew')
     else:
         globals()[f'{var_name}kwdata_frame'].grid(row=ro, column=8, sticky='ew')
@@ -957,24 +957,36 @@ def conetoe_offline():
 ##########
 def connect_Logbook():
     lbconn_str = r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=G:\Shared drives\O&M\NCC\NCC 039.accdb;'
-    globals()['lbconnection'] = pyodbc.connect(lbconn_str)
-    globals()['cur'] = lbconnection.cursor()
-
+    lbconnection = pyodbc.connect(lbconn_str)
+    cur = lbconnection.cursor()
+    return cur, lbconnection
 
 def connect_db():
-    # Create a connection to the Access database
-    globals()['dbconn_str'] = (
-                r'DRIVER={ODBC Driver 18 for SQL Server};'
-                fr'SERVER={CREDS['DB_IP']}\SQLEXPRESS;'
-                r'DATABASE=NARENCO_O&M_AE;'
-                fr'UID={CREDS['DB_UID']};'
-                fr'PWD={CREDS['DB_PWD']};'
-                r'Encrypt=no;'
-            )
-    globals()['dbconnection'] = pyodbc.connect(dbconn_str)
-    globals()['c'] = dbconnection.cursor()
+    # Create a connection to the SQL database
+    if LOCAL_YN:
+        dbconn_str = (
+                        r'DRIVER={ODBC Driver 18 for SQL Server};'
+                        r'SERVER=localhost\SQLEXPRESS;'
+                        r'DATABASE=NARENCO_O&M_AE;'
+                        r'Trusted_Connection=yes;'
+                        r'Encrypt=no;'
+                    )
+    else:
+        dbconn_str = (
+                    r'DRIVER={ODBC Driver 18 for SQL Server};'
+                    fr'SERVER={CREDS['DB_IP']}\SQLEXPRESS;'
+                    r'DATABASE=NARENCO_O&M_AE;'
+                    fr'UID={CREDS['DB_UID']};'
+                    fr'PWD={CREDS['DB_PWD']};'
+                    r'Encrypt=no;'
+                )
+    
+    dbconnection = pyodbc.connect(dbconn_str)
+    c = dbconnection.cursor()
+    return c, dbconnection
 
-def launch_check():
+
+def launch_check(c):
     tday = datetime.now()
     format_date = tday.strftime('%m/%d/%Y')
     query = """
@@ -991,11 +1003,17 @@ def launch_check():
         return False
     
 
-def last_online(site, inv_num, duplin_except):
+def last_online(c, site, inv_num, duplin_except):
     query = f"""
-    SELECT TOP 1 [Timestamp] 
-    FROM [{site}{duplin_except} INV {inv_num} Data]
-    WHERE [Watts] > 2
+    SELECT TOP 1 [Timestamp]
+    FROM (
+        SELECT [Timestamp], 
+               [Watts],
+               LEAD([Watts], 1) OVER(ORDER BY [Timestamp] DESC) as Watts_1,
+               LEAD([Watts], 2) OVER(ORDER BY [Timestamp] DESC) as Watts_2
+        FROM [{site}{duplin_except} INV {inv_num} Data]
+    ) sub
+    WHERE [Watts] > 2 AND Watts_1 > 2 AND Watts_2 > 2
     ORDER BY [Timestamp] DESC
     """
     c.execute(query)
@@ -1006,11 +1024,17 @@ def last_online(site, inv_num, duplin_except):
     else:
         return None
 
-def meter_last_online(site):
+def meter_last_online(c, site):
     query = f"""
-    SELECT TOP 1 [Timestamp] 
-    FROM [{site} Meter Data]
-    WHERE [Watts] > 2
+    SELECT TOP 1 [Timestamp]
+    FROM (
+        SELECT [Timestamp], 
+               [Watts],
+               LEAD([Watts], 1) OVER(ORDER BY [Timestamp] DESC) as Watts_1,
+               LEAD([Watts], 2) OVER(ORDER BY [Timestamp] DESC) as Watts_2
+        FROM [{site} Meter Data]
+    ) sub
+    WHERE [Watts] > 2 AND Watts_1 > 2 AND Watts_2 > 2
     ORDER BY [Timestamp] DESC
     """
     c.execute(query)
@@ -1021,7 +1045,7 @@ def meter_last_online(site):
     else:
         return None
         
-def last_closed(site):
+def last_closed(c, site):
     if site == "Violet":
         query1 = f"""
         SELECT TOP 1 [Timestamp] 
@@ -1080,7 +1104,7 @@ def check_inv_consecutively_online(alist):
     for num in alist:
         if num > 0:
             consecutive_count += 1
-            if consecutive_count == 2:
+            if consecutive_count == 3:
                 return True
         else:
             consecutive_count = 0
@@ -1141,7 +1165,7 @@ def siteSnapShot_Update(site, var_name, inv_num, meterkW):
 
 
 
-def update_data():
+def update_data(c, dbconnection):
     global text_update_Table
     load_cb_state()
     update_data_start = ty.perf_counter()
@@ -1272,7 +1296,7 @@ def update_data():
                             breakerstatuscolor = 'green'
                         else:         
                             if breakerconfig != "❌❌" and master_cb_skips_INV_check:
-                                last_operational = last_closed(name)
+                                last_operational = last_closed(c, name)
                                 msg= f"{name} Breaker Tripped Open, Please Investigate! {last_operational}"
                                 ToolTip( globals()[f'{var_name}{two}statusLabel'], f"{name} Breaker {two} is Open\n{last_operational}")
                                 if not textOnly.get():
@@ -1280,7 +1304,7 @@ def update_data():
                                 else:
                                     text_update_Table.append("<br>" + str(msg))
 
-                            last_operational = last_closed(name)
+                            last_operational = last_closed(c, name)
                             ToolTip( globals()[f'{var_name}{two}statusLabel'], f"{name} Breaker {two} is Open\n{last_operational}")
                             breakerstatus = "❌❌"
                             breakerstatuscolor = 'red'
@@ -1289,7 +1313,7 @@ def update_data():
                         bklbl = globals()[f'{var_name}{two}statusLabel'].cget('bg')
                         globals()[f'{var_name}{two}statusLabel'].config(bg='pink')
                         if bklbl != 'pink' and master_cb_skips_INV_check:
-                            last_operational = last_closed(name)
+                            last_operational = last_closed(c, name)
                             ToolTip( globals()[f'{var_name}{two}statusLabel'], f"{name} Breaker Lost Comms\n{last_operational}")
                             msg= f"Breaker Comms lost {bk_Ltime} with the Breaker at {name}! Please Investigate!"
                             if not textOnly.get():
@@ -1305,14 +1329,14 @@ def update_data():
                     if rows_w_zeros >= 2:
                         breakerconfig = globals()[f'{var_name}statusLabel'].cget("text")
                         if breakerconfig != "❌❌" and master_cb_skips_INV_check:
-                            last_operational = last_closed(name)
+                            last_operational = last_closed(c, name)
                             msg= f"{name} Breaker Tripped Open, Please Investigate! {last_operational}"
                             if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title= f"{name}", message= msg)
                             else:
                                 text_update_Table.append("<br>" + str(msg))
                         
-                        last_operational = last_closed(name)
+                        last_operational = last_closed(c, name)
                         ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker is Open\n{last_operational}")
                         breakerstatus = "❌❌"
                         breakerstatuscolor = 'red'     
@@ -1327,7 +1351,7 @@ def update_data():
                     bklbl = globals()[f'{var_name}statusLabel'].cget('bg')
                     globals()[f'{var_name}statusLabel'].config(bg='pink')
                     if bklbl != 'pink' and master_cb_skips_INV_check:
-                        last_operational = last_closed(name)
+                        last_operational = last_closed(c, name)
                         ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker Lost Comms\n{last_operational}")
                         msg= f"Meter Comms lost {metercomms_time} with the Meter at {name}! Please Investigate!"
                         if not textOnly.get():
@@ -1347,14 +1371,14 @@ def update_data():
                         ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker is Operational")
                     else:         
                         if breakerconfig != "❌❌" and master_cb_skips_INV_check:
-                            last_operational = last_closed(name)
+                            last_operational = last_closed(c, name)
                             ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker is Open\n{last_operational}")
                             msg= f"{name} Breaker Tripped Open, Please Investigate! {last_operational}"
                             if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title= f"{name}", message= msg)
                             else:
                                 text_update_Table.append("<br>" + str(msg))
-                        last_operational = last_closed(name)
+                        last_operational = last_closed(c, name)
                         ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker is Open\n{last_operational}")
                         breakerstatus = "❌❌"
                         breakerstatuscolor = 'red'
@@ -1364,7 +1388,7 @@ def update_data():
                     globals()[f'{var_name}statusLabel'].config(bg='pink')
                     if bklbl != 'pink' and master_cb_skips_INV_check:
                         msg= f"Breaker Comms lost {bk_Ltime} with the Breaker at {name}! Please Investigate!"
-                        last_operational = last_closed(name)
+                        last_operational = last_closed(c, name)
                         ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker Lost Comms\n{last_operational}")
                         if not textOnly.get():
                             messagebox.showerror(parent= alertW, title=f"{name}, Breaker Comms Loss", message= msg)
@@ -1409,14 +1433,14 @@ def update_data():
                             var_key = f'{var_name}statusLabel'
                             if var_key in globals():
                                 if globals()[var_key].cget("bg") == 'green':
-                                    online_last = last_online(name, r, duplin_except)
+                                    online_last = last_online(c, name, r, duplin_except)
                                     msg= f"{name} | Inverter Offline, Good DC Voltage | {online_last}"
                                     if not textOnly.get():
                                         messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                     else:
                                         text_update_Table.append("<br>" + str(msg))
                             else:
-                                online_last = last_online(name, r, duplin_except)
+                                online_last = last_online(c, name, r, duplin_except)
                                 msg= f"{name} | Inverter Offline, Good DC Voltage | {online_last}"
                                 if not textOnly.get():
                                     messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
@@ -1427,20 +1451,20 @@ def update_data():
                         globals()[f'{var_name}Label'].config(bg='orange')
 
                     else:
-                        online_last = last_online(name, r, duplin_except)
+                        online_last = last_online(c, name, r, duplin_except)
                         ToolTip(globals()[f'{var_name}meterkWLabel'], f"Inverter Offline, Bad DC Voltage\n{online_last}")
                         if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
                             var_key = f'{var_name}statusLabel'
                             if var_key in globals():
                                 if globals()[var_key].cget("bg") == 'green':
-                                    online_last = last_online(name, r, duplin_except)
+                                    online_last = last_online(c, name, r, duplin_except)
                                     msg= f"{name} | Inverter Offline, Bad DC Voltage | {online_last}"
                                     if not textOnly.get():
                                         messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                     else:
                                         text_update_Table.append("<br>" + str(msg))
                             else:
-                                online_last = last_online(name, r, duplin_except)
+                                online_last = last_online(c, name, r, duplin_except)
                                 msg= f"{name} | Inverter Offline, Bad DC Voltage | {online_last}"
                                 if not textOnly.get():
                                     messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
@@ -1506,20 +1530,20 @@ def update_data():
                 if inv_comm > time_date_compare:
                     if all(point[1] < 1 for point in data):
                         if avg_dcv > 100:
-                            online_last = last_online(name, inv_num, duplin_except)
+                            online_last = last_online(c, name, inv_num, duplin_except)
                             ToolTip(globals()[f'{var_name}inv{inv_val}cb'], f"Inverter Offline, Good DC Voltage\n{online_last}")
                             if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
                                 var_key = f'{var_name}statusLabel'
                                 if var_key in globals():
                                     if globals()[var_key].cget("bg") == 'green':
-                                        online_last = last_online(name, inv_num, duplin_except)
+                                        online_last = last_online(c, name, inv_num, duplin_except)
                                         msg= f"{name} | Inverter {inv_val} Offline, Good DC Voltage | {online_last}"
                                         if not textOnly.get():
                                             messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                         else:
                                             text_update_Table.append("<br>" + str(msg))
                                 else:
-                                    online_last = last_online(name, inv_num, duplin_except)
+                                    online_last = last_online(c, name, inv_num, duplin_except)
                                     msg= f"{name} | Inverter {inv_val} Offline, Good DC Voltage | {online_last}"
                                     if not textOnly.get():
                                         messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
@@ -1527,20 +1551,20 @@ def update_data():
                                         text_update_Table.append("<br>" + str(msg))
                             globals()[f'{var_name}inv{inv_val}cb'].config(bg='orange')
                         else:
-                            online_last = last_online(name, inv_num, duplin_except)
+                            online_last = last_online(c, name, inv_num, duplin_except)
                             ToolTip(globals()[f'{var_name}inv{inv_val}cb'], f"Inverter Offline, Bad DC Voltage\n{online_last}")
                             if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
                                 var_key = f'{var_name}statusLabel'
                                 if var_key in globals():
                                     if globals()[var_key].cget("bg") == 'green':
-                                        online_last = last_online(name, inv_num, duplin_except)
+                                        online_last = last_online(c, name, inv_num, duplin_except)
                                         msg= f"{name} | Inverter {inv_val} Offline, Bad DC Voltage | {online_last}"
                                         if not textOnly.get():
                                             messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
                                         else:
                                             text_update_Table.append("<br>" + str(msg))                                            
                                 else:
-                                    online_last = last_online(name, inv_num, duplin_except)
+                                    online_last = last_online(c, name, inv_num, duplin_except)
                                     msg= f"{name} | Inverter {inv_val} Offline, Bad DC Voltage | {online_last}"
                                     if not textOnly.get():
                                         messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
@@ -1550,10 +1574,14 @@ def update_data():
                             globals()[f'{var_name}inv{inv_val}cb'].config(bg='red')
                     else:
                         if check_inv_consecutively_online(point[1] for point in data):
-                            globals()[f'{var_name}inv{inv_val}cb'].config(bg='green')
+                            bg_color = 'green'
                             ToolTip(globals()[f'{var_name}inv{inv_val}cb'], "Inverter Online")
+                        else:
+                            bg_color = '#ADD8E6'
+                            ToolTip(globals()[f'{var_name}inv{inv_val}cb'], "Inverter Starting to Produce or Starting to Shutdown")
+                        globals()[f'{var_name}inv{inv_val}cb'].config(bg=bg_color)
                 else:
-                    online_last = last_online(name, inv_num, duplin_except)
+                    online_last = last_online(c, name, inv_num, duplin_except)
                     ToolTip(globals()[f'{var_name}inv{inv_val}cb'], f"Inverter Comms Lost\n{online_last}")
                     globals()[f'{var_name}inv{inv_val}cb'].config(bg='pink')
                     invlbl = globals()[f'{var_name}inv{inv_val}cb'].cget('bg')
@@ -1570,7 +1598,7 @@ def update_data():
                         else:
                             msg= f"INV Comms lost {inv_Ltime} with Inverter {inv_val} at {name}! Please Investigate!"
                             if not textOnly.get():
-                                online_last = last_online(name, inv_num, duplin_except)
+                                online_last = last_online(c, name, inv_num, duplin_except)
                                 ToolTip(globals()[f'{var_name}inv{inv_val}cb'], f"Inverter Comms Lost\n{online_last}")
                                 messagebox.showerror(parent= alertW, title=f"{name}, Inverter Comms Loss", message=msg)
                             else:
@@ -1643,7 +1671,7 @@ def update_data():
                     meterVstatus= '❌❌'
                     meterVstatuscolor= 'red'
                     if meterVconfig != '❌❌':
-                        online = meter_last_online(name)
+                        online = meter_last_online(c, name)
                         msg= f"Loss of Utility Voltage or Lost Comms with Meter. {online}"
                         if not textOnly.get():
                             messagebox.showerror(parent=alertW, title= f"{name} Meter", message= msg)
@@ -1726,7 +1754,7 @@ def update_data():
                         meterkWstatuscolor= 'red'
                         meterlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
                         if meterlbl != 'red' and master_cb_skips_INV_check and poa > 10:
-                            online = meter_last_online(name)
+                            online = meter_last_online(c, name)
                             msg= f"Site: {name}\nMeter Production: {round(meterdataW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}"
                             if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title=f"{name}, Power Loss", message=msg)
@@ -1737,7 +1765,7 @@ def update_data():
                         meterkWstatuscolor= 'red'
                         meterlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
                         if meterlbl != 'red' and master_cb_skips_INV_check and poa > 10:
-                            online = meter_last_online(name)
+                            online = meter_last_online(c, name)
                             msg= f"Site: {name}\nMeter Production: {round(meterdataW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}"
                             if not textOnly.get():
                                 messagebox.showerror(parent= alertW, title=f"{name}, Meter Power Loss", message=msg)
@@ -1757,9 +1785,9 @@ def update_data():
                 
                 #PVSYST Ratio Update
                 try:
-                    pysyst_connect()
+                    cursor_p, connect_pvsystdb = pvsyst_connect()
                     if meterdataWM and poa and pvsyst_name:
-                        performance_ratio, degradation, meter_est = pvsyst_est(meterdataWM, poa, pvsyst_name)
+                        performance_ratio, degradation, meter_est = pvsyst_est(meterdataWM, poa, pvsyst_name, connect_pvsystdb, cursor_p)
                         if pvsyst_name is not None:
                             print(f'{pvsyst_name:<15} | {round(performance_ratio, 1)}% | {round(degradation*100, 2)}% Loss | {round(meter_est, 2):<13} W or kW?')
                         
@@ -1962,14 +1990,14 @@ def update_data():
     sendTexts.config(state=NORMAL)
 
 
-def pysyst_connect():
-    global cursor_p, connect_pvsystdb
+def pvsyst_connect():
     #Connect to PV Syst DB for Performance expectations
     pvsyst_db = r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=G:\Shared drives\O&M\NCC Automations\Notification System\PVsyst (Josephs Edits).accdb;'
     connect_pvsystdb = pyodbc.connect(pvsyst_db)
     cursor_p = connect_pvsystdb.cursor()
+    return cursor_p, connect_pvsystdb
 
-def pvsyst_est(meterval, poa_val, pvsyst_name):
+def pvsyst_est(meterval, poa_val, pvsyst_name, connect_pvsystdb, cursor_p):
     if pvsyst_name == None:
         return (0,0,0)
     if poa_val == 9999:
@@ -2025,12 +2053,12 @@ def pvsyst_est(meterval, poa_val, pvsyst_name):
         return (0,0,0)
 
 
-def checkin():
+def checkin(c, dbconnection):
     try: 
         for widget in checkIns.winfo_children():
             widget.destroy()
 
-        connect_Logbook()
+        cur, lbconnection = connect_Logbook()
 
         cur.execute("SELECT Location, Company, Employee FROM [Checked In]")
         checkedIn = cur.fetchall()
@@ -2057,10 +2085,10 @@ def checkin():
     except pyodbc.Error as err:
         print("Logbook Error: ", err)
 
-    update_data()
+    update_data(c, dbconnection)
 
 
-def last_update():
+def last_update(c):
     times = []
     for name in MAP_SITES_HARDWARE_GUI:
         if name != "CDIA":
@@ -2073,7 +2101,7 @@ def last_update():
 
 
 
-def time_window():
+def time_window(c, dbconnection):
     global timecurrent, text_update_Table
     #SELECT 15 = 30 Mins
     c.execute("SELECT TOP 16 [Timestamp] FROM [Ogburn Meter Data] ORDER BY [Timestamp] DESC")
@@ -2110,7 +2138,7 @@ def time_window():
     timecurrent = datetime.now()
     db_update_time = 10
     timecompare = timecurrent - timedelta(minutes=db_update_time)
-    recent_update = last_update()
+    recent_update = last_update(c)
     if recent_update < timecompare:
         msg = f"The Database has not been updated in {str(db_update_time)} Minutes and usually updates every 2\nPlease check the SQL Server pc and verify the data pull script is operating as expected."
         if not textOnly.get():
@@ -2128,7 +2156,7 @@ def time_window():
 
     timmytimeLabel.config(text= tupdate, font= ("Calibiri", 30))
     
-    checkin() 
+    checkin(c, dbconnection) 
 
 def db_to_dict():
     day_of_week = datetime.today().weekday()
@@ -2142,7 +2170,7 @@ def db_to_dict():
     sendTexts.config(state=DISABLED)
 
 
-    connect_db()
+    c, dbconnection = connect_db()
     global tables, inv_data, breaker_data, meter_data, comm_data, POA_data, begin
     tables = []
     for tb in c.tables(tableType='TABLE'):
@@ -2155,7 +2183,8 @@ def db_to_dict():
     comm_data = {}
     for table in tables:
         table_name = table.table_name
-        if table_name not in excluded_tables:
+        if table_name not in excluded_tables and "Tracker Loss Data" not in table_name:
+            #SELECT 10 = 20 Mins
             c.execute(f"SELECT TOP 10 [Last Upload] FROM [{table_name}] ORDER BY Timestamp DESC")
             comm_value = c.fetchall()
             comm_data[table_name] = comm_value
@@ -2212,11 +2241,11 @@ def db_to_dict():
             breaker_data[table_name] = breaker_rows
     #ic(breaker_data)
 
-    begin = launch_check()
+    begin = launch_check(c)
 
     query_end = ty.perf_counter()
     print("Query Time (secs):", round(query_end - query_start, 2))
-    time_window()
+    time_window(c, dbconnection)
 
 
 

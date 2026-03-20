@@ -1,4 +1,10 @@
-import re, os
+import re, os, socket
+from google.auth.transport.requests import Request
+import tkinter as tk
+import pyodbc
+from google.oauth2.credentials import Credentials
+from google.auth import exceptions as auth_exceptions
+from google_auth_oauthlib.flow import InstalledAppFlow
 
 def find_last_digit(text_to_search):
     """
@@ -11,8 +17,7 @@ def find_last_digit(text_to_search):
     # The pattern .*\d finds the last digit in the string.
     # .* is greedy and consumes the whole string.
     # This pattern finds the last sequence of one or more digits in the string.
-    pattern = r'.*?(\d+)[^\d]*$'
-    
+    pattern = r'.*?(\d+)[^\d]*$'   
     match = re.search(pattern, text_to_search)
     
     if match:
@@ -22,6 +27,54 @@ def find_last_digit(text_to_search):
         
     return None
 
+
+
+
+
+def get_hostname():
+    """
+    Identifies the Hostname of the PC running the file.
+    Returns:
+        str: The hostname of the local machine.
+    """
+    try:
+        hostname = socket.gethostname()
+        return hostname
+    except Exception as e:
+        print(f"Error getting hostname: {e}")
+        return None
+
+
+# --- Google API Authentication ---
+SCOPES = [
+    'https://www.googleapis.com/auth/drive',
+    'https://www.googleapis.com/auth/spreadsheets'
+]
+
+def get_google_credentials():
+    """Handles Google API authentication."""
+    creds = None
+    token_path = r"G:\Shared drives\O&M\NCC Automations\Auth\token.json"
+    creds_path = r"G:\Shared drives\O&M\NCC Automations\Auth\NCC-AutomationCredentials.json"
+    print("Start!")
+    if os.path.exists(token_path):
+        creds = Credentials.from_authorized_user_file(token_path, SCOPES)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        elif creds and creds.refresh_token: # Handle cases where token might be invalid due to scope changes but not expired
+            try:
+                creds.refresh(Request())
+            except auth_exceptions.RefreshError:
+                os.remove(token_path) # Delete invalid token to force re-authentication
+                flow = InstalledAppFlow.from_client_secrets_file(creds_path, SCOPES)
+                creds = flow.run_local_server(port=0)
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(creds_path, SCOPES)
+            creds = flow.run_local_server(port=0)
+        with open(token_path, 'w') as token:
+            token.write(creds.to_json())
+    return creds
 
 
 
@@ -157,3 +210,37 @@ def legible_date_validation(dvalue):
 
     # If all checks pass, the input is valid so far
     return True
+
+
+class ToolTip(object):
+    """
+    Create a tooltip for a given tkinter widget.
+    """
+    def __init__(self, widget, text='widget info'):
+        self.widget = widget
+        self.text = text
+        self.widget.bind("<Enter>", self.enter)
+        self.widget.bind("<Leave>", self.close)
+        self.tipwindow = None
+
+    def enter(self, event=None):
+        x, y, _, _ = self.widget.bbox("insert")
+        x += self.widget.winfo_rootx() + 25
+        y += self.widget.winfo_rooty() + 20
+
+        # Creates a toplevel window
+        self.tipwindow = tk.Toplevel(self.widget)
+        self.tipwindow.wm_attributes("-topmost", True)
+
+        # Leaves only the label and removes the app window
+        self.tipwindow.wm_overrideredirect(True)
+        self.tipwindow.wm_geometry(f"+{x}+{y}")
+
+        label = tk.Label(self.tipwindow, text=self.text, justify='left',
+                       background="#ffffe0", relief='solid', borderwidth=1,
+                       font=("tahoma", "8", "normal"))
+        label.pack(ipadx=1)
+
+    def close(self, event=None):
+        if self.tipwindow:
+            self.tipwindow.destroy()

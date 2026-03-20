@@ -33,9 +33,6 @@ dataPullTime = 1
 
 HOSTNAME = get_hostname()
 
-if HOSTNAME not in {"NAR-OMOPSXPS", "NAR-OMOps-SQL"}:
-    messagebox.showwarning(message="Make sure to be connected to the NARENCO Office VPN if you are not on the nar-wifi network.")
-
 email = EMAILS['NCC Desk']
 password = CREDS['AlsoEnergy']
 base_url = "https://api.alsoenergy.com"
@@ -204,6 +201,9 @@ def get_data_for_site(site, site_data, api_data, AE_HARDWARE_MAP, start, base_ur
     print(f"Pulled Data: {site:<15}| Time Taken: {round(end-current, 2)}")
 
 if __name__ == '__main__': #This is absolutely necessary due to running the async pool.
+    if HOSTNAME not in {"NAR-OMOPSXPS", "NAR-OMOps-SQL"}:
+        messagebox.showwarning(message="Make sure to be connected to the NARENCO Office VPN if you are not on the nar-wifi network.")
+
     def my_main():
         global AE_HARDWARE_MAP, sites_endpoint, dataPullTime, today_date, start, api_data, access_token
         def error_callback(e):
@@ -241,7 +241,7 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
             
             #print(api_data_dict)
             if api_data_dict:
-                if HOSTNAME == "NAR-OMOps-SQL":
+                if HOSTNAME in {"NAR-OMOps-SQL", "NAR-JosephLang"}:
                     connection_string = (
                         r'DRIVER={ODBC Driver 18 for SQL Server};'
                         r'SERVER=localhost\SQLEXPRESS;'
