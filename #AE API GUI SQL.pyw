@@ -1,313 +1,108 @@
-#AE API GUI
 import warnings
 import pyodbc
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, time, timedelta
 from tkinter import *
 from tkinter import messagebox, filedialog, ttk
 import atexit
 import time as ty
 import threading
 import numpy as np
-from tkinter import simpledialog
 import ctypes
-from icecream import ic
 import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-import subprocess
-import os, sys
+import os
+import sys
 import glob
 import json
 import re
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from bs4 import BeautifulSoup
+from sklearn.linear_model import LinearRegression
+import pandas as pd
 
-# Add the parent directory ('NCC Automations') to the Python path
-# This allows us to import the 'PythonTools' package from there.
+# External Imports (Assumed environment setup)
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
-from PythonTools import CREDS, EMAILS, sql_date_validation, PausableTimer, restart_pc, ToolTip, get_hostname #Both of these Variables are Dictionaries with a single layer that holds Personnel data or app passwords
+from PythonTools import CREDS, EMAILS, restart_pc, get_hostname, ToolTip
 
-
-import pandas as pd
-from sklearn.linear_model import LinearRegression
-
-
-site_widgets ={}
-
-breaker_pulls = 6
-meter_pulls = 8
-
-start = ty.perf_counter()
 myappid = 'AE.API.Data.GUI'
 ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
+# --- Constants ---
+MAIN_COLOR = '#ADD8E6'
+BUTTON_STATE_FILE = r"G:\Shared drives\O&M\NCC Automations\Notification System\CheckBoxState.json"
+ICON_PATH = r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico"
 
+# Helper for WO Parser
+NORMAL_NUMBERING = {'Bluebird', 'Cardinal', 'Cherry Blossom', 'Cougar', 'Harrison', 'Hayes', 'Hickory', 'Violet', 'HICKSON',
+                    'JEFFERSON', 'Marshall', 'OGBURN', 'Tedder', 'Thunderhead', 'Van Buren', 'Bulloch 1A', 'Bulloch 1B', 'Elk', 'Duplin',
+                    'Harding', 'Mclean', 'Richmond', 'Shorthorn', 'Sunflower', 'Upson', 'Warbler', 'Washington', 'Whitehall', 'Whitetail',
+                    'Conetoe', 'Wayne 1', 'Wayne 2', 'Wayne 3', 'Freightliner', 'Holly Swamp', 'PG'}
 
-
-HOSTNAME = get_hostname()
-sql_pc = True if HOSTNAME == "NAR-OMOPSXPS" else False
-
-if HOSTNAME == 'NAR-JosephLang':
-    LOCAL_YN = messagebox.askyesno(title="SQL Server Selection", message="Yes for Localhost, No for VPN and Server Connection.")
-else:
-    LOCAL_YN = False
-
-main_color = '#ADD8E6'
-root = Tk()
-root.title("Site Data")
-try:
-    root.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-except Exception as e:
-    print(f"Error loading icon: {e}")
-root.wm_attributes("-topmost", True)
-root.configure(bg="#ADD8E6") 
-
-#Date Validation Registration
-vcmd_date = (root.register(sql_date_validation), '%P')
-
-checkIns= Toplevel(root)
-try:
-    checkIns.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-except Exception as e:
-    print(f"Error loading icon: {e}")
-checkIns.title("Personnel On-Site")
-
-checkIns.wm_attributes("-topmost", True)
-
-
-timeWin= Toplevel(root)
-try:
-    timeWin.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-except Exception as e:
-    print(f"Error loading icon: {e}")
-timeWin.title("Timestamps")
-timeWin.wm_attributes("-topmost", True)
-timeW = Frame(timeWin)
-timeW.pack(side=LEFT)
-timeW_notes= Label(timeW, text= "Data Pull Timestamps", font= ("Calibiri", 14))
-timeW_notes.grid(row=0, column= 0, columnspan= 3)
-
-# Fit in another 2 columns and make them sticky to eeach other like these below.
-time1= Label(timeW, text= "First:", font= ("Calibiri", 12))
-time2= Label(timeW, text= "Second:", font= ("Calibiri", 12))
-time3= Label(timeW, text= "Third:", font= ("Calibiri", 12))
-time4= Label(timeW, text= "Fourth:", font= ("Calibiri", 12))
-time5= Label(timeW, text= "Tenth:", font= ("Calibiri", 12))
-timeL= Label(timeW, text= "Fifteenth:", font= ("Calibiri", 12))
-time1.grid(row=1, column= 0, sticky=E)
-time2.grid(row=2, column= 0, sticky=E)
-time3.grid(row=3, column = 0, sticky=E)
-time4.grid(row=4, column = 0, sticky=E)
-time5.grid(row=5, column = 0, sticky=E)
-timeL.grid(row=6, column = 0, sticky=E)
-time1v= Label(timeW, text= "Time")
-time2v= Label(timeW, text= "Time")
-time3v= Label(timeW, text= "Time")
-time4v= Label(timeW, text= "Time")
-time10v= Label(timeW, text= "Time")
-timeLv= Label(timeW, text= "Time")
-time1v.grid(row=1, column= 1, sticky=W)
-time2v.grid(row=2, column= 1, sticky=W)
-time3v.grid(row=3, column = 1, sticky=W)
-time4v.grid(row=4, column = 1, sticky=W)
-time10v.grid(row=5, column = 1, sticky=W)
-timeLv.grid(row=6, column = 1, sticky=W)
-
-
-
-datalbl= Label(timeW, text= "MsgBox Data:", font= ("Calibiri", 14))
-datalbl.grid(row=1, column=2)
-inverterT = Label(timeW, text= "Inverters:", font= ("Calibiri", 12))
-inverterT.grid(row=2, column=2)
-spread15 = Label(timeW, text= "Time")
-spread15.grid(row=3, column=2)
-breakermeter = Label(timeW, text= """Breakers &
-Meters:""", font= ("Calibiri", 12))
-breakermeter.grid(row=4, column=2)
-spread10 = Label(timeW, text= "Time")
-spread10.grid(row=5, column=2)
-
-
-
-alertW = Toplevel(root)
-alertW.title("Alert Windows Info")
-alertW.wm_attributes("-topmost", True)
-try:
-    alertW.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-except Exception as e:
-    print(f"Error loading icon: {e}")
-
-
-
-
-#Top Labels Main Window
-siteLabel = Label(root, bg="#ADD8E6", text= "Sites", font=('Tk_defaultFont', 10, 'bold'))
-siteLabel.grid(row=0, column= 0, sticky=W)
-breakerstatusLabel= Label(root, bg="#ADD8E6", text= "Breaker Status", font=('Tk_defaultFont', 10, 'bold'))
-breakerstatusLabel.grid(row=0, column=1)
-meterVLabel = Label(root, bg="#ADD8E6", text= "Utility V", font=('Tk_defaultFont', 10, 'bold'))
-meterVLabel.grid(row= 0, column=2)
-meterkWLabel = Label(root, bg="#ADD8E6", text="Meter kW", font=('Tk_defaultFont', 10, 'bold'))
-meterkWLabel.grid(row=0, column=4)
-meterratioLabel = Label(root, bg="#ADD8E6", text= "% of Max", font=('Tk_defaultFont', 10, 'bold'))
-meterratioLabel.grid(row=0, column= 5)
-meterpvsystLabel = Label(root, bg="#ADD8E6", text= "% of PvSyst", font=('Tk_defaultFont', 10, 'bold'))
-meterpvsystLabel.grid(row=0, column= 6)
-POALabel = Label(root, bg="#ADD8E6", text= "POA", font=('Tk_defaultFont', 10, 'bold'))
-POALabel.grid(row=0, column= 7)
-SSSLabel = Label(root, bg="#ADD8E6", text= "Site Snap Shot", font=('Tk_defaultFont', 10, 'bold'))
-# Configure column 8 to expand, allowing the snapshot frame to fill the available space
-root.columnconfigure(8, weight=1)
-SSSLabel.grid(row=0, column= 8)
-
-
-
-if sql_pc:
-    #Windows with multiple pages of Site inv data
-    solrvr_win = Toplevel(root)
-    solrvr_win.title("Sol River's Portfolio")
-    try:
-        solrvr_win.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-    except Exception as e:
-        print(f"Error loading icon: {e}")
-    solrvrnotebook = ttk.Notebook(solrvr_win)
-    style = ttk.Style(root)
-    style.configure("TNotebook.Tab", padding=[90, 2], font=('Tk_defaultFont', 12, 'bold'))
-    solrvr = ttk.Frame(solrvrnotebook)
-    solrvr2 = ttk.Frame(solrvrnotebook)
-
-    solrvrnotebook.add(solrvr, text="Bulloch 1A - Sunflower")
-    solrvrnotebook.add(solrvr2, text="Upson - Williams")
-
-    solrvrnotebook.pack(expand=True, fill='both')
-
-    hst_win = Toplevel(root)
-    hst_win.title("Harrison Street's Portfolio")
-    try:
-        hst_win.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-    except Exception as e:
-        print(f"Error loading icon: {e}")
-    hstnotebook = ttk.Notebook(hst_win)
-    hst = ttk.Frame(hstnotebook)
-    hstnotebook.add(hst, text="Bishopville II - Van Buren")
-    hstnotebook.pack(expand=True, fill='both')
-
-    nar_win = Toplevel(root)
-    nar_win.title("NARENCO's Portfolio")
-    try:
-        nar_win.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-    except Exception as e:
-        print(f"Error loading icon: {e}")
-    narnotebook = ttk.Notebook(nar_win)
-    nar = ttk.Frame(narnotebook)
-    narnotebook.add(nar, text="Bluebird - Violet")
-    narnotebook.pack(expand=True, fill='both')
-
-    #Static Inv Windows
-    soltage = Toplevel(root)
-    soltage.title("Soltage")
-    soltage.wm_attributes("-topmost", True)
-
-    try:
-        soltage.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-    except Exception as e:
-        print(f"Error loading icon: {e}")
-    ncemc = Toplevel(root)
-    ncemc.title("NCEMC")
-    ncemc.wm_attributes("-topmost", True)
-    try:
-        ncemc.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-    except Exception as e:
-        print(f"Error loading icon: {e}")
-    #Inverter Windows created
-else:
-    #Windows with multiple pages of Site inv data
-    inv_win = Toplevel(root)
-    inv_win.title("Inverter's Portfolio")
-    try:
-        inv_win.iconbitmap(r"G:\Shared drives\O&M\NCC Automations\Icons\favicon.ico")
-    except Exception as e:
-        print(f"Error loading icon: {e}")
-    notebook = ttk.Notebook(inv_win)
-
-    solrvr = ttk.Frame(notebook)
-    solrvr2 = ttk.Frame(notebook)
-    hst = ttk.Frame(notebook)
-    nar = ttk.Frame(notebook)
-    ncemc = ttk.Frame(notebook)
-    soltage = ttk.Frame(notebook)
-
-    notebook.add(nar, text="NARENCO")
-    notebook.add(hst, text="Harrison Street")
-    notebook.add(soltage, text="Soltage")
-    notebook.add(ncemc, text="NCEMC")
-    notebook.add(solrvr, text="Bulloch 1A - Shorthorn")
-    notebook.add(solrvr2, text="Sunflower - Whitetail")
-
-    notebook.pack(expand=True, fill='both')
-
+def define_inv_num(site, group, num):
+    group, num = int(group), int(num)
+    if site in NORMAL_NUMBERING: return num
+    elif site in {'Gray Fox'}: return num + ((20 * group) - 20)
+    elif site in {'Bishopville II'}: return num + ((9 * group) - 9)
+    elif site in {'Wellons'}: return num + ((2 * group) - 2)
+    return num
 
 MAP_SITES_HARDWARE_GUI = {
     'Bishopville II': {
         'INV_DICT': {i: f"{(i-1)//9 + 1}.{(i-1)%9 + 1}" for i in range(1, 37)},
         'METER_MAX': 9900000,
         'VAR_NAME': 'bishopvilleII',
-        'CUST_ID': hst,
         'PVSYST': None,
         'BREAKER': True,
+        'CUST_ID': 'hst',
     },
     'Bluebird': {
         'INV_DICT': {i: f'A{i}' if i <= 12 else f'B{i}' for i in range(1, 25)},
         'METER_MAX': 3000000,
         'VAR_NAME': 'bluebird',
-        'CUST_ID': nar,
         'PVSYST': 'BLUEBIRD',
         'BREAKER': False,
+        'CUST_ID': 'nar',
     },
     'Bulloch 1A': {
         'INV_DICT': {i: str(i) for i in range(1, 25)},
         'METER_MAX': 3000000,
         'VAR_NAME': 'bulloch1a',
-        'CUST_ID': solrvr,
         'PVSYST': 'BULLOCH1A',
         'BREAKER': False,
-
+        'CUST_ID': 'solrvr',
     },
     'Bulloch 1B': {
         'INV_DICT': {i: str(i) for i in range(1, 25)},
         'METER_MAX': 3000000,
         'VAR_NAME': 'bulloch1b',
-        'CUST_ID': solrvr,
         'PVSYST': 'BULLOCH1B',
         'BREAKER': False,
-
+        'CUST_ID': 'solrvr',
     },
     'Cardinal': {
         'INV_DICT': {i: str(i) for i in range(1, 60)},
         'METER_MAX': 7080000,
         'VAR_NAME': 'cardinal',
-        'CUST_ID': nar, 
         'PVSYST': 'CARDINAL',
         'BREAKER': True,
-
+        'CUST_ID': 'nar',
     },
     'CDIA': {
         'INV_DICT': {1: '1'},
-        'METER_MAX': 192000,
+        'METER_MAX': 250000,
         'VAR_NAME': 'cdia',
-        'CUST_ID': nar,
         'PVSYST': None,
         'BREAKER': False,
-
+        'CUST_ID': 'nar',
     },
     'Cherry Blossom': {
         'INV_DICT': {1: '1', 2: '2', 3: '3', 4: '4'},
         'METER_MAX': 10000000,
         'VAR_NAME': 'cherryblossom',
-        'CUST_ID': nar,
         'PVSYST': 'CHERRY BLOSSOM',
         'BREAKER': True,
-
+        'CUST_ID': 'nar',
     },
     'Cougar': {
         'INV_DICT': {
@@ -317,2100 +112,1428 @@ MAP_SITES_HARDWARE_GUI = {
         },
         'METER_MAX': 2670000,
         'VAR_NAME': 'cougar',
-        'CUST_ID': nar,
         'PVSYST': 'COUGAR',
         'BREAKER': False,
-
+        'CUST_ID': 'nar',
     },
     'Conetoe': {
         'INV_DICT': {i: f"{(i-1)//4 + 1}.{(i-1)%4 + 1}" for i in range(1, 17)},
         'METER_MAX': 5000000,
         'VAR_NAME': 'conetoe1',
-        'CUST_ID': soltage,
         'PVSYST': None,
         'BREAKER': False,
-
+        'CUST_ID': 'soltage',
     },
     'Duplin': {
-        'INV_DICT': {i: f'C-{i}' if i <= 3 else f'S-{i-3}' for i in range(1,22)},
+        'INV_DICT': {i: f'C-{i}' if i <= 3 else f'S-{i-3}' for i in range(1, 22)},
         'METER_MAX': 5040000,
         'VAR_NAME': 'duplin',
-        'CUST_ID': soltage,
         'PVSYST': None,
         'BREAKER': False,
-
+        'CUST_ID': 'soltage',
     },
     'Elk': {
         'INV_DICT': {i: f"1-{i}" if i <= 15 else (f"2-{i-15}" if i <= 29 else f"3-{i-29}") for i in range(1, 44)},
         'METER_MAX': 5380000,
         'VAR_NAME': 'elk',
-        'CUST_ID': solrvr,
         'PVSYST': 'ELK',
         'BREAKER': True,
-
+        'CUST_ID': 'solrvr',
     },
     'Freightliner': {
         'INV_DICT': {i: str(i) for i in range(1, 19)},
         'METER_MAX': 2250000,
         'VAR_NAME': 'freightliner',
-        'CUST_ID': ncemc,
         'PVSYST': 'FREIGHTLINE',
         'BREAKER': False,
-
+        'CUST_ID': 'ncemc',
     },
     'Gray Fox': {
         'INV_DICT': {i: f"{(i-1)//20 + 1}.{(i-1)%20 + 1}" for i in range(1, 41)},
         'METER_MAX': 5000000,
         'VAR_NAME': 'grayfox',
-        'CUST_ID': solrvr,
         'PVSYST': 'GRAYFOX',
         'BREAKER': True,
-
+        'CUST_ID': 'solrvr',
     },
     'Harding': {
         'INV_DICT': {i: str(i) for i in range(1, 25)},
         'METER_MAX': 3000000,
         'VAR_NAME': 'harding',
-        'CUST_ID': solrvr,
         'PVSYST': 'HARDING',
         'BREAKER': True,
-
+        'CUST_ID': 'solrvr',
     },
     'Harrison': {
         'INV_DICT': {i: str(i) for i in range(1, 44)},
         'METER_MAX': 5380000,
         'VAR_NAME': 'harrison', 
-        'CUST_ID': nar, 
         'PVSYST': 'HARRISON',
         'BREAKER': True,
-
+        'CUST_ID': 'nar',
     },
     'Hayes': {
         'INV_DICT': {i: str(i) for i in range(1, 27)},
         'METER_MAX': 3240000,
         'VAR_NAME': 'hayes',
-        'CUST_ID': nar,
         'PVSYST': 'HAYES',
         'BREAKER': True,
-
+        'CUST_ID': 'nar',
     },
     'Hickory': {
         'INV_DICT': {1: '1', 2: '2'}, 
         'METER_MAX': 5000000,
-        'VAR_NAME':'hickory',
-        'CUST_ID': nar,
+        'VAR_NAME': 'hickory',
         'PVSYST': 'HICKORY',
         'BREAKER': True,
-
+        'CUST_ID': 'nar',
     },
     'Hickson': {
         'INV_DICT': {i: f"1-{i}" for i in range(1, 17)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'hickson', 
-        'CUST_ID': hst,
         'PVSYST': None,
         'BREAKER': True,
-
+        'CUST_ID': 'hst',
     },
     'Holly Swamp': {
         'INV_DICT': {i: str(i) for i in range(1, 17)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'hollyswamp',
-        'CUST_ID': ncemc,
         'PVSYST': 'HOLLYSWAMP',
         'BREAKER': False,
-
+        'CUST_ID': 'ncemc',
     },
     'Jefferson': {
         'INV_DICT': {i: f"{(i - 1) // 16 + 1}.{(i - 1) % 16 + 1}" for i in range(1, 65)},
         'METER_MAX': 8000000,
         'VAR_NAME': 'jefferson',
-        'CUST_ID': hst,
         'PVSYST': None,
         'BREAKER': False,
-
+        'CUST_ID': 'hst',
     },
     'Longleaf Pine': {
         'INV_DICT': {i: f"A{i}" if i < 21 else f"B{i - 20}" for i in range(1, 41)},
         'METER_MAX': 5000000,
         'VAR_NAME': 'longleafpine',
-        'CUST_ID': solrvr,
         'PVSYST': None,
         'BREAKER': True,
-
+        'CUST_ID': 'solrvr',
     },
     'Marshall': {
         'INV_DICT': {i: f"1.{i}" for i in range(1, 17)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'marshall',
-        'CUST_ID': hst,
         'PVSYST': None,
         'BREAKER': True,
-
+        'CUST_ID': 'hst',
     },
     'McLean': {
         'INV_DICT': {i: str(i) for i in range(1, 41)},
         'METER_MAX': 5000000,
         'VAR_NAME': 'mclean',
-        'CUST_ID': solrvr,
         'PVSYST': 'MCLEAN',
         'BREAKER': True,
-
+        'CUST_ID': 'solrvr',
     },
     'Ogburn': {
         'INV_DICT': {i: f"1-{i}" for i in range(1, 17)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'ogburn',
-        'CUST_ID': hst,
         'PVSYST': None,
         'BREAKER': True,
-
+        'CUST_ID': 'hst',
     },
     'PG': {
         'INV_DICT': {i: str(i) for i in range(1, 19)},
         'METER_MAX': 2210000,
         'VAR_NAME': 'pg',
-        'CUST_ID': ncemc,
         'PVSYST': 'PG',
         'BREAKER': False,
-
+        'CUST_ID': 'ncemc',
     },
     'Richmond': {
         'INV_DICT': {i: str(i) for i in range(1, 25)},
         'METER_MAX': 3000000,
         'VAR_NAME': 'richmond',
-        'CUST_ID': solrvr,
         'PVSYST': 'RICHMOND',
         'BREAKER': False,
-
+        'CUST_ID': 'solrvr',
     },
     'Shorthorn': {
         'INV_DICT': {i: str(i) for i in range(1, 73)},
         'METER_MAX': 9000000,
         'VAR_NAME': 'shorthorn',
-        'CUST_ID': solrvr,
         'PVSYST': 'SHORTHORN',
         'BREAKER': True,
-
+        'CUST_ID': 'solrvr',
     },
     'Sunflower': {
         'INV_DICT': {i: str(i) for i in range(1, 81)},
         'METER_MAX': 10000000,
         'VAR_NAME': 'sunflower',
-        'CUST_ID': solrvr,
         'PVSYST': 'SUNFLOWER',
         'BREAKER': True,
-
+        'CUST_ID': 'solrvr',
     },
     'Tedder': {
         'INV_DICT': {i: str(i) for i in range(1, 17)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'tedder',
-        'CUST_ID': hst,
         'PVSYST': None,
         'BREAKER': True,
-
+        'CUST_ID': 'hst',
     },
     'Thunderhead': {
         'INV_DICT': {i: str(i) for i in range(1, 17)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'thunderhead',
-        'CUST_ID': hst,
         'PVSYST': None,
         'BREAKER': True,
-
+        'CUST_ID': 'hst',
     },
     'Upson': {
         'INV_DICT': {i: str(i) for i in range(1, 25)},
         'METER_MAX': 3000000,
         'VAR_NAME': 'upson',
-        'CUST_ID': solrvr2,
         'PVSYST': None,
         'BREAKER': False,
-
+        'CUST_ID': 'solrvr2',
     },
     'Van Buren': {
         'INV_DICT': {i: str(i) for i in range(1, 18)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'vanburen',
-        'CUST_ID': hst,
         'PVSYST': 'VAN BUREN',
         'BREAKER': False,
-
+        'CUST_ID': 'hst',
     },
     'Warbler': {
         'INV_DICT': {i: f"{'A' if i <= 16 else 'B'}{i}" for i in range(1, 33)},
         'METER_MAX': 4000000,
         'VAR_NAME': 'warbler',
-        'CUST_ID': solrvr2,
         'PVSYST': 'WARBLER',
         'BREAKER': True,
-
+        'CUST_ID': 'solrvr2',
     },
     'Washington': {
         'INV_DICT': {i: str(i) for i in range(1, 41)},
         'METER_MAX': 5000000,
         'VAR_NAME': 'washington',
-        'CUST_ID': solrvr2,
         'PVSYST': None,
         'BREAKER': True,
-
+        'CUST_ID': 'solrvr2',
     },
     'Wayne 1': {
         'INV_DICT': {1: '1', 2: '2', 3: '3', 4: '4'},
         'METER_MAX': 5000000,
         'VAR_NAME': 'wayne1',
-        'CUST_ID': soltage,
         'PVSYST': None,
         'BREAKER': False,
-
+        'CUST_ID': 'soltage',
     },
     'Wayne 2': {
         'INV_DICT': {1: '1', 2: '2', 3: '3', 4: '4'},
         'METER_MAX': 5000000,
         'VAR_NAME': 'wayne2',
-        'CUST_ID': soltage,
         'PVSYST': None,
         'BREAKER': False,
-
+        'CUST_ID': 'soltage',
     },
     'Wayne 3': {
         'INV_DICT': {1: '1', 2: '2', 3: '3', 4: '4'},
         'METER_MAX': 5000000,
         'VAR_NAME': 'wayne3',
-        'CUST_ID': soltage,
         'PVSYST': None,
         'BREAKER': False,
-
+        'CUST_ID': 'soltage',
     },
     'Wellons': {
         'INV_DICT': {1: '1-1', 2: '1-2', 3: '2-1', 4: '2-2', 5: '3-1', 6: '3-2'},
         'METER_MAX': 5000000,
         'VAR_NAME': 'wellons',
-        'CUST_ID': nar,
         'PVSYST': 'WELLONS',
         'BREAKER': False,
-
+        'CUST_ID': 'nar',
     },
     'Whitehall': {
         'INV_DICT': {i: str(i) for i in range(1, 17)},
         'METER_MAX': 2000000,
         'VAR_NAME': 'whitehall',
-        'CUST_ID': solrvr2,
         'PVSYST': 'WHITEHALL',
         'BREAKER': True,
-
+        'CUST_ID': 'solrvr2',
     },
     'Whitetail': {
         'INV_DICT': {i: str(i) for i in range(1, 81)},
         'METER_MAX': 10000000,
         'VAR_NAME': 'whitetail',
-        'CUST_ID': solrvr2,
         'PVSYST': None,
         'BREAKER': True,
-
+        'CUST_ID': 'solrvr2',
     },
     'Williams': {
         'INV_DICT': {i: f"{'A' if i <= 20 else 'B'}{i-20 if i > 20 else i}" for i in range(1, 41)},
         'METER_MAX': 5000000,
         'VAR_NAME': 'williams',
-        'CUST_ID': solrvr2,
         'PVSYST': None,
         'BREAKER': True,
-
+        'CUST_ID': 'solrvr2',
     },
     'Violet': {
         'INV_DICT': {1: '1', 2: '2'},
         'METER_MAX': 5000000,
         'VAR_NAME': 'violet',
-        'CUST_ID': nar,
         'PVSYST': 'VIOLET',
         'BREAKER': True,
-
+        'CUST_ID': 'nar',
     }
 }
 
 
+def fast_mean(iterable):
+    valid = [x for x in iterable if x is not None]
+    return sum(valid) / len(valid) if valid else 0
+
+class AEDataApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Site Data")
+        self.root.configure(bg=MAIN_COLOR)
+        self._set_window_icon(self.root)
+        
+        # Determine Hostname and Database Target
+        self.sql_pc = True if get_hostname() == "NAR-OMOPSXPS" else False
+        if not self.sql_pc:
+            self.local_db = messagebox.askyesno(
+                title="SQL Server Selection", 
+                message="Yes for Localhost, No for VPN and Office Server Connection."
+            )
+        else:
+            self.local_db = False
+            
+        # State Variables
+        self.is_fetching = False # Synchronization flag for background thread
+        self.site_widgets = {}
+        self.all_cbs = []
+        self.cached_table_names = []
+        self.device_states = {}
+        self.last_online_cache = {}
+        self.inv_online_since = {}
+        self.last_closed_cache = {}
+        self.meter_last_online_cache = {}
+        self.pvsyst_model_cache = {}
+        self.pvsyst_results = {} # Computed in background thread
+        self.text_update_table = []
+        
+        # Site Configuration Map
+        self.MAP_SITES = MAP_SITES_HARDWARE_GUI
+        self.sites_per_col = 21
+        
+        # UI Setup
+        self._setup_main_window()
+        self._setup_peripheral_windows()
+        self._setup_inverter_windows()
+        self._populate_inverter_checkboxes()
+        
+        # Start lifecycle
+        self.load_checkbox_states()
+        self.root.after(500, self.run_data_cycle)
+
+    def _set_window_icon(self, window):
+        """Helper to apply the program icon to a window."""
+        try:
+            window.iconbitmap(ICON_PATH)
+        except Exception:
+            pass
+
+    def _setup_main_window(self):
+        """Builds the main grid headers and site rows dynamically."""
+        headers = ["Sites", "Breaker", "Utility V", "Opt", "Meter kW", "% Max", "% PvSyst", "POA", "Site Overview"]
+        
+        # Calculate how many column blocks are needed
+        total_sites = len(self.MAP_SITES)
+        num_blocks = (total_sites - 1) // self.sites_per_col + 1
+        
+        # Draw headers for each block
+        for block in range(num_blocks):
+            col_offset = block * 9
+            for i, h in enumerate(headers):
+                Label(self.root, bg=MAIN_COLOR, text=h, font=('Tk_defaultFont', 10, 'bold')).grid(row=0, column=col_offset + i, padx=5)
+
+            # Tell Tkinter to let the Snapshot column absorb all extra horizontal space
+            self.root.grid_columnconfigure(col_offset + 8, weight=1)
+
+        for i, (name, config) in enumerate(self.MAP_SITES.items(), 1):
+            self._create_site_row(i, name, config)
+
+    def _create_site_row(self, index, name, config):
+        # Calculate which block (column group) this site belongs to (0-indexed)
+        block = (index - 1) // self.sites_per_col
+        
+        # Calculate the actual grid row (1-indexed to account for headers at row 0)
+        row = ((index - 1) % self.sites_per_col) + 1
+        
+        # Calculate the column offset (each block is 9 columns wide)
+        col_offset = block * 9
+        
+        var_name = config['VAR_NAME']
+        self.site_widgets[var_name] = {'inverters': {}, 'config': config}
+        
+        # Site Name
+        self.site_widgets[var_name]['label'] = Label(self.root, bg=MAIN_COLOR, text=name, font=('Tk_defaultFont', 12, 'bold'), anchor='w')
+        self.site_widgets[var_name]['label'].grid(row=row, column=col_offset, sticky='w')
+        
+        # Breaker Status
+        if config['BREAKER']:
+            if name == 'Violet':
+                bf = Frame(self.root, bg=MAIN_COLOR)
+                bf.grid(row=row, column=col_offset + 1, sticky='nsew')
+                self.site_widgets[var_name]['status_label_1'] = Label(bf, bg=MAIN_COLOR, text='❌', fg='black')
+                self.site_widgets[var_name]['status_label_1'].grid(row=0, column=0, sticky='nsew')
+                self.site_widgets[var_name]['status_label_2'] = Label(bf, bg=MAIN_COLOR, text='❌', fg='black')
+                self.site_widgets[var_name]['status_label_2'].grid(row=1, column=0, sticky='nsew')
+                
+                # Attach ToolTips
+                self.site_widgets[var_name]['breaker_tt_1'] = ToolTip(self.site_widgets[var_name]['status_label_1'], "Pending Update...")
+                self.site_widgets[var_name]['breaker_tt_2'] = ToolTip(self.site_widgets[var_name]['status_label_2'], "Pending Update...")
+            else:
+                lbl = Label(self.root, bg=MAIN_COLOR, text='❌')
+                lbl.grid(row=row, column=col_offset + 1)
+                self.site_widgets[var_name]['breaker_label'] = lbl
+                
+                # Attach ToolTip
+                self.site_widgets[var_name]['breaker_tt'] = ToolTip(lbl, "Pending Update...")
+
+        # Utility Voltage
+        v_lbl = Label(self.root, bg=MAIN_COLOR, text='V')
+        v_lbl.grid(row=row, column=col_offset + 2)
+        self.site_widgets[var_name]['v_label'] = v_lbl
+        self.site_widgets[var_name]['v_tt'] = ToolTip(v_lbl, "Pending Update...")
+
+        # Suppress Alerts Checkbox
+        cb_var = IntVar()
+        self.all_cbs.append(cb_var)
+        Checkbutton(self.root, bg=MAIN_COLOR, variable=cb_var, command=self.save_checkbox_states).grid(row=row, column=col_offset + 3)
+        self.site_widgets[var_name]['suppress_var'] = cb_var
+
+        # Meter kW
+        kw_lbl = Label(self.root, bg=MAIN_COLOR, text='kW', font=( 'Tk_defaultFont', 10, 'bold'))
+        kw_lbl.grid(row=row, column=col_offset + 4)
+        self.site_widgets[var_name]['kw_label'] = kw_lbl
+        self.site_widgets[var_name]['kw_tt'] = ToolTip(kw_lbl, "Pending Update...")
+
+        # % Max & % PvSyst
+        self.site_widgets[var_name]['ratio_label'] = Label(self.root, bg=MAIN_COLOR, text='0%', font=('Tk_defaultFont', 10, 'bold'))
+        self.site_widgets[var_name]['ratio_label'].grid(row=row, column=col_offset + 5)
+        self.site_widgets[var_name]['pvsyst_label'] = Label(self.root, bg=MAIN_COLOR, text='--', font=('Tk_defaultFont', 10, 'bold'))
+        self.site_widgets[var_name]['pvsyst_label'].grid(row=row, column=col_offset + 6)
+
+        # POA Weather
+        poa_var = IntVar()
+        self.all_cbs.append(poa_var)
+        poa_btn = Checkbutton(self.root, bg=MAIN_COLOR, text='0', font=( 'Tk_defaultFont', 10, 'bold'), variable=poa_var)
+        poa_btn.grid(row=row, column=col_offset + 7)
+        self.site_widgets[var_name]['poa_btn'] = poa_btn
+        self.site_widgets[var_name]['poa_var'] = poa_var
+
+        # Snapshot Frame Setup
+        snap = Frame(self.root, bg=MAIN_COLOR, bd=1, relief="solid")
+        self.site_widgets[var_name]['snap_tt'] = ToolTip(snap, "INV kW  |  Meter-INVs  |  # INVs ✅\nMeter kW  |  No Comms  |  Total INVs")
+        snap.grid(row=row, column=col_offset + 8, sticky='ew')
+        snap.columnconfigure(0, weight=1)
+        snap.columnconfigure(1, weight=1)
+        snap.columnconfigure(2, weight=1)
+        self.site_widgets[var_name]['snap_frame'] = snap
+        self.site_widgets[var_name]['inv_kw_total'] = Label(snap, bg=MAIN_COLOR, text='INV kW', font=('Tk_defaultFont', 9, 'bold'))
+        self.site_widgets[var_name]['inv_kw_total'].grid(row=0, column=0, sticky='ew')
+        self.site_widgets[var_name]['meter_inv_diff'] = Label(snap, bg=MAIN_COLOR, text='Meter-INVs', font=('Tk_defaultFont', 9, 'bold'))
+        self.site_widgets[var_name]['meter_inv_diff'].grid(row=0, column=1, sticky='ew')
+        self.site_widgets[var_name]['invs_online'] = Label(snap, bg=MAIN_COLOR, text='# INVs ✅', font=('Tk_defaultFont', 9, 'bold'))
+        self.site_widgets[var_name]['invs_online'].grid(row=0, column=2, sticky='ew')
+        self.site_widgets[var_name]['meter_kw_snap'] = Label(snap, bg=MAIN_COLOR, text='Meter kW', font=('Tk_defaultFont', 9, 'bold'))
+        self.site_widgets[var_name]['meter_kw_snap'].grid(row=1, column=0, sticky='ew')
+        self.site_widgets[var_name]['invs_no_comms'] = Label(snap, bg=MAIN_COLOR, text='No Comms', font=('Tk_defaultFont', 9, 'bold'))
+        self.site_widgets[var_name]['invs_no_comms'].grid(row=1, column=1, sticky='ew')
+        self.site_widgets[var_name]['invs_total'] = Label(snap, bg=MAIN_COLOR, text='Total INVs', font=('Tk_defaultFont', 9, 'bold'))
+        self.site_widgets[var_name]['invs_total'].grid(row=1, column=2, sticky='ew')
+
+    def _setup_peripheral_windows(self):
+        # Alert Window
+        self.alert_win = Toplevel(self.root)
+        self.alert_win.title("Alert Windows Info")
+        self._set_window_icon(self.alert_win)
+        
+        notesFrame = Frame(self.alert_win)
+        notesFrame.grid(row=0, column=0, sticky=EW)
+        Label(notesFrame, text="1st Checkbox: ✓ = Open WO\n& pauses inv notifications", font=("Calibri", 12)).pack()
+        Label(notesFrame, text="GUI Last Updated", font=("Calibri", 18)).pack()
+        self.timmy_label = Label(notesFrame, text="--:--", font=("Calibri", 30))
+        self.timmy_label.pack()
+        Button(notesFrame, command=self.check_button_notes, text="Checkbutton Notes", font=("Calibri", 14), bg=MAIN_COLOR, cursor='hand2').pack(padx=2, pady=2, fill=X)
+        Button(notesFrame, command=self.open_file, text="Procedure Doc", font=("Calibri", 14), cursor='hand2').pack(padx=2, pady=2, fill=X)
+        Button(notesFrame, command=self.parse_wo, text="Assess Open WO's", font=("Calibri", 14), cursor='hand2').pack(padx=2, pady=2, fill=X)
+
+        notificationFrame = Frame(self.alert_win)
+        notificationFrame.grid(row=0, column=1, sticky=N)
+        Label(notificationFrame, text="Notification Settings", font=("Calibri", 14)).pack()
+        self.text_only_var = IntVar()
+        self.all_cbs.append(self.text_only_var)
+        Checkbutton(notificationFrame, text="Send Emails\n(Disable Local MsgBox's)", variable=self.text_only_var, cursor='hand2', command=self.save_checkbox_states).pack(padx=2)
+        self.admin_var = StringVar(value="Joseph Lang")
+        self.admin_box = ttk.Combobox(notificationFrame, textvariable=self.admin_var, values=["Joseph Lang", "Brandon Arrowood", "Jacob Budd", "Administrators + NCC", "Administrators Only"], state="readonly")
+        self.admin_box.pack()
+        self.admin_box.current(0)
+        Label(notificationFrame, text="\nSelect from the Dropdown\nBefore turning the function on\nwith the Checkbox\n").pack()
+
+        # Time Window
+        self.time_win = Toplevel(self.root)
+        self.time_win.title("Timestamps")
+        self._set_window_icon(self.time_win)
+        
+        timeW = Frame(self.time_win)
+        timeW.pack(side=LEFT)
+        Label(timeW, text="Data Pull Timestamps", font=("Calibri", 14)).grid(row=0, column=0, columnspan=3)
+        Label(timeW, text="First:", font=("Calibri", 12)).grid(row=1, column=0, sticky=E)
+        Label(timeW, text="Second:", font=("Calibri", 12)).grid(row=2, column=0, sticky=E)
+        Label(timeW, text="Third:", font=("Calibri", 12)).grid(row=3, column=0, sticky=E)
+        Label(timeW, text="Fourth:", font=("Calibri", 12)).grid(row=4, column=0, sticky=E)
+        Label(timeW, text="Tenth:", font=("Calibri", 12)).grid(row=5, column=0, sticky=E)
+        Label(timeW, text="Fifteenth:", font=("Calibri", 12)).grid(row=6, column=0, sticky=E)
+
+        self.time1v = Label(timeW, text="Time", font=("Calibri", 12, 'bold')); self.time1v.grid(row=1, column=1, sticky=W)
+        self.time2v = Label(timeW, text="Time", font=("Calibri", 12, 'bold')); self.time2v.grid(row=2, column=1, sticky=W)
+        self.time3v = Label(timeW, text="Time", font=("Calibri", 12, 'bold')); self.time3v.grid(row=3, column=1, sticky=W)
+        self.time4v = Label(timeW, text="Time", font=("Calibri", 12, 'bold')); self.time4v.grid(row=4, column=1, sticky=W)
+        self.time10v = Label(timeW, text="Time", font=("Calibri", 12, 'bold')); self.time10v.grid(row=5, column=1, sticky=W)
+        self.timeLv = Label(timeW, text="Time", font=("Calibri", 12, 'bold')); self.timeLv.grid(row=6, column=1, sticky=W)
+
+        Label(timeW, text="MsgBox Data:", font=("Calibri", 14)).grid(row=1, column=2)
+        Label(timeW, text="Inverters:", font=("Calibri", 12)).grid(row=2, column=2)
+        self.spread15 = Label(timeW, text="Time")
+        self.spread15.grid(row=3, column=2)
+        Label(timeW, text="Breakers &\nMeters:", font=("Calibri", 12)).grid(row=4, column=2)
+        self.spread10 = Label(timeW, text="Time")
+        self.spread10.grid(row=5, column=2)
+
+        # Checkin Window
+        self.checkins_win = Toplevel(self.root)
+        self.checkins_win.title("Personnel On-Site")
+        self._set_window_icon(self.checkins_win)
+
+    def _setup_inverter_windows(self):
+        """Builds separate portfolio windows or a combined tabbed window depending on host."""
+        self.customer_frames = {}
+        
+        if self.sql_pc:
+            solrvr_win = Toplevel(self.root)
+            solrvr_win.title("Sol River's Portfolio")
+            self._set_window_icon(solrvr_win)
+            solrvr_nb = ttk.Notebook(solrvr_win)
+            self.customer_frames['solrvr'] = ttk.Frame(solrvr_nb)
+            self.customer_frames['solrvr2'] = ttk.Frame(solrvr_nb)
+            solrvr_nb.add(self.customer_frames['solrvr'], text="Bulloch 1A - Sunflower")
+            solrvr_nb.add(self.customer_frames['solrvr2'], text="Upson - Williams")
+            solrvr_nb.pack(expand=True, fill='both')
+            
+            hst_win = Toplevel(self.root)
+            hst_win.title("Harrison Street's Portfolio")
+            self._set_window_icon(hst_win)
+            hst_nb = ttk.Notebook(hst_win)
+            self.customer_frames['hst'] = ttk.Frame(hst_nb)
+            hst_nb.add(self.customer_frames['hst'], text="Bishopville II - Van Buren")
+            hst_nb.pack(expand=True, fill='both')
+            
+            nar_win = Toplevel(self.root)
+            nar_win.title("NARENCO's Portfolio")
+            self._set_window_icon(nar_win)
+            nar_nb = ttk.Notebook(nar_win)
+            self.customer_frames['nar'] = ttk.Frame(nar_nb)
+            nar_nb.add(self.customer_frames['nar'], text="Bluebird - Violet")
+            nar_nb.pack(expand=True, fill='both')
+            
+            soltage_win = Toplevel(self.root)
+            soltage_win.title("Soltage")
+            self._set_window_icon(soltage_win)
+            self.customer_frames['soltage'] = ttk.Frame(soltage_win)
+            self.customer_frames['soltage'].pack(expand=True, fill='both')
+            
+            ncemc_win = Toplevel(self.root)
+            ncemc_win.title("NCEMC")
+            self._set_window_icon(ncemc_win)
+            self.customer_frames['ncemc'] = ttk.Frame(ncemc_win)
+            self.customer_frames['ncemc'].pack(expand=True, fill='both')
+        else:
+            inv_win = Toplevel(self.root)
+            inv_win.title("Inverter's Portfolio")
+            self._set_window_icon(inv_win)
+            notebook = ttk.Notebook(inv_win)
+            
+            self.customer_frames['nar'] = ttk.Frame(notebook)
+            self.customer_frames['hst'] = ttk.Frame(notebook)
+            self.customer_frames['soltage'] = ttk.Frame(notebook)
+            self.customer_frames['ncemc'] = ttk.Frame(notebook)
+            self.customer_frames['solrvr'] = ttk.Frame(notebook)
+            self.customer_frames['solrvr2'] = ttk.Frame(notebook)
+            
+            notebook.add(self.customer_frames['nar'], text="NARENCO")
+            notebook.add(self.customer_frames['hst'], text="Harrison Street")
+            notebook.add(self.customer_frames['soltage'], text="Soltage")
+            notebook.add(self.customer_frames['ncemc'], text="NCEMC")
+            notebook.add(self.customer_frames['solrvr'], text="Bulloch 1A - Shorthorn")
+            notebook.add(self.customer_frames['solrvr2'], text="Sunflower - Whitetail")
+            notebook.pack(expand=True, fill='both')
+
+    def _populate_inverter_checkboxes(self):
+        """Grids the specific checkboxes/status blocks into the assigned customer windows/frames."""
+        col_trackers = {k: 1 for k in self.customer_frames.keys()}
+        
+        for name, config in self.MAP_SITES.items():
+            var_name = config['VAR_NAME']
+            cust_key = config.get('CUST_ID', 'nar')
+            parent_frame = self.customer_frames[cust_key]
+            invdict = config['INV_DICT']
+            invnum = len(invdict)
+            
+            if name == 'CDIA': continue
+                
+            col = col_trackers[cust_key]
+            if self.sql_pc:
+                length_limit = 73
+                span_col = 6 if invnum > length_limit else 3
+            else:
+                length_limit = 38
+                span_col = 9 if invnum > length_limit * 2 else (6 if invnum > length_limit else 3)
+                
+            btn = Button(parent_frame, text=name, bg=MAIN_COLOR, font=("Tk_defaultFont", 12, 'bold'))
+            btn.grid(row=0, column=col, columnspan=span_col, sticky='ew')
+            
+            for num in range(1, invnum + 1):
+                inv_val = str(invdict.get(num, num))
+                
+                if self.sql_pc:
+                    column_offset = 0 if num <= length_limit else 3
+                    row_offset = num if num <= length_limit else num - length_limit
+                else:
+                    block_number = (num - 1) // length_limit
+                    column_offset = block_number * 3
+                    row_offset = (num - 1) % length_limit + 1
+                    
+                cb_var = IntVar()
+                self.all_cbs.append(cb_var)
+                cb = Checkbutton(parent_frame, text=str(inv_val), variable=cb_var, command=self.save_checkbox_states)
+                cb.grid(row=row_offset, column=col + column_offset, sticky=W)
+                
+                cb_tt = ToolTip(cb, "Pending Update...")
+                
+                wo_label = Label(parent_frame, text='⬜')
+                wo_label.grid(row=row_offset, column=col + 1 + column_offset)
+                
+                if str(inv_val) not in self.site_widgets[var_name]['inverters']:
+                    self.site_widgets[var_name]['inverters'][str(inv_val)] = {}
+                    
+                self.site_widgets[var_name]['inverters'][str(inv_val)].update({
+                    'cb_val': cb_var,
+                    'cb': cb,
+                    'cb_tt': cb_tt,
+                    'wo_label': wo_label
+                })
+                
+                if name != "Conetoe":
+                    up_cb_var = IntVar()
+                    self.all_cbs.append(up_cb_var)
+                    Checkbutton(parent_frame, variable=up_cb_var, command=self.save_checkbox_states).grid(row=row_offset, column=col + 2 + column_offset, sticky=W)
+                else:
+                    if num < 5:
+                        up_cb_var = IntVar()
+                        self.all_cbs.append(up_cb_var)
+                        Checkbutton(parent_frame, variable=up_cb_var, command=self.save_checkbox_states).grid(row=(4 * row_offset - 3), rowspan=4, column=col + 2 + column_offset, sticky=W)
+            
+            col_trackers[cust_key] += span_col
+
+    # --- UI Helpers for Alert Window ---
+    def check_button_notes(self):
+        msg = ("The First column of CheckButtons in the Site Data Window turns off all notifications associated with that Site.\n\n"
+               "The POA CB will change the value to 9999 so that no inv outages are filtered by the POA.\n\n"
+               "The colored INV CheckButtons are to be selected when a WO is open for that device and will turn off notifications of outages with INV.\n\n"
+               "The Box in the middle Represents the Status of that device in Emaint. | ⬜ = NO WO | Black BG = Offline WO Open | Blue BG = Underperformance WO Open | Pink BG = Comms Outage WO Open | Yellow BG = Unknown WO Found |\n\n"
+               "The 3rd Column is a CB for Underperformance tracking.")
+        messagebox.showinfo(parent=self.alert_win, title="Checkbutton Info", message=msg)
+
+    def open_file(self):
+        try:
+            os.startfile(r"G:\Shared drives\Narenco Projects\O&M Projects\NCC\Procedures\NCC Tools - Joseph\Also Energy GUI Interactions - How To.docx")
+        except Exception as e:
+            print(f"Could not open file: {e}")
+
+    def parse_wo(self):
+        dir_path = r"G:\Shared drives\O&M\NCC Automations\Notification System\WO Tracking\\"
+        for f in glob.glob(os.path.join(dir_path, "*.txt")):
+            try: os.remove(f)
+            except: pass
+        
+        file_path = filedialog.askopenfilename(parent=self.alert_win, title="Select WO Excel", filetypes=[("Excel", "*.xlsx *.xls")], initialdir="C:\\Users\\OMOPS\\Downloads")
+        if not file_path: return
+        
+        df = pd.read_excel(file_path)
+        inv_pat = re.compile(r"(?:inverter|inv)\s*(\d+)?(?:-|\.)?(\d+)?")
+        
+        for _, row in df.iterrows():
+            site = str(row['Site'])
+            if pd.isna(site) or site in {"Charter GM", "Charter RM", "Charter Roof"}: continue
+            
+            vn = site.lower().replace(", llc", "").replace("farm", "").replace("cadle", "").replace("solar", "").replace(" ", "").replace("freightline", "freightliner")
+            if site == "BISHOPVILLE": vn = 'bishopvilleII'
+            
+            if 'inv' in str(row['Asset Description']).lower() or 'inv' in str(row['Brief Description']).lower():
+                m = inv_pat.search(str(row['Brief Description']).lower())
+                if m:
+                    g = int(m.group(1)) if m.group(1) else None
+                    n = int(m.group(2)) if m.group(2) else g
+                    if g is None or n is None: continue
+                    
+                    inv_num = define_inv_num(site, g, n)
+                    if inv_num and vn in self.site_widgets:
+                        inv_val = self.MAP_SITES.get(site, {}).get('INV_DICT', {}).get(inv_num)
+                        if inv_val and str(inv_val) in self.site_widgets[vn]['inverters']:
+                            lbl = self.site_widgets[vn]['inverters'][str(inv_val)]['wo_label']
+                            err = row['Fault Code Category']
+                            
+                            clr = 'gray' if lbl.cget('bg') in ['black', 'blue'] else 'blue' if err == 'Underperformance' else 'black' if err == 'Equipment Outage' else 'pink' if err == 'COMMs Outage' else 'yellow'
+                            lbl.config(bg=clr)
+                            
+                        with open(os.path.join(dir_path, f"{vn} Open WO's.txt"), 'a+') as f:
+                            f.write(f"{inv_num:<5}| WO: {row['WO No.']:<8}| {row['WO Date']} | {row['Brief Description']}\n")
+
+    def _trigger_alert(self, title, msg):
+        #print(msg)
+        if self.text_only_var.get():
+            self.text_update_table.append(f"<br><b>{title}</b>: {msg}")
+            #print(self.text_update_table)
+        else:
+            messagebox.showwarning(parent=self.alert_win, title=title, message=msg)
 
 
+    # =========================================================================
+    # --- Multithreading Background Tasks & DB Connectivity ---
+    # =========================================================================
 
+    def connect_db(self):
+        if self.local_db:
+            conn_str = (r"DRIVER={ODBC Driver 18 for SQL Server};SERVER=localhost\SQLEXPRESS;"
+                        r"DATABASE=NARENCO_O&M_AE;Trusted_Connection=yes;Encrypt=no;")
+        else:
+            conn_str = (f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={CREDS['DB_IP']}\\SQLEXPRESS;"
+                        f"DATABASE=NARENCO_O&M_AE;UID={CREDS['DB_UID']};PWD={CREDS['DB_PWD']};Encrypt=no;")
+        db = pyodbc.connect(conn_str)
+        return db.cursor(), db
 
+    def _get_last_closed_bg(self, cursor, site):
+        try:
+            if site == "Violet":
+                cursor.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Breaker Data 1] WHERE [Status] = 1 ORDER BY [Timestamp] DESC")
+                d1 = cursor.fetchone()
+                cursor.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Breaker Data 2] WHERE [Status] = 1 ORDER BY [Timestamp] DESC")
+                d2 = cursor.fetchone()
+                return f"Brk1: {d1[0]} | Brk2: {d2[0]}" if d1 and d2 else "Unknown"
+            elif site in ['Cardinal', 'Harrison', 'Hayes', 'Warbler']:
+                cursor.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Meter Data] WHERE [Amps A] <> 0 AND [Amps B] <> 0 AND [Amps C] <> 0 ORDER BY [Timestamp] DESC")
+                data = cursor.fetchone()
+                return f"{data[0]}" if data else "Unknown"
+            else:
+                cursor.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Breaker Data] WHERE [Status] = 1 ORDER BY [Timestamp] DESC")
+                data = cursor.fetchone()
+                return f"{data[0]}" if data else "Unknown"
+        except Exception:
+            return "Unknown"
 
+    def _get_meter_last_online_bg(self, cursor, site):
+        try:
+            q = f"SELECT TOP 1 [Timestamp] FROM (SELECT [Timestamp], [Watts], LEAD([Watts], 1) OVER(ORDER BY [Timestamp] DESC) as Watts_1, LEAD([Watts], 2) OVER(ORDER BY [Timestamp] DESC) as Watts_2 FROM [{site} Meter Data]) sub WHERE [Watts] > 2 AND Watts_1 > 2 AND Watts_2 > 2 ORDER BY [Timestamp] DESC"
+            cursor.execute(q)
+            data = cursor.fetchone()
+            return f"{data[0]}" if data else "Unknown"
+        except Exception:
+            return "Unknown"
 
-if len(MAP_SITES_HARDWARE_GUI) > 22:
-    siteLabel1 = Label(root, bg="#ADD8E6", text= "Sites", font=('Tk_defaultFont', 10, 'bold'))
-    siteLabel1.grid(row=0, column= 9, sticky=W)
-    breakerstatusLabel1= Label(root, bg="#ADD8E6", text= "Breaker Status", font=('Tk_defaultFont', 10, 'bold'))
-    breakerstatusLabel1.grid(row=0, column=10)
-    meterVLabel1 = Label(root, bg="#ADD8E6", text= "Utility V", font=('Tk_defaultFont', 10, 'bold'))
-    meterVLabel1.grid(row= 0, column=11)
-    meterkWLabel1 = Label(root, bg="#ADD8E6", text="Meter kW", font=('Tk_defaultFont', 10, 'bold'))
-    meterkWLabel1.grid(row=0, column=13)
-    meterratioLabel1 = Label(root, bg="#ADD8E6", text= "% of Max", font=('Tk_defaultFont', 10, 'bold'))
-    meterratioLabel1.grid(row=0, column= 14)
-    meterpvsystLabel1 = Label(root, bg="#ADD8E6", text= "% of PvSyst", font=('Tk_defaultFont', 10, 'bold'))
-    meterpvsystLabel1.grid(row=0, column= 15)
-    POALabel1 = Label(root, bg="#ADD8E6", text= "POA", font=('Tk_defaultFont', 10, 'bold'))
-    POALabel1.grid(row=0, column= 16)
-    SSSLabel1 = Label(root, bg="#ADD8E6", text= "Site Snap Shot", font=('Tk_defaultFont', 10, 'bold'))
-    # Configure column 8 to expand, allowing the snapshot frame to fill the available space
-    root.columnconfigure(17, weight=1)
-    SSSLabel1.grid(row=0, column= 17)
+    def _get_last_online_bg(self, cursor, site, inv_num, duplin_except):
+        try:
+            q = f"SELECT TOP 1 [Timestamp] FROM (SELECT [Timestamp], [Watts], LEAD([Watts], 1) OVER(ORDER BY [Timestamp] DESC) as Watts_1, LEAD([Watts], 2) OVER(ORDER BY [Timestamp] DESC) as Watts_2 FROM [{site}{duplin_except} INV {inv_num} Data]) sub WHERE [Watts] > 2 AND Watts_1 > 2 AND Watts_2 > 2 ORDER BY [Timestamp] DESC"
+            cursor.execute(q)
+            data = cursor.fetchone()
+            return f"{data[0]}" if data else "Unknown"
+        except Exception:
+            return "Unknown"
 
+    def _fetch_raw_data_bg(self, cursor):
+        raw_inv, raw_meter, raw_poa, raw_breaker = {}, {}, {}, {}
+        if not self.cached_table_names:
+            self.cached_table_names = [t.table_name for t in cursor.tables(tableType='TABLE') if 'Data' in t.table_name]
 
+        for table in self.cached_table_names:
+            if "INV" in table:
+                # ADDED [Last Upload] to the SQL query
+                cursor.execute(f"SELECT TOP 16 [dc V], Watts, [Last Upload] FROM [{table}] ORDER BY Timestamp DESC")
+                raw_inv[table] = cursor.fetchall()
+            elif "Meter" in table:
+                cursor.execute(f"SELECT TOP 16 [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], Watts FROM [{table}] ORDER BY Timestamp DESC")
+                raw_meter[table] = cursor.fetchall()
+            elif "POA" in table:
+                cursor.execute(f"SELECT TOP 1 [W/M²] FROM [{table}] ORDER BY Timestamp DESC")
+                res = cursor.fetchone()
+                raw_poa[table] = res[0] if res else 0
+            elif "Breaker" in table:
+                cursor.execute(f"SELECT TOP 6 [Status] FROM [{table}] ORDER BY Timestamp DESC")
+                raw_breaker[table] = cursor.fetchall()
 
+        return raw_inv, raw_meter, raw_poa, raw_breaker
 
+    def _fetch_timestamps_bg(self, cursor):
+        try:
+            cursor.execute("SELECT TOP 16 [Timestamp] FROM [Ogburn Meter Data] ORDER BY [Timestamp] DESC")
+            return [r[0] for r in cursor.fetchall()]
+        except Exception as e:
+            print(f"Error fetching timestamps: {e}")
+            return []
 
+    def _fetch_checkins_bg(self):
+        data = []
+        try:
+            lbconn_str = r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=G:\Shared drives\O&M\NCC\NCC 039.accdb;'
+            conn = pyodbc.connect(lbconn_str)
+            cur = conn.cursor()
+            cur.execute("SELECT Location, Company, Employee FROM [Checked In]")
+            data = [list(row) for row in cur.fetchall()]
+            conn.close()
+        except Exception as e:
+            print(f"Logbook access DB error: {e}")
+        return data
 
+    def _calculate_pvsyst_bg(self, meterval, poa_val, pvsyst_name):
+        """Fetches PVsyst data from Access DB in the Background, calculates expected production."""
+        if not pvsyst_name or poa_val == 9999 or poa_val <= 0:
+            return 0
+            
+        if pvsyst_name not in ["WELLONS", "FREIGHTLINE", "WARBLER", "PG", "HOLLYSWAMP"]:
+            meterval = meterval / 1000.0
 
-all_CBs = []
-#This is used to track the column for the inverter widgets
-normal_numbering = {'Bluebird', 'Cardinal', 'Cherry Blossom', 'Cougar', 'Harrison', 'Hayes', 'Hickory', 'Violet', 'HICKSON',
-                    'JEFFERSON', 'Marshall', 'OGBURN', 'Tedder', 'Thunderhead', 'Van Buren', 'Bulloch 1A', 'Bulloch 1B', 'Elk', 'Duplin',
-                    'Harding', 'Mclean', 'Richmond Cadle', 'Shorthorn', 'Sunflower', 'Upson', 'Warbler', 'Washington', 'Whitehall', 'Whitetail',
-                    'Conetoe 1', 'Wayne I', 'Wayne II', 'Wayne III', 'Freight Line', 'Holly Swamp', 'PG'}
-
-number20set = {'Gray Fox'}
-number9set = {'BISHOPVILLE'}
-number2set = {'Wellons Farm'}
-
-def define_inv_num(site, group, num):
-    group = int(group)
-    num = int(num)
-
-    if site in normal_numbering:
-        return num
-    elif site in number20set:
-        inv = num+((20*group)-20)
-        return inv
-    elif site in number9set:
-        inv = num+((9*group)-9)
-        return inv
-    elif site in number2set:
-        inv = num+((2*group)-2)
-        return inv
-
-
-def open_wo_tracking(name):
-    file = f"G:\\Shared drives\\O&M\\NCC Automations\\Notification System\\WO Tracking\\{name} Open WO's.txt"
-    try:
-        os.startfile(file)
-    except FileNotFoundError:
-        print(f"File Not Found: {file}")
-BUTTON_STATE_FILE = r"G:\Shared drives\O&M\NCC Automations\Notification System\CheckBoxState.json"
-
-def save_cb_state():
-    state = [var.get() for var in all_CBs]
-    with open(BUTTON_STATE_FILE, 'w') as f:
-        json.dump(state, f)
-
-def load_cb_state():
-    if os.path.exists(BUTTON_STATE_FILE):
-        with open(BUTTON_STATE_FILE, 'r') as f:
+        if pvsyst_name not in self.pvsyst_model_cache:
+            pvsyst_db = r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=G:\Shared drives\O&M\NCC Automations\Notification System\PVsyst (Josephs Edits).accdb;'
             try:
+                conn = pyodbc.connect(pvsyst_db)
+                cursor = conn.cursor()
+                query = "SELECT [GlobInc_WHSQM], [EGrid_KWH] FROM [PVsystHourly] WHERE [PlantName] = ?"
+                
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    slope_df = pd.read_sql_query(query, conn, params=[pvsyst_name])
+                
+                if slope_df.empty:
+                    conn.close()
+                    return 0
+
+                X = slope_df['GlobInc_WHSQM'].values.reshape(-1, 1)
+                y = slope_df['EGrid_KWH'].values
+                model = LinearRegression().fit(X, y)
+                
+                cursor.execute("SELECT TOP 1 [SimulationDate] FROM [PVsystHourly] WHERE [PlantName] = ?", pvsyst_name)
+                sim_date_row = cursor.fetchone()
+                sim_date = sim_date_row[0] if sim_date_row else datetime.now()
+                
+                self.pvsyst_model_cache[pvsyst_name] = (model.coef_[0], model.intercept_, sim_date)
+                conn.close()
+            except Exception as e:
+                print(f"PVsyst Error for {pvsyst_name}: {e}")
+                return 0
+
+        slope, intercept, sim_date = self.pvsyst_model_cache[pvsyst_name]
+        meter_est = slope * poa_val + intercept
+
+        if meter_est <= 0: return 0
+
+        try:
+            degrad = ((datetime.now() - sim_date).days / 365.25) * 0.005
+            meter_estdegrad = meter_est * (1 - degrad)
+            performance = (meterval / meter_estdegrad) * 100
+            return performance
+        except Exception:
+            return 0
+
+    def _background_fetch_task(self, poa_states):
+        """Executed entirely in a background thread to prevent Tkinter freezing."""
+        self.is_fetching = True
+        success = False
+        try:
+            cursor, conn = self.connect_db()
+
+            # 1. Fetch raw data
+            raw_inv, raw_meter, raw_poa, raw_breaker = self._fetch_raw_data_bg(cursor)
+
+            # 2. Fetch Timestamps
+            timestamps_data = self._fetch_timestamps_bg(cursor)
+
+            # 3. Fetch Checkins
+            checkins_data = self._fetch_checkins_bg()
+
+            # 4. Pre-calculate metrics that require DB (PVsyst and Offline checks)
+            pvsyst_results = {}
+            fetched_offline = {'breakers': {}, 'meters': {}, 'invs': {}}
+
+            for name, config in self.MAP_SITES.items():
+                var_name = config['VAR_NAME']
+                poa_btn_val = poa_states.get(name, 0)
+
+                # POA
+                poa_val = raw_poa.get(f"{name} POA Data", 0)
+                if poa_btn_val == 1: poa_val = 9999
+
+                # Meter Avg
+                meter_data = raw_meter.get(f"{name} Meter Data", [])
+                avg_w = fast_mean(row[6] for row in meter_data if row[6] is not None and row[6] < 760000000)
+
+                # PVsyst Ratio Precomputation
+                pvsyst_name = config.get('PVSYST')
+                perf_ratio = self._calculate_pvsyst_bg(avg_w, poa_val, pvsyst_name)
+                pvsyst_results[name] = perf_ratio
+
+                # Evaluate Database requirements for device offline times
+                # Breakers
+                if config['BREAKER']:
+                    if name == 'Violet':
+                        for i in (1, 2):
+                            data = raw_breaker.get(f"{name} Breaker Data {i}", [])
+                            is_closed = any(row[0] for row in data) if data else False
+                            cache_key = f"{name}_{i}"
+                            if not is_closed and cache_key not in self.last_closed_cache:
+                                fetched_offline['breakers'][cache_key] = self._get_last_closed_bg(cursor, name)
+                    else:
+                        data = raw_breaker.get(f"{name} Breaker Data", [])
+                        is_closed = any(row[0] for row in data) if data else False
+                        if not is_closed and name not in self.last_closed_cache:
+                            fetched_offline['breakers'][name] = self._get_last_closed_bg(cursor, name)
+
+                # Meters
+                if avg_w < 2 and poa_val > 10 and name not in self.meter_last_online_cache:
+                    fetched_offline['meters'][name] = self._get_meter_last_online_bg(cursor, name)
+
+                # Inverters
+                invdict = config['INV_DICT']
+                for inv_num, inv_label in invdict.items():
+                    duplin_except = (' Central' if inv_num <= 3 else ' String') if name == 'Duplin' else ''
+                    inv_n = inv_num if name != 'Duplin' else (inv_num if inv_num <= 3 else inv_num - 3)
+                    table_name = f'{name}{duplin_except} INV {inv_n} Data'
+                    data = raw_inv.get(table_name, [])
+
+                    last_comm_ts = data[0][2] if data and len(data[0]) > 2 else None
+                    is_completely_offline = all(row[1] is not None and row[1] < 1 for row in data) if data else False
+                    if is_completely_offline:
+                        cache_key = f"{name}_{inv_num}"
+                        if cache_key not in self.last_online_cache:
+                            fetched_offline['invs'][cache_key] = self._get_last_online_bg(cursor, name, inv_num, duplin_except)
+                        if last_comm_ts:
+                            # Store this in a new cache or pass it through bg_data
+                            fetched_offline['invs'][f"{cache_key}_comm"] = last_comm_ts.strftime('%m/%d/%Y %H:%M:%S')
+            # Package all gathered data for main thread
+            bg_data = {
+                'raw_inv': raw_inv, 'raw_meter': raw_meter, 'raw_poa': raw_poa, 'raw_breaker': raw_breaker,
+                'timestamps': timestamps_data, 'checkins': checkins_data, 'pvsyst_results': pvsyst_results,
+                'fetched_offline': fetched_offline
+            }
+
+            # Ship back to main thread safely
+            self.root.after(0, self._apply_ui_updates, bg_data)
+            success = True
+            
+        except Exception as e:
+            print(f"Background Fetch Thread Error: {e}")
+        finally:
+            if 'conn' in locals() and conn: 
+                try: conn.close()
+                except: pass
+            
+            # Failsafe loop restart if something fatally breaks inside background thread
+            if not success:
+                self.root.after(60000, self.run_data_cycle)
+                
+            self.is_fetching = False
+
+    def run_data_cycle(self):
+        """Timer entry point -> Spawns background thread."""
+        now = datetime.now()
+        day_of_week = now.weekday()
+        if (day_of_week > 4 and now.hour > 15) or now.hour > 20:
+            restart_pc()
+
+        if self.is_fetching:
+            print("Background process is currently running. Skipping this cycle execution.")
+            return
+
+        print("Initiating Background Fetch Cycle...")
+        # Gather states that are needed before creating the thread (Safest practice)
+        poa_states = {name: self.site_widgets[config['VAR_NAME']]['poa_var'].get() for name, config in self.MAP_SITES.items()}
+        
+        threading.Thread(target=self._background_fetch_task, args=(poa_states,), daemon=True).start()
+
+    # =========================================================================
+    # --- Main Thread UI Applicators ---
+    # =========================================================================
+
+    def _apply_ui_updates(self, bg_data):
+        """Runs on main thread via root.after(), applies fetched background data to the UI."""
+        # 1. Update Instance Data dicts
+        self.raw_inv_data = bg_data['raw_inv']
+        self.raw_meter_data = bg_data['raw_meter']
+        self.raw_poa_data = bg_data['raw_poa']
+        self.raw_breaker_data = bg_data['raw_breaker']
+        
+        self.pvsyst_results = bg_data['pvsyst_results']
+
+        # 2. Add any newly fetched offline timestamps to caches
+        self.last_closed_cache.update(bg_data['fetched_offline']['breakers'])
+        self.meter_last_online_cache.update(bg_data['fetched_offline']['meters'])
+        self.last_online_cache.update(bg_data['fetched_offline']['invs'])
+
+        # 3. Apply individual frame pieces
+        self._apply_timestamps(bg_data['timestamps'])
+        self._apply_checkins(bg_data['checkins'])
+
+        # 4. Trigger UI component updates
+        self.refresh_ui()
+        
+        # 5. Schedule Next Cycle
+        now = datetime.now()
+        target_time = time(8, 30)
+        if self.text_only_var.get(): delay_ms = 420000
+        elif now.time() < target_time: delay_ms = 300000
+        else: delay_ms = 60000
+            
+        self.root.after(delay_ms, self.run_data_cycle)
+
+    def _apply_timestamps(self, ts):
+        if len(ts) >= 16:
+            for i, lbl in enumerate([self.time1v, self.time2v, self.time3v, self.time4v, None, None, None, None, None, self.time10v, None, None, None, None, self.timeLv]):
+                if lbl: lbl.config(text=ts[i].strftime('%H:%M'))
+            self.spread10.config(text=f"5 Pulls\n{round((ts[0]-ts[4]).total_seconds()/60, 2)} Minutes")
+            self.spread15.config(text=f"15 Pulls\n{round((ts[0]-ts[14]).total_seconds()/60, 2)} Minutes")
+
+    def _apply_checkins(self, data):
+        for widget in self.checkins_win.winfo_children(): 
+            widget.destroy()
+        for row_idx, row in enumerate(data):
+            for col_idx, val in enumerate(row):
+                if isinstance(val, datetime): val = val.strftime('%m/%d/%y')
+                bg = '#90EE90' if row_idx % 2 else '#ADD8E6'
+                w = 24 if col_idx == 2 else 32 if col_idx == 1 else 23
+                Label(self.checkins_win, text=val, font=("Calibri", 14), borderwidth=1, relief="solid", width=w, bg=bg).grid(row=row_idx, column=col_idx)
+
+    def refresh_ui(self):
+        """Processes the synchronized data directly to UI widgets."""
+        self.text_update_table = ["<html><body><h2>GUI Update</h2>"]
+        now = datetime.now()
+        
+        for name, config in self.MAP_SITES.items():
+            var_name = config['VAR_NAME']
+            poa = self._update_poa(name, var_name)
+            
+            if config['BREAKER']: 
+                self._update_breakers(name, var_name)
+                
+            meter_w = self._update_meters(name, var_name, poa)
+            self._update_inverters(name, var_name, poa)
+            self._update_snapshots(name, var_name, meter_w)
+            
+        self.text_update_table.append("</body></html>")
+        self.timmy_label.config(text=now.strftime("%H:%M"))
+        
+        if self.text_only_var.get(): 
+            self._handle_notifications()
+
+    def _update_poa(self, site, var):
+        val = self.raw_poa_data.get(f"{site} POA Data", 0)
+        color = 'gray' if val < 100 else '#ADD8E6' if val > 800 else '#1E90FF'
+        
+        if self.site_widgets[var]['poa_var'].get() == 1:
+            val = 9999
+            color = 'pink'
+            
+        self.site_widgets[var]['poa_btn'].config(text=str(int(val)), bg=color)
+        return val
+
+    def _update_breakers(self, site, var):
+        suppress_alerts = self.site_widgets[var]['suppress_var'].get() == 1
+        
+        if site == 'Violet':
+            for i in (1, 2):
+                data = self.raw_breaker_data.get(f"{site} Breaker Data {i}", [])
+                is_closed = any(row[0] for row in data) if data else False
+                cache_key = f"{site}_{i}"
+                
+                if is_closed:
+                    self.last_closed_cache.pop(cache_key, None)
+                    self.site_widgets[var][f'status_label_{i}'].config(text='✓✓✓', bg='green')
+                    self.site_widgets[var][f'breaker_tt_{i}'].text = "Breaker Operational"
+                else:
+                    last_op = self.last_closed_cache.get(cache_key, "Unknown")
+                    self.site_widgets[var][f'status_label_{i}'].config(text='❌❌', bg='red')
+                    self.site_widgets[var][f'breaker_tt_{i}'].text = f"Breaker Open\nLast closed: {last_op}"
+                    
+                    if not suppress_alerts:
+                        self._trigger_alert(f"{site} Breaker {i}", f"Breaker Tripped Open! Last closed: {last_op}")
+        else:
+            data = self.raw_breaker_data.get(f"{site} Breaker Data", [])
+            is_closed = any(row[0] for row in data) if data else False
+            
+            if is_closed:
+                self.last_closed_cache.pop(site, None)
+                self.site_widgets[var]['breaker_label'].config(text='✓✓✓', bg='green')
+                self.site_widgets[var]['breaker_tt'].text = "Breaker Operational"
+            else:
+                last_op = self.last_closed_cache.get(site, "Unknown")
+                self.site_widgets[var]['breaker_label'].config(text='❌❌', bg='red')
+                self.site_widgets[var]['breaker_tt'].text = f"Breaker Open\nLast closed: {last_op}"
+                
+                if not suppress_alerts:
+                    self._trigger_alert(f"{site} Breaker", f"Breaker Tripped Open! Last closed: {last_op}")
+
+    def _update_meters(self, site, var, poa):
+        time_now = datetime.now()
+        lost_comm_threshold = time_now - timedelta(hours=2)        
+        if site == "CDIA":
+            data = self.raw_inv_data.get(f"{site} INV 1 Data", [])
+            #print(data)
+            if not data or data[0][2] < lost_comm_threshold:
+                self.site_widgets[var]['kw_label'].config(bg='pink')
+                self.site_widgets[var]['kw_tt'].text = f"Inverter Lost Communications | Last comm: {data[2][0].strftime('%m/%d/%Y %H:%M:%S') if data else 'Unknown'}"
+                return 0
+            else:
+                w = fast_mean(row[1] for row in data if row[1] is not None and row[1] < 760000000)
+                kw = round(w/1000, 1)
+                ui_color = 'green' if kw > 0 else 'black'
+                if ui_color == 'black':
+                    self.site_widgets[var]['label'].config(bg='red')
+
+                self.site_widgets[var]['kw_label'].config(text=kw, bg=ui_color)
+                self.site_widgets[var]['kw_tt'].text = "Meter Online" if ui_color == 'green' else "Meter Offline"
+
+                dc_v = fast_mean(row[0] for row in data)
+                self.site_widgets[var]['v_label'].config(text="✓✓✓" if dc_v > 100 else "❌❌", bg="green" if dc_v > 100 else "red")
+                self.site_widgets[var]['v_tt'].text = f"DC Voltage {round(dc_v, 1)}"
+
+                cdiaRatio = round(w/self.MAP_SITES[site]['METER_MAX']*100, 1)
+                if cdiaRatio > 90: ratio_color = '#ADD8E6'
+                elif cdiaRatio > 80: ratio_color = '#87CEEB'
+                elif cdiaRatio > 70: ratio_color = '#1E90FF'
+                elif cdiaRatio > 60: ratio_color = '#4682B4'
+                elif cdiaRatio > 50: ratio_color = '#4169E1'
+                elif cdiaRatio < 0.1: ratio_color = 'black'
+                else: ratio_color = 'gray'
+
+                self.site_widgets[var]['ratio_label'].config(text=f"{cdiaRatio}%", bg=ratio_color)
+                
+                return kw
+        else:        
+            data = self.raw_meter_data.get(f"{site} Meter Data", [])
+            suppress_alerts = self.site_widgets[var]['suppress_var'].get() == 1
+            
+            if not data: 
+                self.site_widgets[var]['kw_label'].config(bg='pink')
+                self.site_widgets[var]['kw_tt'].text = "Meter Lost Communications"
+                return 0
+                
+            v_a = fast_mean(row[0] for row in data)
+            v_b = fast_mean(row[1] for row in data)
+            v_c = fast_mean(row[2] for row in data)
+            avg_w = fast_mean(row[6] for row in data if row[6] is not None and row[6] < 760000000)
+            
+            val_thresh = 5 if site == "Hickory" else 5000
+            dif_thresh = 9 if site in ["Wellons", "Cherry Blossom"] else 5
+
+            pct_diff_ab = ((max(v_a, v_b) - min(v_a, v_b)) / fast_mean([v_a, v_b])) * 100 if fast_mean([v_a, v_b]) else 0
+            pct_diff_ac = ((max(v_a, v_c) - min(v_a, v_c)) / fast_mean([v_a, v_c])) * 100 if fast_mean([v_a, v_c]) else 0
+            pct_diff_bc = ((max(v_b, v_c) - min(v_b, v_c)) / fast_mean([v_b, v_c])) * 100 if fast_mean([v_b, v_c]) else 0
+
+            # Refactored Phase Text Logic
+            if v_a < val_thresh and v_b < val_thresh and v_c < val_thresh:
+                self.site_widgets[var]['v_label'].config(text='❌❌', bg='red')
+                self.site_widgets[var]['v_tt'].text = "Loss of Utility Voltage across all phases."
+                if not suppress_alerts: self._trigger_alert(f"{site} Meter", "Loss of Utility Voltage across all phases.")
+            elif v_a < val_thresh:
+                self.site_widgets[var]['v_label'].config(text='X✓✓', bg='orange')
+                self.site_widgets[var]['v_tt'].text = "Loss of Phase A Voltage."
+                if not suppress_alerts: self._trigger_alert(f"{site} Meter", "Loss of Utility Phase A Voltage.")
+            elif v_b < val_thresh:
+                self.site_widgets[var]['v_label'].config(text='✓X✓', bg='orange')
+                self.site_widgets[var]['v_tt'].text = "Loss of Phase B Voltage."
+                if not suppress_alerts: self._trigger_alert(f"{site} Meter", "Loss of Utility Phase B Voltage.")
+            elif v_c < val_thresh:
+                self.site_widgets[var]['v_label'].config(text='✓✓X', bg='orange')
+                self.site_widgets[var]['v_tt'].text = "Loss of Phase C Voltage."
+                if not suppress_alerts: self._trigger_alert(f"{site} Meter", "Loss of Utility Phase C Voltage.")
+            elif pct_diff_ab >= dif_thresh or pct_diff_ac >= dif_thresh or pct_diff_bc >= dif_thresh:
+                self.site_widgets[var]['v_label'].config(text='???', bg='orange')
+                self.site_widgets[var]['v_tt'].text = f"Voltage Imbalance greater than {dif_thresh}%"
+                if not suppress_alerts: self._trigger_alert(f"{site} Meter", f"Voltage Imbalance greater than {dif_thresh}%")
+            else:
+                self.site_widgets[var]['v_label'].config(text='✓✓✓', bg='green')
+                self.site_widgets[var]['v_tt'].text = "Voltage levels operational"
+
+            # Check Production / Power Loss
+            if avg_w < 2 and poa > 10 and not suppress_alerts:
+                online = self.meter_last_online_cache.get(site, "Unknown")
+                
+                self.site_widgets[var]['kw_label'].config(text='❌❌', bg='red')
+                self.site_widgets[var]['kw_tt'].text = f"Offline. Last online: {online}"
+                self._trigger_alert(f"{site} Power Loss", f"Meter reading ~0kW while POA is active. Last online: {online}")
+            else:
+                self.meter_last_online_cache.pop(site, None)
+                self.site_widgets[var]['kw_label'].config(text=f"{round(avg_w/1000, 1)}", bg='green' if avg_w > 0 else 'gray')
+                self.site_widgets[var]['kw_tt'].text = "Meter Online"
+            
+            # --- Ratio / % of Max Calculation with Color Sequencing ---
+            ratio_pct = (avg_w / self.MAP_SITES[site]['METER_MAX']) * 100 if self.MAP_SITES[site]['METER_MAX'] else 0
+            meterRatio = ratio_pct / 100.0
+            
+            if meterRatio > .90: ratio_color = '#ADD8E6'
+            elif meterRatio > .80: ratio_color = '#87CEEB'
+            elif meterRatio > .70: ratio_color = '#1E90FF'
+            elif meterRatio > .60: ratio_color = '#4682B4'
+            elif meterRatio > .50: ratio_color = '#4169E1'
+            elif meterRatio < 0.001: ratio_color = 'black'
+            else: ratio_color = 'gray'
+            
+            self.site_widgets[var]['ratio_label'].config(text=f"{round(ratio_pct, 1)}%", bg=ratio_color)
+
+            # --- PVsyst Application with Color Sequencing ---
+            perf_ratio = self.pvsyst_results.get(site, 0)
+            
+            if perf_ratio > 0:
+                if perf_ratio > 90: pv_color = '#ADD8E6'
+                elif perf_ratio > 80: pv_color = '#87CEEB'
+                elif perf_ratio > 70: pv_color = '#1E90FF'
+                elif perf_ratio > 60: pv_color = '#4682B4'
+                elif perf_ratio > 50: pv_color = '#4169E1'
+                else: pv_color = 'gray'
+                self.site_widgets[var]['pvsyst_label'].config(text=f'{round(perf_ratio, 1)}%', bg=pv_color)
+            else:
+                self.site_widgets[var]['pvsyst_label'].config(text='N/A', bg=MAIN_COLOR, font=('Tk_defaultFont', 10,))
+
+            return avg_w
+    
+    def _update_inverters(self, site, var, poa):
+        invdict = self.MAP_SITES[site]['INV_DICT']
+        suppress_alerts = self.site_widgets[var]['suppress_var'].get() == 1
+        
+        # --- PASS 1: Evaluate raw data and gather site-wide metrics ---
+        site_statuses = {}
+        total_expected = 0
+        total_online_expected = 0
+        any_expected_inv_over_2_hours = False
+        
+        for inv_num, inv_label in invdict.items():
+            duplin_except = (' Central' if inv_num <= 3 else ' String') if site == 'Duplin' else ''
+            inv_n = inv_num if site != 'Duplin' else (inv_num if inv_num <= 3 else inv_num - 3)
+            
+            table_name = f'{site}{duplin_except} INV {inv_n} Data'
+            data = self.raw_inv_data.get(table_name, [])
+            
+            inv_widget = self.site_widgets[var]['inverters'].get(str(inv_label))
+            is_manually_suppressed = inv_widget['cb_val'].get() == 1 if inv_widget else False
+            
+            # --- Track Last Communication ---
+            last_comm_ts = "Unknown"
+            is_no_comms = False
+            
+            if data and len(data[0]) > 2 and data[0][2]:
+                upload_time = data[0][2]
+                # Using the full timestamp format as requested previously
+                last_comm_ts = upload_time.strftime('%m/%d/%Y %H:%M:%S') 
+                
+                if (datetime.now() - upload_time).total_seconds() > 7200:
+                    is_no_comms = True
+            else:
+                is_no_comms = True 
+
+            # --- Track Production & DC Voltage ---
+            consecutive = 0
+            is_online = False
+            is_completely_offline = all(row[1] is not None and row[1] < 1 for row in data) if data else False
+            
+            # Grab average DC Voltage for the 'Orange' status check
+            avg_dcv = fast_mean(row[0] for row in data) if data else 0
+            
+            if not is_completely_offline and not is_no_comms:
+                for row in data:
+                    if row[1] is not None and row[1] > 0:
+                        consecutive += 1
+                        if consecutive >= 3:
+                            is_online = True
+                            break
+                    else:
+                        consecutive = 0
+            
+            cache_key = f"{site}_{inv_num}"
+            
+            if is_online:
+                if cache_key not in self.inv_online_since:
+                    self.inv_online_since[cache_key] = datetime.now()
+            else:
+                self.inv_online_since.pop(cache_key, None) 
+                
+            if not is_manually_suppressed:
+                total_expected += 1
+                if is_online:
+                    total_online_expected += 1
+                    if cache_key in self.inv_online_since and (datetime.now() - self.inv_online_since[cache_key]).total_seconds() > 7200:
+                        any_expected_inv_over_2_hours = True
+                        
+            site_statuses[inv_num] = {
+                'is_online': is_online,
+                'is_completely_offline': is_completely_offline,
+                'is_no_comms': is_no_comms,
+                'avg_dcv': avg_dcv,
+                'last_comm_str': last_comm_ts,
+                'cache_key': cache_key,
+                'inv_label': inv_label,
+                'is_manually_suppressed': is_manually_suppressed
+            }
+
+        # --- PASS 2: Update UI ---
+        for inv_num, status in site_statuses.items():
+            inv_label = status['inv_label']
+            inv_widget = self.site_widgets[var]['inverters'].get(str(inv_label))
+            if not inv_widget: continue
+                
+            cache_key = status['cache_key']
+            last_state = self.device_states.get(cache_key, "ONLINE")
+            
+            # Logic for color coding including the Orange Voltage check
+            if status['is_no_comms']:
+                current_state = "NO_COMMS"
+                ui_color = 'pink' 
+            elif status['is_online']:
+                current_state = "ONLINE"
+                ui_color = 'green'
+            elif not status['is_completely_offline']:
+                current_state = "STARTING"
+                ui_color = 'yellow'
+            else:
+                # Inverter is production-offline. Check DC Voltage:
+                if status['avg_dcv'] > 100:
+                    current_state = "OFFLINE_WITH_VOLTAGE"
+                    ui_color = 'orange'
+                else:
+                    current_state = "OFFLINE_NO_VOLTAGE"
+                    ui_color = 'red'
+
+            # Build tooltip and alert message
+            online_last = self.last_online_cache.get(cache_key, "Unknown")
+            comm_last = status.get('last_comm_str', "Unknown")
+            
+            msg = f"Inv {inv_label}\nLast Online: {online_last}\nLast Comm: {comm_last}"
+
+            if status['is_completely_offline'] or status['is_no_comms']:
+                inv_widget['cb'].config(bg=ui_color)
+                inv_widget['cb_tt'].text = msg 
+                
+                # Notification Logic
+                all_others_online = (total_expected > 1) and (total_online_expected >= total_expected - 1)
+                suppression_lifted = (poa > 400) or any_expected_inv_over_2_hours or all_others_online
+                
+                if suppression_lifted and not suppress_alerts and not status['is_manually_suppressed']:
+                    if not self.text_only_var.get() or current_state != last_state:
+                        self._trigger_alert(f"{site} Device Issue", msg.replace('\n', ' | '))
+            else:
+                # Device is online or starting
+                self.last_online_cache.pop(cache_key, None)
+                inv_widget['cb'].config(bg=ui_color)
+                inv_widget['cb_tt'].text = f"Status: {current_state}\nLast Comm: {comm_last}"
+
+            self.device_states[cache_key] = current_state
+
+    def _update_snapshots(self, site, var, meter_w):
+        inv_dict = self.MAP_SITES[site]['INV_DICT']
+        inv_count = len(inv_dict)
+        communicating_invs = 0
+        total_inv_kw = 0
+        active_inv_count = 0
+        
+        if 'inverters' in self.site_widgets[var]:
+            for inv_widget in self.site_widgets[var]['inverters'].values():
+                if inv_widget.get('cb') and inv_widget['cb'].cget('bg') == 'green':
+                    communicating_invs += 1
+
+        for inv_num, inv_label in inv_dict.items():
+            duplin_except = (' Central' if inv_num <= 3 else ' String') if site == 'Duplin' else ''
+            inv_n = inv_num if site != 'Duplin' else (inv_num if inv_num <= 3 else inv_num - 3)
+            
+            table_name = f'{site}{duplin_except} INV {inv_n} Data'
+            data = self.raw_inv_data.get(table_name, [])
+            
+            if data:
+                max_w = max((row[1] for row in data[:8] if row[1] is not None), default=0)
+                if max_w > 0:
+                    total_inv_kw += max_w
+                    active_inv_count += 1
+
+        color = MAIN_COLOR
+        if total_inv_kw == 0 and meter_w <= 0:
+            color = 'black'
+        elif communicating_invs < inv_count and active_inv_count > 0:
+            avg_inv_prod = total_inv_kw / active_inv_count
+            non_comm_invs = inv_count - communicating_invs
+            estimated_prod = total_inv_kw + (avg_inv_prod * 0.75) * non_comm_invs
+            color = 'green' if meter_w >= estimated_prod else 'yellow'
+
+        text_color = 'white' if color == 'black' else 'black'
+
+        self.site_widgets[var]['snap_frame'].config(bg=color)
+        self.site_widgets[var]['inv_kw_total'].config(text=f"{total_inv_kw/1000:.1f} kW", bg=color, fg=text_color)
+        self.site_widgets[var]['meter_inv_diff'].config(text=f"{round((meter_w - total_inv_kw)/1000, 1)} kW", bg=color, fg=text_color)
+        self.site_widgets[var]['invs_online'].config(text=f"{communicating_invs}", bg=color, fg=text_color)
+        self.site_widgets[var]['meter_kw_snap'].config(text=f"{meter_w/1000:.1f} kW", bg=color, fg=text_color)
+        self.site_widgets[var]['invs_no_comms'].config(text=f"{inv_count - communicating_invs}", bg=color, fg=text_color)
+        self.site_widgets[var]['invs_total'].config(text=f"{inv_count}", bg=color, fg=text_color)
+
+    def save_checkbox_states(self):
+        with open(BUTTON_STATE_FILE, 'w') as f: json.dump([v.get() for v in self.all_cbs], f)
+
+    def load_checkbox_states(self):
+        if os.path.exists(BUTTON_STATE_FILE):
+            with open(BUTTON_STATE_FILE, 'r') as f:
                 state = json.load(f)
-                for var, value in zip(all_CBs, state):
-                    var.set(value)
-            except json.decoder.JSONDecodeError as e:
-                print(f"Error decoding JSON data: {e}")
-                # Handle the error or provide appropriate fallback behavior
-    else:
-        print(f"File {BUTTON_STATE_FILE} does not exist.")
+                for var, val in zip(self.all_cbs, state): var.set(val)
 
-
-
-#This loop creates all the tkinter widgets for the GUI
-col = 1
-
-for ro, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items(), start=1):
-    invdict = site_dictionary['INV_DICT']
-    var_name = site_dictionary['VAR_NAME']
-    custid = site_dictionary['CUST_ID']
-    breakertf = site_dictionary['BREAKER']
-
-    invnum = len(invdict)
-    #Site Info
-    #Main Color
-    globals()[f'{var_name}Label'] = Label(root, bg=main_color, text=name, fg= 'black', font=('Tk_defaultFont', 10, 'bold'))
-    if ro > 22:
-        globals()[f'{var_name}Label'].grid(row=ro-22, column= 9, sticky=W)
-        breaker_col = 10
-    else:
-        globals()[f'{var_name}Label'].grid(row=ro, column= 0, sticky=W)
-        breaker_col = 1
-
-    if breakertf:
-        if name == 'Violet':
-            # Create a frame specifically for Violet's two breakers
-            violet_breaker_frame = Frame(root, bg=main_color)
-            if ro > 22:
-                violet_breaker_frame.grid(row=ro-22, column=breaker_col, sticky='nsew')
-            else:
-                violet_breaker_frame.grid(row=ro, column=breaker_col, sticky='nsew')
-
-            globals()[f'{var_name}1statusLabel'] = Label(violet_breaker_frame, bg=main_color, text='❌', fg= 'black')
-            globals()[f'{var_name}1statusLabel'].grid(row=0, column=0, sticky='nsew')
-            globals()[f'{var_name}2statusLabel'] = Label(violet_breaker_frame, bg=main_color, text='❌', fg= 'black')
-            globals()[f'{var_name}2statusLabel'].grid(row=1, column=0, sticky='nsew')
-        else: # For all other sites with breakers
-            globals()[f'{var_name}statusLabel'] = Label(root, bg=main_color, text='❌', fg= 'black')
-            if ro > 22:
-                globals()[f'{var_name}statusLabel'].grid(row=ro-22, column=breaker_col)
-            else:
-                globals()[f'{var_name}statusLabel'].grid(row=ro, column=breaker_col)
-
-    if name != 'CDIA':
-        #Site Voltage Boolean
-        globals()[f'{var_name}meterVLabel'] = Label(root, bg=main_color, text='V', fg= 'black')
-        if ro > 22:
-            globals()[f'{var_name}meterVLabel'].grid(row=ro-22, column= 11)
-        else:
-            globals()[f'{var_name}meterVLabel'].grid(row=ro, column= 2)
-
-    globals()[f'{var_name}metercbval'] = IntVar()
-    all_CBs.append(globals()[f'{var_name}metercbval'])
-    globals()[f'{var_name}metercb'] = Checkbutton(root, bg=main_color, variable=globals()[f'{var_name}metercbval'], fg= 'black', cursor='hand2', command=save_cb_state)
-    if ro > 22:
-        globals()[f'{var_name}metercb'].grid(row=ro-22, column= 12)
-    else:
-        globals()[f'{var_name}metercb'].grid(row=ro, column= 3)
-    #Meter Producing Boolean
-    globals()[f'{var_name}meterkWLabel'] = Label(root, bg=main_color, text='kW', fg= 'black')
-    if ro > 22:
-        globals()[f'{var_name}meterkWLabel'].grid(row=ro-22, column= 13)
-    else:
-        globals()[f'{var_name}meterkWLabel'].grid(row=ro, column= 4)
-    #Meter % of Max capability
-    globals()[f'{var_name}meterRatioLabel'] = Label(root, bg=main_color, text='Ratio', fg= 'black')
-    if ro > 22:
-        globals()[f'{var_name}meterRatioLabel'].grid(row=ro-22, column= 14)
-    else:
-        globals()[f'{var_name}meterRatioLabel'].grid(row=ro, column= 5)
-    #PVSyst Value
-    globals()[f'{var_name}meterPvSystLabel'] = Label(root, bg=main_color, text='Ratio', fg= 'black')
-    if ro > 22:
-        globals()[f'{var_name}meterPvSystLabel'].grid(row=ro-22, column= 15)
-    else:
-        globals()[f'{var_name}meterPvSystLabel'].grid(row=ro, column= 6)
-
-    globals()[f'{var_name}POAcbval'] = IntVar()
-    all_CBs.append(globals()[f'{var_name}POAcbval'])
-    globals()[f'{var_name}POAcb'] = Checkbutton(root, bg=main_color, text='X', variable=globals()[f'{var_name}POAcbval'], fg= 'black', cursor='hand2', command=save_cb_state)
-    
-    if ro > 22:
-        globals()[f'{var_name}POAcb'].grid(row=ro-22, column= 16)
-    else:
-        globals()[f'{var_name}POAcb'].grid(row=ro, column= 7)
-    
-    # Create a frame for the site snapshot data
-    globals()[f'{var_name}kwdata_frame'] = Frame(root, bg=main_color, bd=1, relief="solid")
-    if ro > 22:
-        globals()[f'{var_name}kwdata_frame'].grid(row=ro-22, column= 17, sticky='ew')
-    else:
-        globals()[f'{var_name}kwdata_frame'].grid(row=ro, column=8, sticky='ew')
-
-    # Configure columns to have equal weight, allowing them to share space
-    globals()[f'{var_name}kwdata_frame'].columnconfigure(0, weight=1)
-    globals()[f'{var_name}kwdata_frame'].columnconfigure(1, weight=1)
-    globals()[f'{var_name}kwdata_frame'].columnconfigure(2, weight=1)
-
-    # Initialize the site's widget dictionary
-    site_widgets[var_name] = {
-        'kwdata_frame': globals()[f'{var_name}kwdata_frame']
-    }
-
-    # Create 6 individual labels inside the frame, using sticky='ew' to make them fill their columns
-    globals()[f'{var_name}_inv_kw_total'] = Label(globals()[f'{var_name}kwdata_frame'], bg=main_color, text='INV kW', fg='black')
-    globals()[f'{var_name}_inv_kw_total'].grid(row=0, column=0, sticky='ew')
-    globals()[f'{var_name}_meter_inv_diff'] = Label(globals()[f'{var_name}kwdata_frame'], bg=main_color, text='Meter-INVs', fg='black')
-    globals()[f'{var_name}_meter_inv_diff'].grid(row=0, column=1, sticky='ew')
-    globals()[f'{var_name}_invs_online'] = Label(globals()[f'{var_name}kwdata_frame'], bg=main_color, text='# INVs ✅', fg='black')
-    globals()[f'{var_name}_invs_online'].grid(row=0, column=2, sticky='ew')
-    globals()[f'{var_name}_meter_kw'] = Label(globals()[f'{var_name}kwdata_frame'], bg=main_color, text='Meter kW', fg='black')
-    globals()[f'{var_name}_meter_kw'].grid(row=1, column=0, sticky='ew')
-    globals()[f'{var_name}_invs_no_comms'] = Label(globals()[f'{var_name}kwdata_frame'], bg=main_color, text='No Comms', fg='black')
-    globals()[f'{var_name}_invs_no_comms'].grid(row=1, column=1, sticky='ew')
-    globals()[f'{var_name}_invs_total'] = Label(globals()[f'{var_name}kwdata_frame'], bg=main_color, text='Total INVs', fg='black')
-    globals()[f'{var_name}_invs_total'].grid(row=1, column=2, sticky='ew')
-
-    # Add the new labels to the site_widgets dictionary
-    site_widgets[var_name]['inv_kw_total'] = globals()[f'{var_name}_inv_kw_total']
-    site_widgets[var_name]['meter_inv_diff'] = globals()[f'{var_name}_meter_inv_diff']
-    site_widgets[var_name]['invs_online'] = globals()[f'{var_name}_invs_online']
-    site_widgets[var_name]['meter_kw'] = globals()[f'{var_name}_meter_kw']
-    site_widgets[var_name]['invs_no_comms'] = globals()[f'{var_name}_invs_no_comms']
-    site_widgets[var_name]['invs_total'] = globals()[f'{var_name}_invs_total']
-    
-    #End
-    if sql_pc:          
-        #INVERTER INFO
-        length_limit = 73
-        if name != 'CDIA':
-            if invnum > length_limit:
-                span_col = 6
-            else:
-                span_col = 3
-            globals()[f'{var_name}invsLabel'] = Button(custid, text=name, command=lambda name=name: open_wo_tracking(name), bg=main_color, font=("Tk_defaultFont", 12, 'bold'), cursor='hand2')
-            globals()[f'{var_name}invsLabel'].grid(row=0, column=col, columnspan=span_col, sticky='ew')
-        for num in range(1, invnum+1):
-            column_offset = 0 if num <= length_limit else 3
-            row_offset = num if num <= length_limit else num - length_limit
-            if name != 'CDIA':
-                if num in invdict:  # Check if the key exists in the dictionary
-                    inv_val = str(invdict[num])
-                else:
-                    inv_val = str(num)
-
-                globals()[f'{var_name}inv{inv_val}cbval'] = IntVar()
-                all_CBs.append(globals()[f'{var_name}inv{inv_val}cbval'])
-                globals()[f'{var_name}inv{inv_val}cb'] = Checkbutton(custid, text=str(inv_val), variable=globals()[f'{var_name}inv{inv_val}cbval'], cursor='hand2', command=save_cb_state)
-                globals()[f'{var_name}inv{inv_val}cb'].grid(row=row_offset, column=col + column_offset, sticky=W)
-
-                globals()[f'{var_name}inv{num}WOLabel'] = Label(custid, text='⬜') #intial Setup of WO Placeholder. 
-                globals()[f'{var_name}inv{num}WOLabel'].grid(row=row_offset, column=col + 1 + column_offset)
-
-                if name != "Conetoe":
-                    globals()[f'{var_name}invup{num}cbval'] = IntVar()
-                    all_CBs.append(globals()[f'{var_name}invup{num}cbval'])
-                    globals()[f'{var_name}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{var_name}invup{num}cbval'], cursor='hand2', command=save_cb_state)
-                    globals()[f'{var_name}invup{num}cb'].grid(row=row_offset, column=col + 2 + column_offset, sticky=W)
-                else:
-                    if num < 5:
-                        globals()[f'{var_name}invup{num}cbval'] = IntVar()
-                        all_CBs.append(globals()[f'{var_name}invup{num}cbval'])
-                        globals()[f'{var_name}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{var_name}invup{num}cbval'], cursor='hand2', command=save_cb_state)
-                        globals()[f'{var_name}invup{num}cb'].grid(row=(4 * row_offset - 3), rowspan=4, column=col + 2 + column_offset, sticky=W)
-        col += span_col
-    else:
-        #INVERTER INFO
-        length_limit = 38
-        if name != 'CDIA':
-            if invnum > length_limit*2:
-                span_col = 9
-            elif length_limit*2 > invnum > length_limit:
-                span_col = 6
-            else:
-                span_col = 3
-            print(f"{name} | Invs: {invnum} | {length_limit*2} | {span_col}")
-
-            globals()[f'{var_name}invsLabel'] = Button(custid, text=name, command=lambda name=var_name: open_wo_tracking(name), bg=main_color, font=("Tk_defaultFont", 12, 'bold'), cursor='hand2')
-            globals()[f'{var_name}invsLabel'].grid(row=0, column=col, columnspan=span_col, sticky='ew')
-        for num in range(1, invnum+1):
-            block_number = (num - 1) // length_limit
-            column_offset = block_number * 3
-            row_offset = (num - 1) % length_limit + 1
-            if name != 'CDIA':
-                if num in invdict:  # Check if the key exists in the dictionary
-                    inv_val = str(invdict[num])
-                else:
-                    inv_val = str(num)
-
-                globals()[f'{var_name}inv{inv_val}cbval'] = IntVar()
-                all_CBs.append(globals()[f'{var_name}inv{inv_val}cbval'])
-                globals()[f'{var_name}inv{inv_val}cb'] = Checkbutton(custid, text=str(inv_val), variable=globals()[f'{var_name}inv{inv_val}cbval'], cursor='hand2', command=save_cb_state)
-                globals()[f'{var_name}inv{inv_val}cb'].grid(row=row_offset, column=col + column_offset, sticky=W)
-
-                globals()[f'{var_name}inv{num}WOLabel'] = Label(custid, text='⬜') #intial Setup of WO Placeholder. 
-                globals()[f'{var_name}inv{num}WOLabel'].grid(row=row_offset, column=col + 1 + column_offset)
-
-                if name != "Conetoe":
-                    globals()[f'{var_name}invup{num}cbval'] = IntVar()
-                    all_CBs.append(globals()[f'{var_name}invup{num}cbval'])
-                    globals()[f'{var_name}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{var_name}invup{num}cbval'], cursor='hand2', command=save_cb_state)
-                    globals()[f'{var_name}invup{num}cb'].grid(row=row_offset, column=col + 2 + column_offset, sticky=W)
-                else:
-                    if num < 5:
-                        globals()[f'{var_name}invup{num}cbval'] = IntVar()
-                        all_CBs.append(globals()[f'{var_name}invup{num}cbval'])
-                        globals()[f'{var_name}invup{num}cb'] = Checkbutton(custid, variable=globals()[f'{var_name}invup{num}cbval'], cursor='hand2', command=save_cb_state)
-                        globals()[f'{var_name}invup{num}cb'].grid(row=(4 * row_offset - 3), rowspan=4, column=col + 2 + column_offset, sticky=W)
-        col += span_col
-
-
-##########
-##########
-##########
-##########
-##########
-#TEMPORARY CHECKS TO BE REMOVED WHEN DEVICE IS REPIARED
-# check if False then call function to implement
-conetoe_check = False
-def conetoe_offline():
-    global conetoe_check
-    try:
-        if int(hardingPOAcb.cget("text")) >= 400 and datetime.now().hour >= 9 and not conetoe_check:
-            msg= "Call Conetoe Utilities:\nWO 43079\n757-857-2888\nID: 710R41"
-            if not textOnly.get():
-                messagebox.showinfo(title="Comm Outage", parent=alertW, message=msg)
-            else:
-                text_update_Table.append("<br>" + str(msg))
-            conetoe_check = True
-    except ValueError:
-        print("POA Value is not a valid Integer")
-
-
-##########
-##########
-##########
-##########
-##########
-##########
-def connect_Logbook():
-    lbconn_str = r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=G:\Shared drives\O&M\NCC\NCC 039.accdb;'
-    lbconnection = pyodbc.connect(lbconn_str)
-    cur = lbconnection.cursor()
-    return cur, lbconnection
-
-def connect_db():
-    # Create a connection to the SQL database
-    if LOCAL_YN:
-        dbconn_str = (
-                        r'DRIVER={ODBC Driver 18 for SQL Server};'
-                        r'SERVER=localhost\SQLEXPRESS;'
-                        r'DATABASE=NARENCO_O&M_AE;'
-                        r'Trusted_Connection=yes;'
-                        r'Encrypt=no;'
-                    )
-    else:
-        dbconn_str = (
-                    r'DRIVER={ODBC Driver 18 for SQL Server};'
-                    fr'SERVER={CREDS['DB_IP']}\SQLEXPRESS;'
-                    r'DATABASE=NARENCO_O&M_AE;'
-                    fr'UID={CREDS['DB_UID']};'
-                    fr'PWD={CREDS['DB_PWD']};'
-                    r'Encrypt=no;'
-                )
-    
-    dbconnection = pyodbc.connect(dbconn_str)
-    c = dbconnection.cursor()
-    return c, dbconnection
-
-
-def launch_check(c):
-    tday = datetime.now()
-    format_date = tday.strftime('%m/%d/%Y')
-    query = """
-    SELECT TOP 16 [Timestamp] FROM [Whitetail Meter Data]
-    WHERE FORMAT([Timestamp], 'MM/DD/YYYY') = ?
-    """
-    c.execute(query, (format_date,))
-    data = c.fetchall()
-    if len(data) == 16:
-        #ic(data)
-        return True
-    else:
-        #ic(data)
-        return False
-    
-
-def last_online(c, site, inv_num, duplin_except):
-    query = f"""
-    SELECT TOP 1 [Timestamp]
-    FROM (
-        SELECT [Timestamp], 
-               [Watts],
-               LEAD([Watts], 1) OVER(ORDER BY [Timestamp] DESC) as Watts_1,
-               LEAD([Watts], 2) OVER(ORDER BY [Timestamp] DESC) as Watts_2
-        FROM [{site}{duplin_except} INV {inv_num} Data]
-    ) sub
-    WHERE [Watts] > 2 AND Watts_1 > 2 AND Watts_2 > 2
-    ORDER BY [Timestamp] DESC
-    """
-    c.execute(query)
-    data = c.fetchone()
-    if data:
-        last_producing = f"Last Online: {data[0]}"
-        return last_producing
-    else:
-        return None
-
-def meter_last_online(c, site):
-    query = f"""
-    SELECT TOP 1 [Timestamp]
-    FROM (
-        SELECT [Timestamp], 
-               [Watts],
-               LEAD([Watts], 1) OVER(ORDER BY [Timestamp] DESC) as Watts_1,
-               LEAD([Watts], 2) OVER(ORDER BY [Timestamp] DESC) as Watts_2
-        FROM [{site} Meter Data]
-    ) sub
-    WHERE [Watts] > 2 AND Watts_1 > 2 AND Watts_2 > 2
-    ORDER BY [Timestamp] DESC
-    """
-    c.execute(query)
-    data = c.fetchone()
-    if data:
-        last_producing = f"Last Online: {data[0]}"
-        return last_producing
-    else:
-        return None
-        
-def last_closed(c, site):
-    if site == "Violet":
-        query1 = f"""
-        SELECT TOP 1 [Timestamp] 
-        FROM [{site} Breaker Data 1]
-        WHERE [Status] = 1
-        ORDER BY [Timestamp] DESC
-        """
-        c.execute(query1)
-        data1 = c.fetchone()
-        query2 = f"""
-        SELECT TOP 1 [Timestamp] 
-        FROM [{site} Breaker Data 2]
-        WHERE [Status] = 1
-        ORDER BY [Timestamp] DESC
-        """
-        c.execute(query2)
-        data2 = c.fetchone()
-
-        if data1 and data2:
-            data = f"Last Closed Breaker 1: {data1[0]} | Breaker 2: {data2[0]}"
-            return data
-        else:
-            return None
-    elif site in ['Cardinal', 'Harrison', 'Hayes', 'Warbler']:
-        query = f"""
-        SELECT TOP 1 [Timestamp]
-        FROM [{site} Meter Data]
-        WHERE [Amps A] <> 0 AND [Amps B] <> 0 AND [Amps C] <> 0
-        ORDER BY [Timestamp] DESC 
-        """
-        c.execute(query)
-        data = c.fetchone()
-        if data:
-            last_breaker = f"Last Closed: {data[0]}"
-            return last_breaker
-        else:
-            return None
-    else:
-        query = f"""
-        SELECT TOP 1 [Timestamp] 
-        FROM [{site} Breaker Data]
-        WHERE [Status] = 1
-        ORDER BY [Timestamp] DESC
-        """
-        c.execute(query)
-        data = c.fetchone()
-        if data:
-            last_breaker = f"Last Closed: {data[0]}"
-            return last_breaker
-        else:
-            return None
-
-def check_inv_consecutively_online(alist):
-    consecutive_count = 0
-    
-    for num in alist:
-        if num > 0:
-            consecutive_count += 1
-            if consecutive_count == 3:
-                return True
-        else:
-            consecutive_count = 0
-    
-    return False
-
-def siteSnapShot_Update(site, var_name, inv_num, meterkW):
-    global_vars = globals().copy()
-    invs_ON = []
-    invs_values = []
-    
-    for var, var_value in global_vars.items():
-        #Filter variables to just the INV ones for site
-        if (not isinstance(var_value, (Checkbutton, Label, Button)) or
-                any(filt in var for filt in {'val', 'invup'}) or
-                not all(filt in var for filt in {'inv', f'{var_name}', 'cb'})):
-            continue
-
-        if globals()[f'{var}'].cget('bg') == 'green':
-            invs_ON.append(var)
-
-    for inv in range(1, inv_num + 1):
-        if site == 'Duplin':
-            if inv <= 3:
-                duplin_except = ' Central'
-                inv_n = inv
-            else:
-                duplin_except = ' String'
-                inv_n = inv -3
-        else:
-            duplin_except = ''
-            inv_n = inv
-        data = inv_data[f'{site}{duplin_except} INV {inv_n} Data']
-        invmaxkW = max([row[1] for row in data[:meter_pulls]])
-        invs_values.append(invmaxkW)
-    
-    no_0s_invs_values = [value for value in invs_values if value > 0]
-    total_INVkW = sum(no_0s_invs_values)
-    communicating_INVs = len(invs_ON) #Count of inverters who's bg is green
-
-    if len(no_0s_invs_values) == 0 and meterkW <= 0:
-        color = 'black'
-    elif communicating_INVs == inv_num: #If all inverters are communicating
-        color = main_color
-    elif len(no_0s_invs_values) > 0 and communicating_INVs < inv_num and meterkW >= total_INVkW + ((total_INVkW/len(no_0s_invs_values)) * 0.75)*(inv_num-communicating_INVs): #If theres a non-communicating INV and the Meter value is greater than Total of reporting INV's kW value (plus the avg of the inverters - 10 kW) * # of non Communicating inverters
-        color = 'green'
-    else: #Otherwise show yellow that theres a none communicating Inverter and it is offline according to meter
-        color = 'yellow'
-
-    # Update the individual labels and the frame background color
-    site_widgets[var_name]['kwdata_frame'].config(bg=color)
-    site_widgets[var_name]['inv_kw_total'].config(text=f"{total_INVkW/1000:.1f} kW", bg=color, font=('Tk_default', 9, 'bold'))
-    site_widgets[var_name]['meter_inv_diff'].config(text=f"{round((meterkW - total_INVkW) / 1000, 1)} kW", bg=color, font=('Tk_default', 9, 'bold'))
-    site_widgets[var_name]['invs_online'].config(text=f"{communicating_INVs}", bg=color, font=('Tk_default', 9, 'bold'))
-    site_widgets[var_name]['meter_kw'].config(text=f"{meterkW/1000:.1f} kW", bg=color, font=('Tk_default', 9, 'bold'))
-    site_widgets[var_name]['invs_no_comms'].config(text=f"{inv_num - communicating_INVs}", bg=color, font=('Tk_default', 9, 'bold'))
-    site_widgets[var_name]['invs_total'].config(text=f"{inv_num}", bg=color, font=('Tk_default', 9, 'bold'))
-
-
-
-def update_data(c, dbconnection):
-    global text_update_Table
-    load_cb_state()
-    update_data_start = ty.perf_counter()
-
-    now = datetime.now()
-    if textOnly.get():
-        # Create the email message
-        message = MIMEMultipart()
-        message["Subject"] = f"GUI Update {now}"
-        message["From"] = EMAILS['NCC Desk']
-        user = optionTexts.get()
-        message["To"] = EMAILS[f'{user}'] 
-        password = CREDS['remoteMonitoring']
-        sender = EMAILS['NCC Desk']
-    
-    #How to Capture the Data from the GUI...
-    text_update_Table = []
-    html_start = """<html><head><div style="color:black; font-size:14pt; font-weight:bold; font-family:sans-serif;">
-    GUI Update</div></head><body>"""
-    #Initiate HTML Table Title turn these into an actual table so that each notification is a new row. Atleast for now to make sure that everything gets added
-    text_update_Table.append(html_start)
-
-
-
-    status_all = {}
-    #Retireve Current INV status's and store in lists
-    for name, site_dictionary in MAP_SITES_HARDWARE_GUI.items():
-        invdict = site_dictionary['INV_DICT']
-        var_name = site_dictionary['VAR_NAME']
-
-        inverters = len(invdict)
-        l = []
-        if name != "CDIA":
-            for i in range(1, inverters + 1):
-                if i in invdict:  # Check if the key exists in the dictionary
-                    inv_val = invdict[i]
-                else:
-                    inv_val = str(i)
-                checkbox_var = globals()[f'{var_name}inv{inv_val}cbval']
-                if not checkbox_var.get():
-                    config_color = globals()[f'{var_name}inv{inv_val}cb'].cget("bg")
-                    l.append(config_color)
-                else:
-                    l.append("green") #Checked inverters are known offline, this logs them in this check as 'online' but thats ok since this process is not the one used to check if the inverter is online or not. If we don't do this the message box reports the wrong index.
-            status_all[f'{var_name}'] = l
-
-
-
-    tm_now = datetime.now()
-    str_tm_now = tm_now.strftime('%H')
-    h_tm_now = int(str_tm_now)
-    for name, site_dictionary in MAP_SITES_HARDWARE_GUI.items():
-        invdict = site_dictionary['INV_DICT']
-        var_name = site_dictionary['VAR_NAME']
-        custid = site_dictionary['CUST_ID']
-        metermax = site_dictionary['METER_MAX']
-        pvsyst_name = site_dictionary['PVSYST']
-        breakertf = site_dictionary['BREAKER']
-
-
-        inverters = len(invdict)
-        if name == "Violet":
-            time_date_compare = (timecurrent - timedelta(hours=4))
-        else:
-            time_date_compare = (timecurrent - timedelta(hours=2))
-
-        one_day_ago = (timecurrent - timedelta(days=1))
-        allinv_kW = []
-
-        if name != "CDIA":
-            metercomms = max(comm_data[f'{name} Meter Data'])[0]
-
-
-
-        #POA data Update
-        if globals()[f'{var_name}POAcbval'].get() == 1:
-            poa_noti = False
-            poa = 9999
-        else:
-            poa = POA_data[f'{name} POA Data'][0]
-            poa_noti = True
-        #POA Comms check
-        poa_data = max(comm_data[f'{name} POA Data'])[0]
-        strtime_poa = poa_data.strftime('%m/%d/%y | %H:%M')
-        if 800 <= poa < 2000:
-            poa_color = '#ADD8E6'  # Light Blue
-        elif 800 > poa >= 650:
-            poa_color = '#87CEEB'  # Sky Blue
-        elif 650 > poa >= 500:
-            poa_color = '#1E90FF'  # Dodger Blue
-        elif 500 > poa >= 350:
-            poa_color = '#4682B4'  # Steel Blue
-        elif 350 > poa >= 200:
-            poa_color = '#4169E1'  # Royal Blue
-        elif poa == 0:
-            poa_color = 'black'
-        else: 
-            poa_color = 'gray'
-        
-
-        if poa_data < time_date_compare or poa_data == None:
-            poalbl = globals()[f'{var_name}POAcb'].cget('bg')
-            if poalbl != 'pink' and poa_noti:
-                msg = f"{name} lost comms with POA sensor at {strtime_poa}"
-                if not textOnly.get():
-                    messagebox.showwarning(parent= alertW, title=f"{name}, POA Comms Error", message=msg)
-                else:
-                    text_update_Table.append("<br>" + str(msg))
-            globals()[f'{var_name}POAcb'].config(bg='pink', text=poa, font=('Tk_defaultFont', 10, 'bold'))
-        else:
-            globals()[f'{var_name}POAcb'].config(bg=poa_color, text=poa, font=('Tk_defaultFont', 10, 'bold'))
-
-
-        master_cb_skips_INV_check = True if globals()[f'{var_name}metercbval'].get() == 0 else False
-        #print(name, master_cb_skips_INV_check)
-
-
-        #Breaker Update
-        if breakertf:
-            if name == "Violet":
-                for two in range(1, 3):
-                    breakercomm = max(comm_data[f'{name} Breaker Data {two}'])[0]
-                    bk_Ltime = breakercomm.strftime('%m/%d/%y | %H:%M')
-                    if breakercomm > time_date_compare and breakercomm != None:
-                        breakerconfig = globals()[f'{var_name}{two}statusLabel'].cget("text")
-                        if any(breaker_data[f'{name} Breaker Data {two}'][i][0] == True for i in range(breaker_pulls)):
-                            breakerstatus = "✓✓✓"
-                            breakerstatuscolor = 'green'
-                        else:         
-                            if breakerconfig != "❌❌" and master_cb_skips_INV_check:
-                                last_operational = last_closed(c, name)
-                                msg= f"{name} Breaker Tripped Open, Please Investigate! {last_operational}"
-                                ToolTip( globals()[f'{var_name}{two}statusLabel'], f"{name} Breaker {two} is Open\n{last_operational}")
-                                if not textOnly.get():
-                                    messagebox.showerror(parent= alertW, title= f"{name}", message= msg)
-                                else:
-                                    text_update_Table.append("<br>" + str(msg))
-
-                            last_operational = last_closed(c, name)
-                            ToolTip( globals()[f'{var_name}{two}statusLabel'], f"{name} Breaker {two} is Open\n{last_operational}")
-                            breakerstatus = "❌❌"
-                            breakerstatuscolor = 'red'
-                        globals()[f'{var_name}{two}statusLabel'].config(text= breakerstatus, bg=breakerstatuscolor)
-                    else:
-                        bklbl = globals()[f'{var_name}{two}statusLabel'].cget('bg')
-                        globals()[f'{var_name}{two}statusLabel'].config(bg='pink')
-                        if bklbl != 'pink' and master_cb_skips_INV_check:
-                            last_operational = last_closed(c, name)
-                            ToolTip( globals()[f'{var_name}{two}statusLabel'], f"{name} Breaker Lost Comms\n{last_operational}")
-                            msg= f"Breaker Comms lost {bk_Ltime} with the Breaker at {name}! Please Investigate!"
-                            if not textOnly.get():
-                                messagebox.showerror(parent= alertW, title=f"{name}, Breaker Comms Loss", message=msg)
-                            else:
-                                text_update_Table.append("<br>" + str(msg))
-            elif name in {'Cardinal', 'Harrison', 'Hayes', 'Warbler', 'Hickory'}:
-                if metercomms > time_date_compare and metercomms != None:
-                    rows_w_zeros = 0
-                    for i in range(meter_pulls):
-                        if any(meter_data[f'{name} Meter Data'][i][j] == 0 for j in range(3,6)):
-                            rows_w_zeros += 1
-                    if rows_w_zeros >= 2:
-                        breakerconfig = globals()[f'{var_name}statusLabel'].cget("text")
-                        if breakerconfig != "❌❌" and master_cb_skips_INV_check:
-                            last_operational = last_closed(c, name)
-                            msg= f"{name} Breaker Tripped Open, Please Investigate! {last_operational}"
-                            if not textOnly.get():
-                                messagebox.showerror(parent= alertW, title= f"{name}", message= msg)
-                            else:
-                                text_update_Table.append("<br>" + str(msg))
-                        
-                        last_operational = last_closed(c, name)
-                        ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker is Open\n{last_operational}")
-                        breakerstatus = "❌❌"
-                        breakerstatuscolor = 'red'     
-                    else:
-                            breakerstatus = "✓✓✓"
-                            breakerstatuscolor = 'green'
-                
-                    ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker is Operational")
-                    globals()[f'{var_name}statusLabel'].config(text= breakerstatus, bg=breakerstatuscolor)
-                else:
-                    metercomms_time = metercomms.strftime('%m/%d/%y | %H:%M')
-                    bklbl = globals()[f'{var_name}statusLabel'].cget('bg')
-                    globals()[f'{var_name}statusLabel'].config(bg='pink')
-                    if bklbl != 'pink' and master_cb_skips_INV_check:
-                        last_operational = last_closed(c, name)
-                        ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker Lost Comms\n{last_operational}")
-                        msg= f"Meter Comms lost {metercomms_time} with the Meter at {name}! Please Investigate!"
-                        if not textOnly.get():
-                            messagebox.showerror(parent= alertW, title=f"{name}, Meter Comms Loss", message=msg)   
-                        else:
-                            text_update_Table.append("<br>" + str(msg))
-            else:
-                breakercomm = max(comm_data[f'{name} Breaker Data'])[0]
-                bk_Ltime = breakercomm.strftime('%m/%d/%y | %H:%M')
-
-                if breakercomm > time_date_compare:
-                    breakerconfig = globals()[f'{var_name}statusLabel'].cget("text")
-
-                    if any(breaker_data[f'{name} Breaker Data'][i][0] == True for i in range(breaker_pulls)):
-                        breakerstatus = "✓✓✓"
-                        breakerstatuscolor = 'green'
-                        ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker is Operational")
-                    else:         
-                        if breakerconfig != "❌❌" and master_cb_skips_INV_check:
-                            last_operational = last_closed(c, name)
-                            ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker is Open\n{last_operational}")
-                            msg= f"{name} Breaker Tripped Open, Please Investigate! {last_operational}"
-                            if not textOnly.get():
-                                messagebox.showerror(parent= alertW, title= f"{name}", message= msg)
-                            else:
-                                text_update_Table.append("<br>" + str(msg))
-                        last_operational = last_closed(c, name)
-                        ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker is Open\n{last_operational}")
-                        breakerstatus = "❌❌"
-                        breakerstatuscolor = 'red'
-                    globals()[f'{var_name}statusLabel'].config(text= breakerstatus, bg=breakerstatuscolor)
-                else:
-                    bklbl = globals()[f'{var_name}statusLabel'].cget('bg')
-                    globals()[f'{var_name}statusLabel'].config(bg='pink')
-                    if bklbl != 'pink' and master_cb_skips_INV_check:
-                        msg= f"Breaker Comms lost {bk_Ltime} with the Breaker at {name}! Please Investigate!"
-                        last_operational = last_closed(c, name)
-                        ToolTip( globals()[f'{var_name}statusLabel'], f"{name} Breaker Lost Comms\n{last_operational}")
-                        if not textOnly.get():
-                            messagebox.showerror(parent= alertW, title=f"{name}, Breaker Comms Loss", message= msg)
-                        else:
-                            text_update_Table.append("<br>" + str(msg))
-        #INVERTER CHECKS            
-        if name == "CDIA":
-            #print(name, ': In CDIA Section')
-            data = inv_data[f'{name} INV 1 Data']
-            current_config = globals()[f'{var_name}meterkWLabel'].cget("bg")
-            cbval = globals()[f'{var_name}metercbval'].get()
-            duplin_except = ''
-            r = 1
+    def _handle_notifications(self):
+        """Prepares an email and dispatches it onto another lightweight thread to prevent freezing."""
+        if len(self.text_update_table) <= 2:
+            return
             
-            #Meter Ratio Check for CDIA
-            avg_kW = np.mean([row[1] for row in data])
-            meterRatio = avg_kW/metermax
-            if meterRatio > .90:
-                ratio_color = '#ADD8E6'  # Light Blue
-            elif .90 > meterRatio > .80:
-                ratio_color = '#87CEEB'  # Sky Blue
-            elif .80 > meterRatio > .70:
-                ratio_color = '#1E90FF'  # Dodger Blue
-            elif .70 > meterRatio > .60:
-                ratio_color = '#4682B4'  # Steel Blue
-            elif .60 > meterRatio > .50:
-                ratio_color = '#4169E1'  # Royal Blue
-            elif meterRatio < 0.001:
-                ratio_color = 'black'
-            else: 
-                ratio_color = 'gray'
-            globals()[f'{var_name}meterRatioLabel'].config(text= f"{round(meterRatio*100, 1)}%", bg= ratio_color, font=('Tk_defaultFont', 10, 'bold'))
+        html_content = "".join(self.text_update_table)
+        admin_user = self.admin_var.get()
+        
+        # Dispatch SMTP functionality to a separate thread
+        threading.Thread(target=self._send_email_bg, args=(html_content, admin_user), daemon=True).start()
 
-            avg_dcv = np.mean([row[0] for row in data])
-            inv_comm = max(comm_data[f'{name} INV 1 Data'])[0]
+    def _send_email_bg(self, html_content, admin_user):
+        """Worker function for SMTP dispatches."""
+        try:
+            message = MIMEMultipart()
+            message["Subject"] = f"AE API Update {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            message["From"] = EMAILS['NCC Desk']
+            message["To"] = EMAILS.get(admin_user, EMAILS['NCC Desk'])
+            password = CREDS['remoteMonitoring']
             
-            inv_Ltime = inv_comm.strftime('%m/%d/%y | %H:%M')
-            if inv_comm > time_date_compare and inv_comm != None:
-                if all(point[1] <= 1 for point in data):
-                    if avg_dcv > 100:
-                        if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
-                            var_key = f'{var_name}statusLabel'
-                            if var_key in globals():
-                                if globals()[var_key].cget("bg") == 'green':
-                                    online_last = last_online(c, name, r, duplin_except)
-                                    msg= f"{name} | Inverter Offline, Good DC Voltage | {online_last}"
-                                    if not textOnly.get():
-                                        messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
-                                    else:
-                                        text_update_Table.append("<br>" + str(msg))
-                            else:
-                                online_last = last_online(c, name, r, duplin_except)
-                                msg= f"{name} | Inverter Offline, Good DC Voltage | {online_last}"
-                                if not textOnly.get():
-                                    messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
-                                else:
-                                    text_update_Table.append("<br>" + str(msg))
-
-                        globals()[f'{var_name}meterkWLabel'].config(text="X✓", bg='orange', font=('Tk_defaultFont', 10, 'bold'))
-                        globals()[f'{var_name}Label'].config(bg='orange')
-
-                    else:
-                        online_last = last_online(c, name, r, duplin_except)
-                        ToolTip(globals()[f'{var_name}meterkWLabel'], f"Inverter Offline, Bad DC Voltage\n{online_last}")
-                        if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
-                            var_key = f'{var_name}statusLabel'
-                            if var_key in globals():
-                                if globals()[var_key].cget("bg") == 'green':
-                                    online_last = last_online(c, name, r, duplin_except)
-                                    msg= f"{name} | Inverter Offline, Bad DC Voltage | {online_last}"
-                                    if not textOnly.get():
-                                        messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
-                                    else:
-                                        text_update_Table.append("<br>" + str(msg))
-                            else:
-                                online_last = last_online(c, name, r, duplin_except)
-                                msg= f"{name} | Inverter Offline, Bad DC Voltage | {online_last}"
-                                if not textOnly.get():
-                                    messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
-                                else:
-                                    text_update_Table.append("<br>" + str(msg))
-
-                        globals()[f'{var_name}meterkWLabel'].config(text="❌❌", bg='red')
-                        globals()[f'{var_name}Label'].config(bg='red')
-
-                else:
-                    if check_inv_consecutively_online(point[1] for point in data):
-                        globals()[f'{var_name}meterkWLabel'].config(text=round(avg_kW/1000, 1), bg='green', font=('Tk_defaultFont', 10, 'bold'))
-                        globals()[f'{var_name}Label'].config(bg='#ADD8E6')
-
-            else:
-                invlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
-                globals()[f'{var_name}meterkWLabel'].config(bg='pink')
-                globals()[f'{var_name}meterRatioLabel'].config(bg='pink')
-
-                if invlbl != 'pink' and cbval == 0 and master_cb_skips_INV_check:
-                    var_key = f'{var_name}statusLabel'
-                    if var_key in globals():
-                        if globals()[var_key].cget("bg") == 'green':
-                            msg= f"INV Comms lost {inv_Ltime} with Inverter {r} at {name}! Please Investigate!"
-                            if not textOnly.get():
-                                messagebox.showerror(parent= alertW, title=f"{name}, Inverter Comms Loss", message=msg)
-                            else:
-                                text_update_Table.append("<br>" + str(msg))
-                    else:
-                        msg= f"INV Comms lost {inv_Ltime} with Inverter {r} at {name}! Please Investigate!"
-                        if not textOnly.get():
-                            messagebox.showerror(parent= alertW, title=f"{name}, Inverter Comms Loss", message=msg)
-                        else:
-                            text_update_Table.append("<br>" + str(msg))
-        else:
-            #print(name, ': In Else Section')
-            for r in range(1, inverters + 1):
-                if r in invdict:  # Check if the key exists in the dictionary
-                    inv_val = invdict[r]
-                else:
-                    inv_val = str(r)
-                if name == 'Duplin':
-                    if r <= 3:
-                        duplin_except = ' Central'
-                        inv_num = r
-                    else:
-                        duplin_except = ' String'
-                        inv_num = r -3
-                else:
-                    duplin_except = ''
-                    inv_num = r
-                data = inv_data[f'{name}{duplin_except} INV {inv_num} Data']
-                invmaxkW = max([row[1] for row in data[:meter_pulls]])
-                
-                current_config = globals()[f'{var_name}inv{inv_val}cb'].cget("bg")
-                cbval = globals()[f'{var_name}inv{inv_val}cbval'].get()
-                
-                avg_dcv = np.mean([row[0] for row in data])
-                inv_comm = max(comm_data[f'{name}{duplin_except} INV {inv_num} Data'])[0]
-
-                allinv_kW.append(invmaxkW if inv_comm > time_date_compare else 0)
-                inv_Ltime = inv_comm.strftime('%m/%d/%y | %H:%M')
-                if inv_comm > time_date_compare:
-                    if all(point[1] < 1 for point in data):
-                        if avg_dcv > 100:
-                            online_last = last_online(c, name, inv_num, duplin_except)
-                            ToolTip(globals()[f'{var_name}inv{inv_val}cb'], f"Inverter Offline, Good DC Voltage\n{online_last}")
-                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
-                                var_key = f'{var_name}statusLabel'
-                                if var_key in globals():
-                                    if globals()[var_key].cget("bg") == 'green':
-                                        online_last = last_online(c, name, inv_num, duplin_except)
-                                        msg= f"{name} | Inverter {inv_val} Offline, Good DC Voltage | {online_last}"
-                                        if not textOnly.get():
-                                            messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
-                                        else:
-                                            text_update_Table.append("<br>" + str(msg))
-                                else:
-                                    online_last = last_online(c, name, inv_num, duplin_except)
-                                    msg= f"{name} | Inverter {inv_val} Offline, Good DC Voltage | {online_last}"
-                                    if not textOnly.get():
-                                        messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
-                                    else:
-                                        text_update_Table.append("<br>" + str(msg))
-                            globals()[f'{var_name}inv{inv_val}cb'].config(bg='orange')
-                        else:
-                            online_last = last_online(c, name, inv_num, duplin_except)
-                            ToolTip(globals()[f'{var_name}inv{inv_val}cb'], f"Inverter Offline, Bad DC Voltage\n{online_last}")
-                            if current_config not in ["orange", "red"] and ((poa > 250 and begin) or (h_tm_now >= 10 and poa > 100)) and cbval == 0 and master_cb_skips_INV_check:
-                                var_key = f'{var_name}statusLabel'
-                                if var_key in globals():
-                                    if globals()[var_key].cget("bg") == 'green':
-                                        online_last = last_online(c, name, inv_num, duplin_except)
-                                        msg= f"{name} | Inverter {inv_val} Offline, Bad DC Voltage | {online_last}"
-                                        if not textOnly.get():
-                                            messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
-                                        else:
-                                            text_update_Table.append("<br>" + str(msg))                                            
-                                else:
-                                    online_last = last_online(c, name, inv_num, duplin_except)
-                                    msg= f"{name} | Inverter {inv_val} Offline, Bad DC Voltage | {online_last}"
-                                    if not textOnly.get():
-                                        messagebox.showwarning(title=f"{name}", parent= alertW, message= msg)
-                                    else:
-                                        text_update_Table.append("<br>" + str(msg))                                        
-
-                            globals()[f'{var_name}inv{inv_val}cb'].config(bg='red')
-                    else:
-                        if check_inv_consecutively_online(point[1] for point in data):
-                            bg_color = 'green'
-                            ToolTip(globals()[f'{var_name}inv{inv_val}cb'], "Inverter Online")
-                        else:
-                            bg_color = '#ADD8E6'
-                            ToolTip(globals()[f'{var_name}inv{inv_val}cb'], "Inverter Starting to Produce or Starting to Shutdown")
-                        globals()[f'{var_name}inv{inv_val}cb'].config(bg=bg_color)
-                else:
-                    online_last = last_online(c, name, inv_num, duplin_except)
-                    ToolTip(globals()[f'{var_name}inv{inv_val}cb'], f"Inverter Comms Lost\n{online_last}")
-                    globals()[f'{var_name}inv{inv_val}cb'].config(bg='pink')
-                    invlbl = globals()[f'{var_name}inv{inv_val}cb'].cget('bg')
-                    if invlbl != 'pink' and cbval == 0 and master_cb_skips_INV_check:
-                        var_key = f'{var_name}statusLabel'
-                        if var_key in globals():
-                            if globals()[var_key].cget("bg") == 'green':
-                                msg= f"INV Comms lost {inv_Ltime} with Inverter {inv_val} at {name}! Please Investigate!"
-
-                                if not textOnly.get():
-                                    messagebox.showerror(parent= alertW, title=f"{name}, Inverter Comms Loss", message=msg)
-                                else:
-                                    text_update_Table.append("<br>" + str(msg))                                   
-                        else:
-                            msg= f"INV Comms lost {inv_Ltime} with Inverter {inv_val} at {name}! Please Investigate!"
-                            if not textOnly.get():
-                                online_last = last_online(c, name, inv_num, duplin_except)
-                                ToolTip(globals()[f'{var_name}inv{inv_val}cb'], f"Inverter Comms Lost\n{online_last}")
-                                messagebox.showerror(parent= alertW, title=f"{name}, Inverter Comms Loss", message=msg)
-                            else:
-                                text_update_Table.append("<br>" + str(msg))
-        #Meter Check
-        erroneous_meter_value = 760000000
-        if name != "CDIA":
-            meter_Ltime = metercomms.strftime('%m/%d/%y | %H:%M')
-            if metercomms > time_date_compare and metercomms != None:
-                meterdata = meter_data[f'{name} Meter Data']
-                meterdataVA= None
-                meterdataVB= None
-                meterdataVC= None 
-                meterdataW= None 
-                meterdataWM= None 
-                meterdataAA= None 
-                meterdataAB= None 
-                meterdataAC= None
-
-                # Iterate over fetched rows to find the maximum value for each column
-                for row in meterdata:
-                    # Update maximum values for each column
-                    meterdataVA = max(meterdataVA, row[0]) if meterdataVA is not None else row[0]
-                    meterdataVB = max(meterdataVB, row[1]) if meterdataVB is not None else row[1]
-                    meterdataVC = max(meterdataVC, row[2]) if meterdataVC is not None else row[2]
-                meterdataavgVA = np.mean([row[0] for row in meterdata if row[0] is not None])
-                meterdataavgVB = np.mean([row[1] for row in meterdata if row[1] is not None])
-                meterdataavgVC = np.mean([row[2] for row in meterdata if row[2] is not None])
-
-                if meterdataavgVA != 0 and meterdataavgVB != 0 and meterdataavgVC !=0:
-                    percent_difference_AB = ((max(meterdataavgVA, meterdataavgVB) - min(meterdataavgVA, meterdataavgVB)) / np.mean([meterdataavgVA, meterdataavgVB]))  * 100
-                    percent_difference_AC = ((max(meterdataavgVA, meterdataavgVC) - min(meterdataavgVA, meterdataavgVC)) / np.mean([meterdataavgVA, meterdataavgVC]))  * 100
-                    percent_difference_BC = ((max(meterdataavgVC, meterdataavgVB) - min(meterdataavgVC, meterdataavgVB)) / np.mean([meterdataavgVC, meterdataavgVB]))  * 100
-                    #print(f'{name} | AB: {percent_difference_AB} AC: {percent_difference_AC} BC: {percent_difference_BC}')
-                else:
-                    percent_difference_AB = 0
-                    percent_difference_AC = 0
-                    percent_difference_BC = 0
-
-                meterVconfig = globals()[f'{var_name}meterVLabel'].cget("text")
-
-                meterdataavgAA = np.mean([row[3] for row in meterdata if row[3] is not None])
-                meterdataavgAB = np.mean([row[4] for row in meterdata if row[4] is not None])
-                meterdataavgAC = np.mean([row[5] for row in meterdata if row[5] is not None])
-                meterdataAA = all(row[3] < 1 for row in meterdata if row[3] is not None)
-                meterdataAB = all(row[4] < 1 for row in meterdata if row[4] is not None)
-                meterdataAC = all(row[5] < 1 for row in meterdata if row[5] is not None)
-                meterdataW = np.mean([row[6] for row in meterdata if row[6] is not None and row[6] < erroneous_meter_value])
-                print(name, " ", meterdataW)
-                if name == "Wellons":
-                    meterdataWM = max(row[6] for row in meterdata if row[6] is not None and row[6] < erroneous_meter_value) if max(row[6] for row in meterdata if row[6] is not None and row[6] < erroneous_meter_value) else 0
-                else:
-                    meterdataWM = max(row[6] for row in meterdata if row[6] is not None) if max(row[6] for row in meterdata if row[6] is not None) else 0
-                print(name, " ", meterdataWM)
-
-                
-                #print(f'{name} |  A: {meterdataAA}, B: {meterdataAB}, C: {meterdataAC}')
-                #Accounting for Sites reporting Votlage differently
-                if name == "Hickory":
-                    val = 5
-                else:
-                    val = 5000
-
-                if name in  ["Wellons", "Cherry Blossom"]:
-                    dif = 9
-                else:
-                    dif = 5
-
-                if meterdataVA < val and meterdataVB < val and meterdataVC < val:
-                    meterVstatus= '❌❌'
-                    meterVstatuscolor= 'red'
-                    if meterVconfig != '❌❌':
-                        online = meter_last_online(c, name)
-                        msg= f"Loss of Utility Voltage or Lost Comms with Meter. {online}"
-                        if not textOnly.get():
-                            messagebox.showerror(parent=alertW, title= f"{name} Meter", message= msg)
-                        else:
-                            text_update_Table.append("<br>" + str(name) + " | " + str(msg))
-                elif meterdataVA < val:
-                    meterVstatus= 'X✓✓'
-                    meterVstatuscolor= 'orange'
-                    if meterVconfig != 'X✓✓':
-                        msg= f"Loss of Utility Phase A Voltage or Lost Comms with Meter."
-                        if not textOnly.get():
-                            messagebox.showerror(parent=alertW, title= f"{name} Meter", message= msg)
-                        else:
-                            text_update_Table.append("<br>" + str(name) + " | " + str(msg))
-                elif meterdataVB < val:
-                    meterVstatus= '✓X✓'
-                    meterVstatuscolor= 'orange'
-                    if meterVconfig != '✓X✓':
-                        msg= f"Loss of Utility Phase B Voltage or Lost Comms with Meter."
-                        if not textOnly.get():
-                            messagebox.showerror(parent=alertW, title= f"{name} Meter", message= msg)
-                        else:
-                            text_update_Table.append("<br>" + str(name) + " | " + str(msg))
-                elif meterdataVC < val:
-                    meterVstatus= '✓✓X'
-                    meterVstatuscolor= 'orange'
-                    if meterVconfig != '✓✓X':
-                        msg= f"Loss of Utility Phase C Voltage or Lost Comms with Meter."
-                        if not textOnly.get():
-                            messagebox.showerror(parent=alertW, title= f"{name} Meter", message= msg)
-                        else:
-                            text_update_Table.append("<br>" + str(name) + " | " + str(msg))
-                elif percent_difference_AB >= dif or percent_difference_AC >= dif or percent_difference_BC >= dif:
-                    meterVstatus= '???'
-                    meterVstatuscolor= 'orange'
-                    if meterVconfig != '???':
-                        msg= f"Voltage Imbalance greater than {dif}%"
-                        if not textOnly.get():
-                            messagebox.showerror(parent=alertW, title= f"{name} Meter", message= msg)
-                        else:
-                            text_update_Table.append("<br>" + str(name) + " | " + str(msg))
-                else:
-                    meterVstatus= '✓✓✓'
-                    meterVstatuscolor= 'green'
-                    if meterVconfig not in  ['✓✓✓', 'V']:
-                        msg= "Utility Voltage Restored!!! Close the Breaker"
-                        if not textOnly.get():
-                            messagebox.showinfo(parent=alertW, title=f"{name} Meter", message= msg)
-                        else:
-                            text_update_Table.append("<br>" + str(name) + " | " + str(msg))
-
-                globals()[f'{var_name}meterVLabel'].config(text= meterVstatus, bg= meterVstatuscolor)
-
-                total_invkW = sum(allinv_kW)
-                #Here is where I would check for meterRatio and set the text of the meterRatiolabel
-                meterRatio = meterdataWM/metermax
-                if meterRatio > .90:
-                    ratio_color = '#ADD8E6'  # Light Blue
-                elif .90 > meterRatio > .80:
-                    ratio_color = '#87CEEB'  # Sky Blue
-                elif .80 > meterRatio > .70:
-                    ratio_color = '#1E90FF'  # Dodger Blue
-                elif .70 > meterRatio > .60:
-                    ratio_color = '#4682B4'  # Steel Blue
-                elif .60 > meterRatio > .50:
-                    ratio_color = '#4169E1'  # Royal Blue
-                elif meterRatio < 0.001:
-                    ratio_color = 'black'
-                else: 
-                    ratio_color = 'gray'
-                print(f"{name:<15} | {round(meterRatio*100, 1):<5} | {meterdataWM:<9} | {metermax}")
-
-                globals()[f'{var_name}meterRatioLabel'].config(text= f"{round(meterRatio*100, 1)}%", bg= ratio_color, font=('Tk_defaultFont', 10, 'bold'))
-
-
-                if (meterdataW < 2 or meterdataAA or meterdataAB or meterdataAC) and begin:
-                    print(f"Condition Met: {meterdataW}")
-                    if name != 'Van Buren': # This if statement and elif pair juke around the VanBuren being down a phase. 
-                        meterkWstatus= '❌❌'
-                        meterkWstatuscolor= 'red'
-                        meterlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
-                        if meterlbl != 'red' and master_cb_skips_INV_check and poa > 10:
-                            online = meter_last_online(c, name)
-                            msg= f"Site: {name}\nMeter Production: {round(meterdataW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}"
-                            if not textOnly.get():
-                                messagebox.showerror(parent= alertW, title=f"{name}, Power Loss", message=msg)
-                            else:
-                                text_update_Table.append("<br>" + str(msg))  
-                    elif meterdataAC or meterdataAB or meterdataW < 2: #This is a continuation of the above 'Juke' The Elif below is yet another continuation as Vanburen gets trapped by the very first if statement
-                        meterkWstatus= '❌❌'
-                        meterkWstatuscolor= 'red'
-                        meterlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
-                        if meterlbl != 'red' and master_cb_skips_INV_check and poa > 10:
-                            online = meter_last_online(c, name)
-                            msg= f"Site: {name}\nMeter Production: {round(meterdataW, 2)}\nMeter Amps:\nA: {round(meterdataavgAA, 2)}\nB: {round(meterdataavgAB, 2)}\nC: {round(meterdataavgAC, 2)}\n{online}"
-                            if not textOnly.get():
-                                messagebox.showerror(parent= alertW, title=f"{name}, Meter Power Loss", message=msg)
-                            else:
-                                text_update_Table.append("<br>" + str(msg))
-     
-                else:
-                    meter_kw = round(meterdataW/1000, 1)
-                    meterkWstatus= meter_kw
-                    if meter_kw < 1:
-                        meterkWstatuscolor= 'red'
-                    else:
-                        meterkWstatuscolor= 'green'
-
-                #Below we update the GUI with the above defined text and color
-                globals()[f'{var_name}meterkWLabel'].config(text= meterkWstatus, bg= meterkWstatuscolor, font=('Tk_defaultFont', 10, 'bold'))
-                
-                #PVSYST Ratio Update
-                try:
-                    cursor_p, connect_pvsystdb = pvsyst_connect()
-                    if meterdataWM and poa and pvsyst_name:
-                        performance_ratio, degradation, meter_est = pvsyst_est(meterdataWM, poa, pvsyst_name, connect_pvsystdb, cursor_p)
-                        if pvsyst_name is not None:
-                            print(f'{pvsyst_name:<15} | {round(performance_ratio, 1)}% | {round(degradation*100, 2)}% Loss | {round(meter_est, 2):<13} W or kW?')
-                        
-                        if performance_ratio != 0:
-                            if performance_ratio > 90:
-                                pvSyst_color = '#ADD8E6'  # Light Blue
-                            elif 90 > performance_ratio > 80:
-                                pvSyst_color = '#87CEEB'  # Sky Blue
-                            elif 80 > performance_ratio > 70:
-                                pvSyst_color = '#1E90FF'  # Dodger Blue
-                            elif 70 > performance_ratio > 60:
-                                pvSyst_color = '#4682B4'  # Steel Blue
-                            elif 60 > performance_ratio > 50:
-                                pvSyst_color = '#4169E1'  # Royal Blue
-                            else: 
-                                pvSyst_color = 'gray'
-                            globals()[f'{var_name}meterPvSystLabel'].config(text=f'{round(performance_ratio, 1)}%', bg=pvSyst_color, font=('Tk_defaultFont', 10, 'bold'))
-                        else:
-                            globals()[f'{var_name}meterPvSystLabel'].config(text='N/A')
-                    connect_pvsystdb.close()
-                except Exception as erro:
-                    print("Error: ", erro)
-                    pass
-                siteSnapShot_Update(name, var_name, inverters, meterdataWM)
-
-
-            else:
-                meterlbl = globals()[f'{var_name}meterkWLabel'].cget('bg')
-                if meterlbl != 'pink' and master_cb_skips_INV_check:
-                    msg=f"Meter Comms lost {meter_Ltime} with the Meter at {name}! Please Investigate!"
-                    if not textOnly.get():
-                        messagebox.showerror(parent= alertW, title=f"{name}, Meter Comms Loss", message=msg)
-                    else:
-                        text_update_Table.append("<br>" + str(msg))
-                globals()[f'{var_name}meterkWLabel'].config(bg='pink')
-                globals()[f'{var_name}meterVLabel'].config(bg='pink')
-                globals()[f'{var_name}meterRatioLabel'].config(bg='pink')
-                siteSnapShot_Update(name, var_name, inverters, 0)
-
-
-
-    
-
-    #conetoe_offline()
-
-    if textOnly.get():
-        text_update_Table.append("</body></html>")
-        print("Table: ", text_update_Table)
-        if text_update_Table != [html_start, "</body></html>"]:
-            # Connect to Gmail SMTP server and send email
             with smtplib.SMTP("smtp.gmail.com", 587) as server:
                 server.starttls()
-                server.login(sender, password)
-                msg_list = "".join(text_update_Table)
-                soup = BeautifulSoup(msg_list, 'html.parser')
+                server.login(message["From"], password)
+                soup = BeautifulSoup(html_content, 'html.parser')
                 message.attach(MIMEText(soup.prettify(), 'html'))
-                print("\n", text_update_Table)
-                print("\n", soup.prettify())
-                print("\n",message.as_string())
-                print("\n", textOnly.get())
                 server.send_message(message)
-        else:
-            print("No New Updates | Email Passed")
-
-    dbconnection.close()
-    load_cb_state()
-
-
-    def allinv_message_update(num, state):
-        with open(f"G:\\Shared drives\\O&M\\NCC Automations\\Notification System\\APISiteStat\\Site {num} All INV Msg Stat.txt", "w+") as outfile:
-                outfile.write(str(state))
-
-    def allinv_message_check(num):
-        global text_update_Table
-        file_path = f"G:\\Shared drives\\O&M\\NCC Automations\\Notification System\\APISiteStat\\Site {num} All INV Msg Stat.txt"
-        try:
-            with open(file_path, "r+") as rad:
-                allinvstat = rad.read()
-                return allinvstat
-        except FileNotFoundError:
-            with open(file_path, "w") as rad:
-                 rad.write('1')
-            return '1'
-        except Exception as errorr:
-            msg = f"Error Reading Site {num} txt file"
-            if not textOnly.get():
-                messagebox.showerror(parent= alertW, message= errorr, title=msg)
-            else:
-                text_update_Table += f"<br>{msg} | {errorr}"
-            return '1'
-
-
-    # Post Update Status of Inverters
-    poststatus_all = {}
-    #Retireve Current INV status's and store in lists
-
-    for name, site_dictionary in MAP_SITES_HARDWARE_GUI.items():
-        invdict = site_dictionary['INV_DICT']
-        var_name = site_dictionary['VAR_NAME']
-        custid = site_dictionary['CUST_ID']
-        metermax = site_dictionary['METER_MAX']
-        pvsyst_name = site_dictionary['PVSYST']
-
-        inverters = len(invdict)
-        l = []
-        if name != "CDIA":
-            for i in range(1, inverters + 1):
-                if i in invdict:  # Check if the key exists in the dictionary
-                    inv_val = invdict[i]
-                else:
-                    inv_val = str(i)
-                checkbox_var = globals()[f'{var_name}inv{inv_val}cbval']
-                if not checkbox_var.get():
-                    config_color = globals()[f'{var_name}inv{inv_val}cb'].cget("bg")
-                    l.append(config_color)
-                else:
-                    l.append("green") #Checked inverters are known offline, this logs them in this check as 'online' but thats ok since this process is not the one used to check if the inverter is online or not. If we don't do this the message box reports the wrong index.
-            poststatus_all[f'{var_name}'] = l
-    #ic(poststatus_all['vanburen'])
-    
-    for index, (name, site_dictionary) in enumerate(MAP_SITES_HARDWARE_GUI.items()):
-        invdict = site_dictionary['INV_DICT']
-        var_name = site_dictionary['VAR_NAME']
-        custid = site_dictionary['CUST_ID']
-        metermax = site_dictionary['METER_MAX']
-        pvsyst_name = site_dictionary['PVSYST']
-        inverters = len(invdict)
-        if name != "CDIA":
-            master_cb_skips_INV_checks = True if globals()[f'{var_name}metercbval'].get() == 0 else False
-            if poststatus_all[f'{var_name}']:
-                if master_cb_skips_INV_checks and all(status in ['red', 'orange', 'pink'] for status in poststatus_all[f'{var_name}']):
-                    #Reasons we want to ignore all the Inverters showing offline
-                    if allinv_message_check(index + 1) == '1':
-                        if ((POA_data[f'{name} POA Data'][0] > 250 and begin) or (h_tm_now >= 10 and POA_data[f'{name} POA Data'][0] > 75)):
-                            print(f'{name} Past', status_all[f'{var_name}'])
-                            msg= f"All Inverters Offline, Please Investigate!"
-                            if not textOnly.get():
-                                messagebox.showerror(parent= alertW, title= f"{name}", message=msg)
-                            else:
-                                text_update_Table.append("<br>" + str(name) + " | " + str(msg))
-                            stat = 0
-                            allinv_message_update(index + 1, stat)
-                else:
-                    stat = 1
-                    if allinv_message_check(index + 1) == "0":
-                        print(f'{name} Trigger Error', poststatus_all[f'{var_name}'])
-                        allinv_message_update(index + 1, stat)  
-
-
-
-    def compare_lists(site, before, after, inverter_dictionary):
-        global text_update_Table
-        #Comapres 2 lists of sites inverters to see what remains online
-        changed_indices = []  # List to store indices of changed items
-        
-        # First, identify any change from not "✓" to "✓"
-        changes_detected = any(before_item != "green" and after_item == "green" for before_item, after_item in zip(before, after))
-        
-        if changes_detected:
-            # If changes detected, then identify all items that remain "not ✓"
-            changed_indices = [i for i, item in enumerate(after) if item != "green"]
-        
-        if changed_indices:
-            # Look up the corresponding values in the inverter dictionary
-            offline_inverters = [inverter_dictionary.get(i + 1, f"Index {i + 1}") for i in changed_indices]
-            late_starts = ', '.join(offline_inverters)
-            msg=f"Some Inverters just came Online. Inverters: {late_starts} remain Offline."
-            if not textOnly.get():
-                messagebox.showinfo(parent=alertW, title=site, message=msg)
-            else:
-                text_update_Table += f"<br>{site} | {msg}"
-
-    
-    
-    #Comapres all lists of sites inverters to see what remains online
-    for name, site_dictionary in MAP_SITES_HARDWARE_GUI.items():
-        invdict = site_dictionary['INV_DICT']
-        var_name = site_dictionary['VAR_NAME']
-
-        inverters = len(invdict)
-        if int(globals()[f'{var_name}POAcb'].cget("text")) > 100:
-            if name != "CDIA":
-                compare_lists(name, status_all[f'{var_name}'], poststatus_all[f'{var_name}'], invdict)
-
-    update_data_finish = ty.perf_counter()
-    print("Update Data Time (secs):", round(update_data_finish - update_data_start, 2))
-    global gui_update_timer
-    target_time = time(8, 30)
-    if textOnly.get():
-        gui_update_timer = PausableTimer(420, db_to_dict)
-        gui_update_timer.start() 
-    elif timecurrent.time() < target_time:
-        gui_update_timer = PausableTimer(300, db_to_dict)
-        gui_update_timer.start()
-    else:
-        gui_update_timer = PausableTimer(60, db_to_dict)
-        gui_update_timer.start()
-
-
-    sendTexts.config(state=NORMAL)
-
-
-def pvsyst_connect():
-    #Connect to PV Syst DB for Performance expectations
-    pvsyst_db = r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=G:\Shared drives\O&M\NCC Automations\Notification System\PVsyst (Josephs Edits).accdb;'
-    connect_pvsystdb = pyodbc.connect(pvsyst_db)
-    cursor_p = connect_pvsystdb.cursor()
-    return cursor_p, connect_pvsystdb
-
-def pvsyst_est(meterval, poa_val, pvsyst_name, connect_pvsystdb, cursor_p):
-    if pvsyst_name == None:
-        return (0,0,0)
-    if poa_val == 9999:
-        return (0,0,0)
-
-
-
-    
-    if pvsyst_name not in ["WELLONS", "FREIGHTLINE", "WARBLER", "PG", "HOLLYSWAMP"]:
-        meterval = meterval/1000
-
-
-    query = "SELECT [GlobInc_WHSQM], [EGrid_KWH] FROM [PVsystHourly] WHERE [PlantName] = ?"
-    date_query = "SELECT [SimulationDate] FROM [PVsystHourly] WHERE [PlantName] = ?"
-
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=UserWarning)
-        # Execute the query and read into a DataFrame
-        slope_df = pd.read_sql_query(query, connect_pvsystdb, params=[pvsyst_name])
-    
-    meter = 'EGrid_KWH'
-    poa = 'GlobInc_WHSQM'
-    # Reshape the data for sklearn
-    X = slope_df[poa].values.reshape(-1, 1)
-    y = slope_df[meter].values
-    
-    # Create and fit the model
-    model = LinearRegression()
-    model.fit(X, y)
-    
-    # Get the slope (coefficient) and intercept
-    slope = model.coef_[0]
-    intercept = model.intercept_
-    
-    meter_est = slope * poa_val + intercept
-
-    cursor_p.execute(date_query, pvsyst_name)
-    simulation_date = cursor_p.fetchone()[0]
-    
-    try:
-        difference_in_days = (datetime.now() - simulation_date).days
-        difference_in_years = difference_in_days / 365.25  # Using 365.25 to account for leap years
-        degradation_percentage = difference_in_years * 0.005
-        if pvsyst_name == 'WELLONS':
-            print('Wellons p50: ', meter_est, ' | ', degradation_percentage)
-
-        meter_estdegrad = meter_est * (1 - degradation_percentage)
-        performance = (meterval/meter_estdegrad)*100 #%
-        return (performance, degradation_percentage, meter_est)
-    except TypeError as e:
-        print(e)
-        print("Moving On...")
-        return (0,0,0)
-
-
-def checkin(c, dbconnection):
-    try: 
-        for widget in checkIns.winfo_children():
-            widget.destroy()
-
-        cur, lbconnection = connect_Logbook()
-
-        cur.execute("SELECT Location, Company, Employee FROM [Checked In]")
-        checkedIn = cur.fetchall()
-
-        for row_index, row in enumerate(checkedIn):
-            for col_index, value in enumerate(row):
-            # Check if the value is a datetime object and format it
-                if isinstance(value, datetime):
-                    value = value.strftime('%m/%d/%y')
-                # Apply different formatting for specific columns
-                if row_index in range(1, 100, 2):
-                    bg_color = '#90EE90'  # Pale Light Green
-                else:
-                    bg_color = '#ADD8E6'  # Light Blue of Main Site Data Window
-                if col_index == 2:
-                    wsize = 24
-                elif col_index == 1:
-                    wsize = 32
-                else:
-                    wsize = 23
-                label = Label(checkIns, text=value, font=("Calibri", 14), borderwidth=1, relief="solid", width=wsize, bg=bg_color)
-                label.grid(row=row_index, column=col_index)
-        lbconnection.close()
-    except pyodbc.Error as err:
-        print("Logbook Error: ", err)
-
-    update_data(c, dbconnection)
-
-
-def last_update(c):
-    times = []
-    for name in MAP_SITES_HARDWARE_GUI:
-        if name != "CDIA":
-            c.execute(f"SELECT TOP 1 [Timestamp] FROM [{name} Meter Data] ORDER BY [Timestamp] DESC")
-            last_time = c.fetchone()
-            times.append(last_time[0])
-    most_recent = max(times)
-    return most_recent
-
-
-
-
-def time_window(c, dbconnection):
-    global timecurrent, text_update_Table
-    #SELECT 15 = 30 Mins
-    c.execute("SELECT TOP 16 [Timestamp] FROM [Ogburn Meter Data] ORDER BY [Timestamp] DESC")
-    data_timestamps = c.fetchall()
-    firsttime = data_timestamps[0][0]
-    secondtime = data_timestamps[1][0]
-    thirdtime = data_timestamps[2][0]
-    fourthtime = data_timestamps[3][0]
-    fifthtime = data_timestamps[4][0]
-    tenthtime = data_timestamps[9][0]
-    lasttime = data_timestamps[14][0]
-
-    hm_firsttime = firsttime.strftime('%H:%M')
-    hm_secondtime = secondtime.strftime('%H:%M')
-    hm_thirdtime = thirdtime.strftime('%H:%M')
-    hm_fourthtime = fourthtime.strftime('%H:%M')
-    hm_tenthtime = tenthtime.strftime('%H:%M')
-    hm_lasttime = lasttime.strftime('%H:%M')
-
-    time1v.config(text=hm_firsttime, font=("Calibri", 16))
-    time2v.config(text=hm_secondtime, font=("Calibri", 16))
-    time3v.config(text=hm_thirdtime, font=("Calibri", 16))
-    time4v.config(text=hm_fourthtime, font=("Calibri", 16))
-    time10v.config(text=hm_tenthtime, font=("Calibri", 16))
-    timeLv.config(text=hm_lasttime, font=("Calibri", 16))
-
-    pulls5TD = firsttime - fifthtime
-    pulls5TDmins = round(pulls5TD.total_seconds() / 60, 2)
-    pulls15TD = firsttime - lasttime
-    pulls15TDmins = round(pulls15TD.total_seconds() / 60, 2)
-    spread10.config(text=f"5 Pulls\n{pulls5TDmins} Minutes")
-    spread15.config(text=f"15 Pulls\n{pulls15TDmins} Minutes")
-    
-    timecurrent = datetime.now()
-    db_update_time = 10
-    timecompare = timecurrent - timedelta(minutes=db_update_time)
-    recent_update = last_update(c)
-    if recent_update < timecompare:
-        msg = f"The Database has not been updated in {str(db_update_time)} Minutes and usually updates every 2\nPlease check the SQL Server pc and verify the data pull script is operating as expected."
-        if not textOnly.get():
-            messagebox.showerror(parent=timeW, title="Notification System/GUI", message=msg)
-        else:
-            try:
-                text_update_Table.append("<br>" + str(msg))
-            except UnboundLocalError:
-                pass
-            except NameError:
-                pass
-
-
-    tupdate = timecurrent.strftime('%H:%M')
-
-    timmytimeLabel.config(text= tupdate, font= ("Calibiri", 30))
-    
-    checkin(c, dbconnection) 
-
-def db_to_dict():
-    day_of_week = datetime.today().weekday()
-    now = datetime.now()
-
-    if (day_of_week > 4 and now.hour > 15) or now.hour > 20:
-        restart_pc()
-
-
-    query_start = ty.perf_counter()
-    sendTexts.config(state=DISABLED)
-
-
-    c, dbconnection = connect_db()
-    global tables, inv_data, breaker_data, meter_data, comm_data, POA_data, begin
-    tables = []
-    for tb in c.tables(tableType='TABLE'):
-        if 'Data' in tb.table_name:
-            tables.append(tb)
-    #ic(tables)
-    excluded_tables = ["1)Sites", "2)Breakers", "3)Meters", "4)Inverters", "5)POA"]
-
-    tb_file = r"C:\Users\omops\Documents\Automations\Troubleshooting.txt"
-    comm_data = {}
-    for table in tables:
-        table_name = table.table_name
-        if table_name not in excluded_tables and "Tracker Loss Data" not in table_name:
-            #SELECT 10 = 20 Mins
-            c.execute(f"SELECT TOP 10 [Last Upload] FROM [{table_name}] ORDER BY Timestamp DESC")
-            comm_value = c.fetchall()
-            comm_data[table_name] = comm_value
-
-    #ic(comm_data)
-    inv_data = {}
-    for table in tables:
-        table_name = table.table_name
-        if "INV" in table_name and table_name not in excluded_tables:
-            #SELECT 15 = 30 Mins
-            c.execute(f"SELECT TOP 16 [dc V], Watts FROM [{table_name}] ORDER BY Timestamp DESC")
-            inv_rows = c.fetchall()
-            #ic(inv_rows)
-            inv_data[table_name] = inv_rows
-    #ic(inv_data)
-
-    meter_data = {}
-    for table in tables:
-        table_name = table.table_name
-        if any(name in table_name for name in ["Hickory", "Whitehall"]) and "Meter" in table_name:
-            #SELECT 13 = 17 Mins of Data
-            c.execute(f"SELECT TOP 16 [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], Watts FROM [{table_name}] ORDER BY Timestamp DESC")
-            meter_rows = c.fetchall()
-            meter_data[table_name] = meter_rows 
-        elif any(name in table_name for name in ["Wellons",]) and "Meter" in table_name:
-            #SELECT 45 = 60 Mins of Data | Wellons has a severe intermittent comms issue.
-            c.execute(f"SELECT TOP 60 [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], Watts FROM [{table_name}] ORDER BY Timestamp DESC")
-            meter_rows = c.fetchall()
-            meter_data[table_name] = meter_rows 
-        elif "Meter" in table_name and table_name not in excluded_tables:
-            #SELECT 5 = 5.5 Mins of Data
-            c.execute(f"SELECT TOP {meter_pulls} [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], Watts FROM [{table_name}] ORDER BY Timestamp DESC")
-            meter_rows = c.fetchall()
-            meter_data[table_name] = meter_rows
-
-    #ic(meter_data)
-    POA_data = {}
-    for table in tables:
-        table_name = table.table_name
-        if "POA" in table_name and table_name not in excluded_tables:
-            c.execute(f"SELECT TOP 1 [W/M²] FROM [{table_name}] ORDER BY [Timestamp] DESC")
-            POA_rows = c.fetchone()
-            POA_data[table_name] = POA_rows
-    
-
-    #ic(POA_data)
-
-    breaker_data = {}
-    for table in tables:
-        table_name = table.table_name
-        if "Breaker" in table_name and table_name not in excluded_tables:
-            c.execute(f"SELECT TOP {breaker_pulls} [Status] FROM [{table_name}] ORDER BY [Timestamp] DESC")
-            breaker_rows = c.fetchall()
-            breaker_data[table_name] = breaker_rows
-    #ic(breaker_data)
-
-    begin = launch_check(c)
-
-    query_end = ty.perf_counter()
-    print("Query Time (secs):", round(query_end - query_start, 2))
-    time_window(c, dbconnection)
-
-
-
-def parse_wo():
-    directory = "G:\\Shared drives\\O&M\\NCC Automations\\Notification System\\WO Tracking\\"
-    existing_wo_files = glob.glob(os.path.join(directory, "*.txt"))
-    for file in existing_wo_files:
-        try:
-            os.remove(file)
+                print(f"Alert payload successfully dispatched to {message['To']}")
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"Error during email dispatch: {e}")
 
-    open_wo_file = filedialog.askopenfilename(parent=alertW,
-        title="Select a file", 
-        filetypes=[("Excel Files", "*.xlsx *.xls")],
-        initialdir="C:\\Users\\OMOPS\\Downloads")
-    wo_data = pd.read_excel(open_wo_file)
-    for index, row in wo_data.iterrows():
-        var_adjustment = [", LLC", "Farm", "Cadle", "Solar"]
-        site = row['Site']
-        if pd.isna(site) or site in  {"Charter GM", "Charter RM", "Charter Roof"}:
-            continue
-        var_name = str(site)
-        for phrase in var_adjustment:
-            var_name = var_name.replace(phrase, "")
-        if 'Wayne' in site:
-            var_name = var_name.replace("III", "3")
-            var_name = var_name.replace("II", "2")
-            var_name = var_name.replace("I", "1")
-        var_name = var_name.replace(" ", "").lower()
-        var_name = var_name.replace("freightline", "freightliner")
-        if site == "BISHOPVILLE":
-            var_name = 'bishopvilleII'
-        
-        status = row['Job Status']
-        error_type = row['Fault Code Category']
-        device_type = row['Asset Description']
-        wo_summary = row['Brief Description']
-        notes = row['Work Description']
-        wo_date = row['WO Date']
-        wo_num = row['WO No.']
-
-        if error_type == 'No Issue':
-            continue
-
-        #Inverter check
-        if 'inv' in device_type.lower() or 'inv' in wo_summary.lower():
-            inv_pattern = r"(?:inverter|inv)\s*(\d+)?(?:-|\.)?(\d+)?"
-            matchs = re.search(inv_pattern, wo_summary.lower())
-            #Reset Variables
-            group = None
-            num = None
-            if matchs is not None:
-                group = int(matchs.group(1)) if matchs.group(1) is not None else None
-                num = int(matchs.group(2)) if matchs.group(2) is not None else group
-            print(f"{site}  |  {group} | {num}")
-            
-            #Inverter # not Found
-            if group == None or num == None:
-                print(f"{site} | G:{group} | Num:{num} WO Parse")
-                continue
-
-            inv_num = define_inv_num(site, group, num)
-            
-            if inv_num is None:
-                print(f"Num: {inv_num} | {site} | {wo_num} | {wo_summary}\n")
-                # Construct the file path for the text file
-                txt_file_path = os.path.join(directory, f"{var_name} Open WO's.txt")
-                # Append the row data to the text file
-                with open(txt_file_path, 'a+') as file:
-                    file.write(f'{inv_num} |  WO: {wo_num:<8}|  {wo_date}  |  {wo_summary}\n')
-            else:            
-                #Color Assignment Logic
-                current_colorstatus = globals()[f'{var_name}inv{inv_num}WOLabel'].cget('text')
-                if current_colorstatus == 'gray':
-                    continue
-                
-                if error_type == 'Underperformance':
-                    if current_colorstatus == 'black':
-                        color = 'gray'
-                    else:
-                        color = 'blue' 
-                elif error_type == 'Equipment Outage':
-                    if current_colorstatus == 'blue':
-                        color = 'gray'
-                    else:
-                        color = 'black'
-                elif error_type == 'COMMs Outage':
-                    color = 'pink'
-                else: 
-                    color = 'yellow'
-                globals()[f'{var_name}inv{inv_num}WOLabel'].config(bg=color)
-
-                # Construct the file path for the text file
-                txt_file_path = os.path.join(directory, f"{var_name} Open WO's.txt")
-                # Append the row data to the text file
-                with open(txt_file_path, 'a+') as file:
-                    file.write(f'{inv_num:<5}|  WO: {wo_num:<8}|  {wo_date}  |  {wo_summary}\n')
-
-
-def check_button_notes():
-    messagebox.showinfo(parent=alertW, title="Checkbutton Info", message= """The First column of CheckButtons in the Site Data Window turns off all notifications associated with that Site.
-                        \nThe POA CB will change the value to 9999 so that no inv outages are filtered by the POA
-                        \nThe colored INV CheckButtons are to be selected when a WO is open for that device and will turn off notifications of outages with INV
-                        \nThe Box in the middle Represents the Status of that device in Emaint. | ⬜ = NO WO | Black BG = Offline WO Open | Blue BG = Underperformance WO Open | Pink BG = Comms Outage WO Open | Yellow BG = Unknown WO Found |
-                        \nThe 3rd Column is a CB for Underperformance tracking. Data range is set by the user but as standard 30 days of data and only between the Hours of 10:00 to 15:00.
-                        \nThe first value is calculated by averaging all the values in the data range, then comparing the results to the others in the group.
-                        \nThe second value is a total of all the values in the data range, then comparing the results to the others in the group.""")
-
-    
-    return True
-def open_file():
-    os.startfile(r"G:\Shared drives\Narenco Projects\O&M Projects\NCC\Procedures\NCC Tools - Joseph\Also Energy GUI Interactions - How To.docx")
-    
-
-cur_time = datetime.now()
-tupdate =  cur_time.strftime('%H:%M')
-notesFrame = Frame(alertW)
-notesFrame.grid(row=0, column=0, sticky=EW)
-alertwnotes = Label(notesFrame, text= "1st Checkbox: ✓ = Open WO\n& pauses inv notifications", font= ("Calibiri", 12))
-alertwnotes.pack()
-tupdateLabel = Label(notesFrame, text= "GUI Last Updated", font= ("Calibiri", 18))
-tupdateLabel.pack()
-timmytimeLabel = Label(notesFrame, text= tupdate, font= ("Calibiri", 30))
-timmytimeLabel.pack()
-notes_button = Button(notesFrame, command= lambda: check_button_notes(), text= "Checkbutton Notes", font=("Calibiri", 14), bg=main_color, cursor='hand2')
-notes_button.pack(padx= 2, pady= 2, fill=X)
-proc_button = Button(notesFrame, command= lambda: open_file(), text= "Procedure Doc", font=("Calibiri", 14), cursor='hand2')
-proc_button.pack(padx= 2, pady= 2, fill=X)
-wo_button = Button(notesFrame, command= lambda: parse_wo(), text= "Assess Open WO's", font=("Calibiri", 14), cursor='hand2')
-wo_button.pack(padx= 2, pady= 2, fill=X)
-
-
-notificationFrame = Frame(alertW)
-notificationFrame.grid(row=0, column=1, sticky=N)
-notificationNotes = Label(notificationFrame, text="Notification Settings", font=("Calibiri", 14))
-notificationNotes.pack()
-textOnly = IntVar(value=0)
-sendTexts = Checkbutton(notificationFrame, text="Send Emails\n(Disable Local MsgBox's)", cursor='hand2', variable=textOnly, command=save_cb_state)
-sendTexts.pack(padx=2)
-adminTexts = StringVar(value="Joseph Lang")
-optionTexts = ttk.Combobox(notificationFrame, textvariable=adminTexts, values=["Joseph Lang", "Brandon Arrowood", "Jacob Budd", "Administrators + NCC", "Administrators Only"], state="readonly")
-optionTexts.pack()
-optionTexts.current(0)
-notes_settings = Label(notificationFrame, text="\nSelect from the Dropdown\nBefore turning the function on\nwith the Checkbox\n")
-notes_settings.pack()
-
-
-
-root.after(10, load_cb_state)
-launch_end = ty.perf_counter()
-print("Launch Time (secs):", launch_end - start)
-
-#Start Update Cycle
-root.after(10, db_to_dict)
-root.mainloop()
-
-
-#At Exit Tasks
-def allinv_message_reset():
-    for num in range(1, 38):
-        with open(f"C:\\Users\\OMOPS\\OneDrive - Narenco\\Documents\\APISiteStat\\Site {num} All INV Msg Stat.txt", "w+") as outfile:
-            outfile.write("1")
-
-
-
-atexit.register(allinv_message_reset)
-atexit.register(save_cb_state)
+if __name__ == "__main__":
+    root = Tk()
+    app = AEDataApp(root)
+    root.mainloop()
