@@ -418,6 +418,7 @@ class AEDataApp:
         self.all_cbs = []
         self.cached_table_names = []
         self.device_states = {}
+        self.raw_ghi_data = {}
         self.last_online_cache = {}
         self.inv_online_since = {}
         self.last_closed_cache = {}
@@ -449,7 +450,7 @@ class AEDataApp:
 
     def _setup_main_window(self):
         """Builds the main grid headers and site rows dynamically."""
-        headers = ["Sites", "Breaker", "Utility V", "Opt", "Meter kW", "% Max", "% PvSyst", "POA", "Site Overview"]
+        headers = ["Sites", "Breaker", "Utility V", "Opt", "Meter kW", "% Max", "% PvSyst", "W/S", "Site Overview"]
         
         # Calculate how many column blocks are needed
         total_sites = len(self.MAP_SITES)
@@ -536,6 +537,7 @@ class AEDataApp:
         poa_btn.grid(row=row, column=col_offset + 7)
         self.site_widgets[var_name]['poa_btn'] = poa_btn
         self.site_widgets[var_name]['poa_var'] = poa_var
+        self.site_widgets[var_name]['poa_tt'] = ToolTip(poa_btn, "Pending Update...")
 
         # Snapshot Frame Setup
         snap = Frame(self.root, bg=MAIN_COLOR, bd=1, relief="solid")
@@ -620,6 +622,24 @@ class AEDataApp:
         self.checkins_win = Toplevel(self.root)
         self.checkins_win.title("Personnel On-Site")
         self._set_window_icon(self.checkins_win)
+
+        self.checkins_tree = ttk.Treeview(self.checkins_win, columns=("Location", "Company", "Employee"), show='headings')
+        self.checkins_tree.heading("Location", text="Location")
+        self.checkins_tree.heading("Company", text="Company")
+        self.checkins_tree.heading("Employee", text="Employee")
+        
+        self.checkins_tree.column("Location", width=250, anchor=CENTER)
+        self.checkins_tree.column("Company", width=300, anchor=CENTER)
+        self.checkins_tree.column("Employee", width=200, anchor=CENTER)
+        
+        tree_scroll = ttk.Scrollbar(self.checkins_win, orient="vertical", command=self.checkins_tree.yview)
+        self.checkins_tree.configure(yscrollcommand=tree_scroll.set)
+        
+        tree_scroll.pack(side=RIGHT, fill=Y)
+        self.checkins_tree.pack(side=LEFT, expand=True, fill=BOTH)
+        
+        self.checkins_tree.tag_configure('even', background='#ADD8E6')
+        self.checkins_tree.tag_configure('odd', background='#90EE90')
 
     def _setup_inverter_windows(self):
         """Builds separate portfolio windows or a combined tabbed window depending on host."""
@@ -830,20 +850,35 @@ class AEDataApp:
 
     def _get_last_closed_bg(self, cursor, site):
         try:
+            # 1. Universal Meter Check: Last time all phases had current
+            meter_q = f"SELECT TOP 1 [Timestamp] FROM [{site} Meter Data] WHERE [Amps A] <> 0 AND [Amps B] <> 0 AND [Amps C] <> 0 ORDER BY [Timestamp] DESC"
+            self.db_cursor.execute(meter_q)
+            meter_data = self.db_cursor.fetchone()
+            meter_ts = meter_data[0] if meter_data else None
+
             if site == "Violet":
-                cursor.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Breaker Data 1] WHERE [Status] = 1 ORDER BY [Timestamp] DESC")
-                d1 = cursor.fetchone()
-                cursor.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Breaker Data 2] WHERE [Status] = 1 ORDER BY [Timestamp] DESC")
-                d2 = cursor.fetchone()
-                return f"Brk1: {d1[0]} | Brk2: {d2[0]}" if d1 and d2 else "Unknown"
-            elif site in ['Cardinal', 'Harrison', 'Hayes', 'Warbler']:
-                cursor.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Meter Data] WHERE [Amps A] <> 0 AND [Amps B] <> 0 AND [Amps C] <> 0 ORDER BY [Timestamp] DESC")
-                data = cursor.fetchone()
-                return f"{data[0]}" if data else "Unknown"
+                self.db_cursor.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Breaker Data 1] WHERE [Status] = 1 ORDER BY [Timestamp] DESC")
+                d1 = self.db_cursor.fetchone()
+                self.db_cursor.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Breaker Data 2] WHERE [Status] = 1 ORDER BY [Timestamp] DESC")
+                d2 = self.db_cursor.fetchone()
+                
+                t1 = min(d1[0], meter_ts) if d1 and meter_ts else (d1[0] if d1 else meter_ts)
+                t2 = min(d2[0], meter_ts) if d2 and meter_ts else (d2[0] if d2 else meter_ts)
+                return f"Brk1: {t1} | Brk2: {t2}" if t1 or t2 else "Unknown"
             else:
-                cursor.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Breaker Data] WHERE [Status] = 1 ORDER BY [Timestamp] DESC")
-                data = cursor.fetchone()
-                return f"{data[0]}" if data else "Unknown"
+                try:
+                    self.db_cursor.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Breaker Data] WHERE [Status] = 1 ORDER BY [Timestamp] DESC")
+                    brk_data = self.db_cursor.fetchone()
+                    brk_ts = brk_data[0] if brk_data else None
+                except Exception:
+                    brk_ts = None
+                
+                if brk_ts and meter_ts:
+                    return f"{min(brk_ts, meter_ts)}"
+                elif brk_ts or meter_ts:
+                    return f"{brk_ts or meter_ts}"
+                else:
+                    return "Unknown"
         except Exception:
             return "Unknown"
 
@@ -866,7 +901,7 @@ class AEDataApp:
             return "Unknown"
 
     def _fetch_raw_data_bg(self, cursor):
-        raw_inv, raw_meter, raw_poa, raw_breaker = {}, {}, {}, {}
+        raw_inv, raw_meter, raw_poa, raw_ghi, raw_breaker = {}, {}, {}, {}, {}
         if not self.cached_table_names:
             self.cached_table_names = [t.table_name for t in cursor.tables(tableType='TABLE') if 'Data' in t.table_name]
 
@@ -876,17 +911,19 @@ class AEDataApp:
                 cursor.execute(f"SELECT TOP 16 [dc V], Watts, [Last Upload] FROM [{table}] ORDER BY Timestamp DESC")
                 raw_inv[table] = cursor.fetchall()
             elif "Meter" in table:
-                cursor.execute(f"SELECT TOP 16 [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], Watts FROM [{table}] ORDER BY Timestamp DESC")
+                cursor.execute(f"SELECT TOP 16 [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], Watts, [Last Upload] FROM [{table}] ORDER BY Timestamp DESC")
                 raw_meter[table] = cursor.fetchall()
             elif "POA" in table:
-                cursor.execute(f"SELECT TOP 1 [W/M²] FROM [{table}] ORDER BY Timestamp DESC")
-                res = cursor.fetchone()
-                raw_poa[table] = res[0] if res else 0
+                cursor.execute(f"SELECT TOP 1 [W/M²], [Last Upload] FROM [{table}] ORDER BY Timestamp DESC")
+                raw_poa[table] = cursor.fetchone()
+            elif "GHI" in table:
+                cursor.execute(f"SELECT TOP 1 [W/M²], [Last Upload] FROM [{table}] ORDER BY Timestamp DESC")
+                raw_ghi[table] = cursor.fetchone()
             elif "Breaker" in table:
-                cursor.execute(f"SELECT TOP 6 [Status] FROM [{table}] ORDER BY Timestamp DESC")
+                cursor.execute(f"SELECT TOP 6 [Status], [Last Upload] FROM [{table}] ORDER BY Timestamp DESC")
                 raw_breaker[table] = cursor.fetchall()
 
-        return raw_inv, raw_meter, raw_poa, raw_breaker
+        return raw_inv, raw_meter, raw_poa, raw_ghi, raw_breaker
 
     def _fetch_timestamps_bg(self, cursor):
         try:
@@ -967,7 +1004,7 @@ class AEDataApp:
             cursor, conn = self.connect_db()
 
             # 1. Fetch raw data
-            raw_inv, raw_meter, raw_poa, raw_breaker = self._fetch_raw_data_bg(cursor)
+            raw_inv, raw_meter, raw_poa, raw_ghi, raw_breaker = self._fetch_raw_data_bg(cursor)
 
             # 2. Fetch Timestamps
             timestamps_data = self._fetch_timestamps_bg(cursor)
@@ -984,7 +1021,7 @@ class AEDataApp:
                 poa_btn_val = poa_states.get(name, 0)
 
                 # POA
-                poa_val = raw_poa.get(f"{name} POA Data", 0)
+                poa_val = raw_poa.get(f"{name} POA Data")[0] if raw_poa.get(f"{name} POA Data") else 0
                 if poa_btn_val == 1: poa_val = 9999
 
                 # Meter Avg
@@ -1035,7 +1072,7 @@ class AEDataApp:
                             fetched_offline['invs'][f"{cache_key}_comm"] = last_comm_ts.strftime('%m/%d/%Y %H:%M:%S')
             # Package all gathered data for main thread
             bg_data = {
-                'raw_inv': raw_inv, 'raw_meter': raw_meter, 'raw_poa': raw_poa, 'raw_breaker': raw_breaker,
+                'raw_inv': raw_inv, 'raw_meter': raw_meter, 'raw_poa': raw_poa, 'raw_ghi': raw_ghi, 'raw_breaker': raw_breaker,
                 'timestamps': timestamps_data, 'checkins': checkins_data, 'pvsyst_results': pvsyst_results,
                 'fetched_offline': fetched_offline
             }
@@ -1059,10 +1096,11 @@ class AEDataApp:
 
     def run_data_cycle(self):
         """Timer entry point -> Spawns background thread."""
-        now = datetime.now()
-        day_of_week = now.weekday()
-        if (day_of_week > 4 and now.hour > 15) or now.hour > 20:
-            restart_pc()
+        if get_hostname() != "NAR-JosephLang":
+            now = datetime.now()
+            day_of_week = now.weekday()
+            if (day_of_week > 4 and now.hour > 15) or now.hour > 20:
+                restart_pc()
 
         if self.is_fetching:
             print("Background process is currently running. Skipping this cycle execution.")
@@ -1084,6 +1122,7 @@ class AEDataApp:
         self.raw_inv_data = bg_data['raw_inv']
         self.raw_meter_data = bg_data['raw_meter']
         self.raw_poa_data = bg_data['raw_poa']
+        self.raw_ghi_data = bg_data['raw_ghi']
         self.raw_breaker_data = bg_data['raw_breaker']
         
         self.pvsyst_results = bg_data['pvsyst_results']
@@ -1117,14 +1156,14 @@ class AEDataApp:
             self.spread15.config(text=f"15 Pulls\n{round((ts[0]-ts[14]).total_seconds()/60, 2)} Minutes")
 
     def _apply_checkins(self, data):
-        for widget in self.checkins_win.winfo_children(): 
-            widget.destroy()
+        for item in self.checkins_tree.get_children():
+            self.checkins_tree.delete(item)
         for row_idx, row in enumerate(data):
-            for col_idx, val in enumerate(row):
-                if isinstance(val, datetime): val = val.strftime('%m/%d/%y')
-                bg = '#90EE90' if row_idx % 2 else '#ADD8E6'
-                w = 24 if col_idx == 2 else 32 if col_idx == 1 else 23
-                Label(self.checkins_win, text=val, font=("Calibri", 14), borderwidth=1, relief="solid", width=w, bg=bg).grid(row=row_idx, column=col_idx)
+            formatted_row = []
+            for val in row:
+                formatted_row.append(val.strftime('%m/%d/%y') if isinstance(val, datetime) else val)
+            tag = 'even' if row_idx % 2 == 0 else 'odd'
+            self.checkins_tree.insert('', 'end', values=formatted_row, tags=(tag,))
 
     def refresh_ui(self):
         """Processes the synchronized data directly to UI widgets."""
@@ -1139,7 +1178,11 @@ class AEDataApp:
                 self._update_breakers(name, var_name)
                 
             meter_w = self._update_meters(name, var_name, poa)
-            self._update_inverters(name, var_name, poa)
+            
+            if name == "Conetoe":
+                self._update_conetoe_inverters(name, var_name, poa)
+            else:
+                self._update_inverters(name, var_name, poa)
             self._update_snapshots(name, var_name, meter_w)
             
         self.text_update_table.append("</body></html>")
@@ -1149,63 +1192,186 @@ class AEDataApp:
             self._handle_notifications()
 
     def _update_poa(self, site, var):
-        val = self.raw_poa_data.get(f"{site} POA Data", 0)
+        poa_data = self.raw_poa_data.get(f"{site} POA Data")
+        ghi_data = self.raw_ghi_data.get(f"{site} GHI Data")
+
+        val = 0
+        ts = None
+        source = "N/A"
+
+        poa_ts = poa_data[1] if poa_data and len(poa_data) > 1 else None
+        
+        use_ghi = False
+        if poa_ts:
+            if (datetime.now() - poa_ts).total_seconds() > 7200: # 2 hours
+                use_ghi = True
+        else: # No POA data at all
+            use_ghi = True
+
+        if use_ghi and ghi_data:
+            val = ghi_data[0] if ghi_data and ghi_data[0] is not None else 0
+            ts = ghi_data[1] if ghi_data else None
+            source = "GHI"
+        elif poa_data:
+            val = poa_data[0] if poa_data[0] is not None else 0
+            ts = poa_ts
+            source = "POA"
+
         color = 'gray' if val < 100 else '#ADD8E6' if val > 800 else '#1E90FF'
         
-        if self.site_widgets[var]['poa_var'].get() == 1:
+        current_state = "ONLINE"
+        if ts is None or (datetime.now() - ts).total_seconds() > 7200:
+            color = 'pink'
+            current_state = "NO_COMMS"
+            
+        is_suppressed = self.site_widgets[var]['poa_var'].get() == 1
+        if is_suppressed:
             val = 9999
             color = 'pink'
+            source = "MANUAL OVERRIDE"
             
         self.site_widgets[var]['poa_btn'].config(text=str(int(val)), bg=color)
+        
+        last_comm_str = ts.strftime('%m/%d/%Y %H:%M') if ts else "Unknown"
+        self.site_widgets[var]['poa_tt'].text = f"Source: {source}\nLast Comm: {last_comm_str}"
+
+        # Notifications
+        last_state = self.device_states.get(f"{site}_poa", "ONLINE")
+        if current_state == "NO_COMMS" and not is_suppressed:
+            if not self.text_only_var.get() or current_state != last_state:
+                self._trigger_alert(f"{site} POA", f"POA/GHI Lost Communications | Last comm: {last_comm_str}")
+        elif current_state == "ONLINE" and not is_suppressed:
+            if last_state == "NO_COMMS":
+                if not self.text_only_var.get() or current_state != last_state:
+                    self._trigger_alert(f"{site} POA", "POA/GHI Communications Restored")
+        self.device_states[f"{site}_poa"] = current_state
+
         return val
 
     def _update_breakers(self, site, var):
         suppress_alerts = self.site_widgets[var]['suppress_var'].get() == 1
+        time_now = datetime.now()
+        lost_comm_threshold = time_now - timedelta(hours=2)
+        
+        # Universal Meter Amps Check (0 Amps = Open Breaker/Grid Loss)
+        meter_data = self.raw_meter_data.get(f"{site} Meter Data", [])
+        meter_indicates_open = False
+        if meter_data:
+            # Indices 3, 4, 5 correspond to Amps A, B, C. Check the 8 most recent pulls.
+            zero_amp_rows = sum(1 for row in meter_data[:8] if any(row[i] == 0 for i in (3, 4, 5)))
+            if zero_amp_rows >= 2:
+                meter_indicates_open = True
         
         if site == 'Violet':
             for i in (1, 2):
                 data = self.raw_breaker_data.get(f"{site} Breaker Data {i}", [])
-                is_closed = any(row[0] for row in data) if data else False
+                last_comm_ts = data[0][1] if data and len(data[0]) > 1 and data[0][1] else None
+                last_comm_str = last_comm_ts.strftime('%m/%d/%Y %H:%M') if last_comm_ts else "Unknown"
+                
+                state_key = f"{site}_breaker_{i}"
+                last_state = self.device_states.get(state_key, "ONLINE")
+                current_state = "ONLINE"
+                
+                if not data or not last_comm_ts or last_comm_ts < lost_comm_threshold:
+                    current_state = "NO_COMMS"
+                    self.site_widgets[var][f'status_label_{i}'].config(bg='pink')
+                    self.site_widgets[var][f'breaker_tt_{i}'].text = f"Breaker Lost Communications\nLast Comm: {last_comm_str}"
+                    if not suppress_alerts and (not self.text_only_var.get() or current_state != last_state):
+                        self._trigger_alert(f"{site} Breaker {i}", f"Breaker Lost Communications | Last comm: {last_comm_str}")
+                    self.device_states[state_key] = current_state
+                    continue
+                else:
+                    if last_state == "NO_COMMS" and not suppress_alerts:
+                        if not self.text_only_var.get() or current_state != last_state:
+                            self._trigger_alert(f"{site} Breaker {i}", "Breaker Communications Restored")
+                
+                # Closed ONLY if physical telemetry says closed AND the meter is registering amps
+                physically_closed = any(row[0] for row in data) if data else True
+                is_closed = physically_closed and not meter_indicates_open
+                
                 cache_key = f"{site}_{i}"
                 
                 if is_closed:
                     self.last_closed_cache.pop(cache_key, None)
                     self.site_widgets[var][f'status_label_{i}'].config(text='✓✓✓', bg='green')
-                    self.site_widgets[var][f'breaker_tt_{i}'].text = "Breaker Operational"
+                    self.site_widgets[var][f'breaker_tt_{i}'].text = f"Breaker Operational\nLast Comm: {last_comm_str}"
                 else:
                     last_op = self.last_closed_cache.get(cache_key, "Unknown")
+                    current_state = "OPEN"
+                    
                     self.site_widgets[var][f'status_label_{i}'].config(text='❌❌', bg='red')
-                    self.site_widgets[var][f'breaker_tt_{i}'].text = f"Breaker Open\nLast closed: {last_op}"
+                    self.site_widgets[var][f'breaker_tt_{i}'].text = f"Breaker Open\nLast closed: {last_op}\nLast Comm: {last_comm_str}"
                     
                     if not suppress_alerts:
                         self._trigger_alert(f"{site} Breaker {i}", f"Breaker Tripped Open! Last closed: {last_op}")
+                
+                self.device_states[state_key] = current_state
         else:
             data = self.raw_breaker_data.get(f"{site} Breaker Data", [])
-            is_closed = any(row[0] for row in data) if data else False
+            last_comm_ts = data[0][1] if data and len(data[0]) > 1 and data[0][1] else None
+            last_comm_str = last_comm_ts.strftime('%m/%d/%Y %H:%M') if last_comm_ts else "Unknown"
+            
+            state_key = f"{site}_breaker"
+            last_state = self.device_states.get(state_key, "ONLINE")
+            current_state = "ONLINE"
+            
+            if not data or not last_comm_ts or last_comm_ts < lost_comm_threshold:
+                current_state = "NO_COMMS"
+                self.site_widgets[var]['breaker_label'].config(bg='pink')
+                self.site_widgets[var]['breaker_tt'].text = f"Breaker Lost Communications\nLast Comm: {last_comm_str}"
+                if not suppress_alerts and (not self.text_only_var.get() or current_state != last_state):
+                    self._trigger_alert(f"{site} Breaker", f"Breaker Lost Communications | Last comm: {last_comm_str}")
+                self.device_states[state_key] = current_state
+                return
+            else:
+                if last_state == "NO_COMMS" and not suppress_alerts:
+                    if not self.text_only_var.get() or current_state != last_state:
+                        self._trigger_alert(f"{site} Breaker", "Breaker Communications Restored")
+            
+            # Closed ONLY if physical telemetry says closed AND the meter is registering amps
+            physically_closed = any(row[0] for row in data) if data else True
+            is_closed = physically_closed and not meter_indicates_open
             
             if is_closed:
                 self.last_closed_cache.pop(site, None)
                 self.site_widgets[var]['breaker_label'].config(text='✓✓✓', bg='green')
-                self.site_widgets[var]['breaker_tt'].text = "Breaker Operational"
+                self.site_widgets[var]['breaker_tt'].text = f"Breaker Operational\nLast Comm: {last_comm_str}"
             else:
                 last_op = self.last_closed_cache.get(site, "Unknown")
+                current_state = "OPEN"
+                    
                 self.site_widgets[var]['breaker_label'].config(text='❌❌', bg='red')
-                self.site_widgets[var]['breaker_tt'].text = f"Breaker Open\nLast closed: {last_op}"
+                self.site_widgets[var]['breaker_tt'].text = f"Breaker Open\nLast closed: {last_op}\nLast Comm: {last_comm_str}"
                 
-                if not suppress_alerts:
+                if not suppress_alerts and (not self.text_only_var.get() or current_state != last_state):
                     self._trigger_alert(f"{site} Breaker", f"Breaker Tripped Open! Last closed: {last_op}")
+            
+            self.device_states[state_key] = current_state
 
     def _update_meters(self, site, var, poa):
         time_now = datetime.now()
-        lost_comm_threshold = time_now - timedelta(hours=2)        
+        lost_comm_threshold = time_now - timedelta(hours=2)   
+        suppress_alerts = self.site_widgets[var]['suppress_var'].get() == 1    
         if site == "CDIA":
             data = self.raw_inv_data.get(f"{site} INV 1 Data", [])
-            #print(data)
-            if not data or data[0][2] < lost_comm_threshold:
+            last_comm_ts = data[0][2] if data and len(data[0]) > 2 else None
+            last_state = self.device_states.get(f"{site}_meter", "ONLINE")
+
+            if not data or not last_comm_ts or last_comm_ts < lost_comm_threshold:
+                last_comm_str = last_comm_ts.strftime('%m/%d/%Y %H:%M') if last_comm_ts else "Unknown"
+                current_state = "NO_COMMS"
                 self.site_widgets[var]['kw_label'].config(bg='pink')
-                self.site_widgets[var]['kw_tt'].text = f"Inverter Lost Communications | Last comm: {data[2][0].strftime('%m/%d/%Y %H:%M:%S') if data else 'Unknown'}"
+                self.site_widgets[var]['kw_tt'].text = f"Inverter Lost Communications | Last comm: {last_comm_str}"
+                if not suppress_alerts and (not self.text_only_var.get() or current_state != last_state):
+                    self._trigger_alert(f"{site} Inverter", f"Inverter Lost Communications | Last comm: {last_comm_str}")
+                self.device_states[f"{site}_meter"] = current_state
                 return 0
             else:
+                current_state = "ONLINE"
+                if last_state == "NO_COMMS" and not suppress_alerts:
+                    if not self.text_only_var.get() or current_state != last_state:
+                        self._trigger_alert(f"{site} Inverter", "Inverter Communications Restored")
+                self.device_states[f'{site}_meter'] = current_state
                 w = fast_mean(row[1] for row in data if row[1] is not None and row[1] < 760000000)
                 kw = round(w/1000, 1)
                 ui_color = 'green' if kw > 0 else 'black'
@@ -1234,11 +1400,30 @@ class AEDataApp:
         else:        
             data = self.raw_meter_data.get(f"{site} Meter Data", [])
             suppress_alerts = self.site_widgets[var]['suppress_var'].get() == 1
+            last_comm_ts = data[0][7] if data and len(data[0]) > 7 and data[0][7] else None
+            last_comm_str = last_comm_ts.strftime('%m/%d/%Y %H:%M') if last_comm_ts else "Unknown"
             
-            if not data: 
+            state_key = f"{site}_meter"
+            last_state = self.device_states.get(state_key, "ONLINE")
+            current_state = "ONLINE"
+            
+            if not data or not last_comm_ts or last_comm_ts < lost_comm_threshold:
+                current_state = "NO_COMMS"
                 self.site_widgets[var]['kw_label'].config(bg='pink')
-                self.site_widgets[var]['kw_tt'].text = "Meter Lost Communications"
+                self.site_widgets[var]['v_label'].config(bg='pink')
+                self.site_widgets[var]['ratio_label'].config(bg='pink')
+                self.site_widgets[var]['kw_tt'].text = f"Meter Lost Communications\nLast Comm: {last_comm_str}"
+                self.site_widgets[var]['v_tt'].text = f"Meter Lost Communications\nLast Comm: {last_comm_str}"
+                
+                if not suppress_alerts and (not self.text_only_var.get() or current_state != last_state):
+                    self._trigger_alert(f"{site} Meter", f"Meter Lost Communications | Last comm: {last_comm_str}")
+                
+                self.device_states[state_key] = current_state
                 return 0
+            else:
+                if last_state == "NO_COMMS" and not suppress_alerts:
+                    if not self.text_only_var.get() or current_state != last_state:
+                        self._trigger_alert(f"{site} Meter", "Meter Communications Restored")
                 
             v_a = fast_mean(row[0] for row in data)
             v_b = fast_mean(row[1] for row in data)
@@ -1254,41 +1439,50 @@ class AEDataApp:
 
             # Refactored Phase Text Logic
             if v_a < val_thresh and v_b < val_thresh and v_c < val_thresh:
+                current_state = "ALL_PHASES_LOST"
                 self.site_widgets[var]['v_label'].config(text='❌❌', bg='red')
-                self.site_widgets[var]['v_tt'].text = "Loss of Utility Voltage across all phases."
-                if not suppress_alerts: self._trigger_alert(f"{site} Meter", "Loss of Utility Voltage across all phases.")
+                self.site_widgets[var]['v_tt'].text = f"Loss of Utility Voltage across all phases.\nLast Comm: {last_comm_str}"
+                if not suppress_alerts and (not self.text_only_var.get() or current_state != last_state): self._trigger_alert(f"{site} Meter", "Loss of Utility Voltage across all phases.")
             elif v_a < val_thresh:
+                current_state = "PHASE_A_LOST"
                 self.site_widgets[var]['v_label'].config(text='X✓✓', bg='orange')
-                self.site_widgets[var]['v_tt'].text = "Loss of Phase A Voltage."
-                if not suppress_alerts: self._trigger_alert(f"{site} Meter", "Loss of Utility Phase A Voltage.")
+                self.site_widgets[var]['v_tt'].text = f"Loss of Phase A Voltage.\nLast Comm: {last_comm_str}"
+                if not suppress_alerts and (not self.text_only_var.get() or current_state != last_state): self._trigger_alert(f"{site} Meter", "Loss of Utility Phase A Voltage.")
             elif v_b < val_thresh:
+                current_state = "PHASE_B_LOST"
                 self.site_widgets[var]['v_label'].config(text='✓X✓', bg='orange')
-                self.site_widgets[var]['v_tt'].text = "Loss of Phase B Voltage."
-                if not suppress_alerts: self._trigger_alert(f"{site} Meter", "Loss of Utility Phase B Voltage.")
+                self.site_widgets[var]['v_tt'].text = f"Loss of Phase B Voltage.\nLast Comm: {last_comm_str}"
+                if not suppress_alerts and (not self.text_only_var.get() or current_state != last_state): self._trigger_alert(f"{site} Meter", "Loss of Utility Phase B Voltage.")
             elif v_c < val_thresh:
+                current_state = "PHASE_C_LOST"
                 self.site_widgets[var]['v_label'].config(text='✓✓X', bg='orange')
-                self.site_widgets[var]['v_tt'].text = "Loss of Phase C Voltage."
-                if not suppress_alerts: self._trigger_alert(f"{site} Meter", "Loss of Utility Phase C Voltage.")
+                self.site_widgets[var]['v_tt'].text = f"Loss of Phase C Voltage.\nLast Comm: {last_comm_str}"
+                if not suppress_alerts and (not self.text_only_var.get() or current_state != last_state): self._trigger_alert(f"{site} Meter", "Loss of Utility Phase C Voltage.")
             elif pct_diff_ab >= dif_thresh or pct_diff_ac >= dif_thresh or pct_diff_bc >= dif_thresh:
+                current_state = "PHASE_IMBALANCE"
                 self.site_widgets[var]['v_label'].config(text='???', bg='orange')
-                self.site_widgets[var]['v_tt'].text = f"Voltage Imbalance greater than {dif_thresh}%"
-                if not suppress_alerts: self._trigger_alert(f"{site} Meter", f"Voltage Imbalance greater than {dif_thresh}%")
+                self.site_widgets[var]['v_tt'].text = f"Voltage Imbalance greater than {dif_thresh}%\nLast Comm: {last_comm_str}"
+                if not suppress_alerts and (not self.text_only_var.get() or current_state != last_state): self._trigger_alert(f"{site} Meter", f"Voltage Imbalance greater than {dif_thresh}%")
             else:
                 self.site_widgets[var]['v_label'].config(text='✓✓✓', bg='green')
-                self.site_widgets[var]['v_tt'].text = "Voltage levels operational"
+                self.site_widgets[var]['v_tt'].text = f"Voltage levels operational\nLast Comm: {last_comm_str}"
 
             # Check Production / Power Loss
-            if avg_w < 2 and poa > 10 and not suppress_alerts:
-                online = self.meter_last_online_cache.get(site, "Unknown")
-                
-                self.site_widgets[var]['kw_label'].config(text='❌❌', bg='red')
-                self.site_widgets[var]['kw_tt'].text = f"Offline. Last online: {online}"
-                self._trigger_alert(f"{site} Power Loss", f"Meter reading ~0kW while POA is active. Last online: {online}")
+            if avg_w < 2 and poa > 10:
+                current_state = "POWER_LOSS"
+                if not suppress_alerts:
+                    online = self.meter_last_online_cache.get(site, "Unknown")
+                    self.site_widgets[var]['kw_label'].config(text='❌❌', bg='red')
+                    self.site_widgets[var]['kw_tt'].text = f"Offline. Last online: {online}\nLast Comm: {last_comm_str}"
+                    if not self.text_only_var.get() or current_state != last_state:
+                        self._trigger_alert(f"{site} Power Loss", f"Meter reading ~0kW while POA is active. Last online: {online}")
             else:
                 self.meter_last_online_cache.pop(site, None)
                 self.site_widgets[var]['kw_label'].config(text=f"{round(avg_w/1000, 1)}", bg='green' if avg_w > 0 else 'gray')
-                self.site_widgets[var]['kw_tt'].text = "Meter Online"
+                self.site_widgets[var]['kw_tt'].text = f"Meter Online\nLast Comm: {last_comm_str}"
             
+            self.device_states[state_key] = current_state
+
             # --- Ratio / % of Max Calculation with Color Sequencing ---
             ratio_pct = (avg_w / self.MAP_SITES[site]['METER_MAX']) * 100 if self.MAP_SITES[site]['METER_MAX'] else 0
             meterRatio = ratio_pct / 100.0
@@ -1439,7 +1633,7 @@ class AEDataApp:
                 all_others_online = (total_expected > 1) and (total_online_expected >= total_expected - 1)
                 suppression_lifted = (poa > 400) or any_expected_inv_over_2_hours or all_others_online
                 
-                if suppression_lifted and not suppress_alerts and not status['is_manually_suppressed']:
+                if (suppression_lifted or status['is_no_comms']) and not suppress_alerts and not status['is_manually_suppressed']:
                     if not self.text_only_var.get() or current_state != last_state:
                         self._trigger_alert(f"{site} Device Issue", msg.replace('\n', ' | '))
             else:
@@ -1447,8 +1641,154 @@ class AEDataApp:
                 self.last_online_cache.pop(cache_key, None)
                 inv_widget['cb'].config(bg=ui_color)
                 inv_widget['cb_tt'].text = f"Status: {current_state}\nLast Comm: {comm_last}"
+                
+                if last_state == "NO_COMMS" and not suppress_alerts and not status['is_manually_suppressed']:
+                    if not self.text_only_var.get() or current_state != last_state:
+                        self._trigger_alert(f"{site} Device Issue", f"Inv {inv_label} Communications Restored")
 
             self.device_states[cache_key] = current_state
+
+    def _update_conetoe_inverters(self, site, var, poa):
+        invdict = self.MAP_SITES[site]['INV_DICT']
+        suppress_alerts = self.site_widgets[var]['suppress_var'].get() == 1
+        
+        # Inverter groupings: Inverter 1 (1-4), Inverter 2 (5-8), Inverter 3 (9-12), Inverter 4 (13-16)
+        groups = {
+            1: [1, 2, 3, 4],
+            2: [5, 6, 7, 8],
+            3: [9, 10, 11, 12],
+            4: [13, 14, 15, 16]
+        }
+        
+        # --- PASS 1: Evaluate raw data and gather module-level metrics ---
+        module_statuses = {}
+        
+        for inv_num, inv_label in invdict.items():
+            table_name = f'{site} INV {inv_num} Data'
+            data = self.raw_inv_data.get(table_name, [])
+            
+            inv_widget = self.site_widgets[var]['inverters'].get(str(inv_label))
+            is_manually_suppressed = inv_widget['cb_val'].get() == 1 if inv_widget else False
+            
+            last_comm_ts = "Unknown"
+            is_no_comms = False
+            
+            if data and len(data[0]) > 2 and data[0][2]:
+                upload_time = data[0][2]
+                last_comm_ts = upload_time.strftime('%m/%d/%Y %H:%M:%S') 
+                if (datetime.now() - upload_time).total_seconds() > 7200:
+                    is_no_comms = True
+            else:
+                is_no_comms = True 
+
+            consecutive = 0
+            is_online = False
+            is_completely_offline = all(row[1] is not None and row[1] < 1 for row in data) if data else False
+            avg_dcv = fast_mean(row[0] for row in data) if data else 0
+            
+            if not is_completely_offline and not is_no_comms:
+                for row in data:
+                    if row[1] is not None and row[1] > 0:
+                        consecutive += 1
+                        if consecutive >= 3:
+                            is_online = True
+                            break
+                    else:
+                        consecutive = 0
+            
+            cache_key = f"{site}_{inv_num}"
+            if is_online:
+                if cache_key not in self.inv_online_since:
+                    self.inv_online_since[cache_key] = datetime.now()
+            else:
+                self.inv_online_since.pop(cache_key, None) 
+                
+            module_statuses[inv_num] = {
+                'is_online': is_online,
+                'is_completely_offline': is_completely_offline,
+                'is_no_comms': is_no_comms,
+                'avg_dcv': avg_dcv,
+                'last_comm_str': last_comm_ts,
+                'cache_key': cache_key,
+                'inv_label': inv_label,
+                'is_manually_suppressed': is_manually_suppressed
+            }
+
+        # --- PASS 2: Apply grouping logic for notifications and UI updates ---
+        any_module_online_site_wide = any(not m['is_completely_offline'] for m in module_statuses.values())
+        for group_id, module_ids in groups.items():
+            group_modules = [module_statuses[mod_id] for mod_id in module_ids if mod_id in module_statuses]
+            
+            # Identify group level conditions
+            all_offline_bad_dcv = all(m['is_completely_offline'] and m['avg_dcv'] <= 100 for m in group_modules)
+            all_offline = all(m['is_completely_offline'] for m in group_modules)
+            for mod_id in module_ids:
+                if mod_id not in module_statuses: continue
+                status = module_statuses[mod_id]
+                
+                inv_label = status['inv_label']
+                inv_widget = self.site_widgets[var]['inverters'].get(str(inv_label))
+                if not inv_widget: continue
+                    
+                cache_key = status['cache_key']
+                last_state = self.device_states.get(cache_key, "ONLINE")
+                
+                if status['is_no_comms']:
+                    current_state = "NO_COMMS"
+                    ui_color = 'pink'
+                elif status['is_online']:
+                    current_state = "ONLINE"
+                    ui_color = 'green'
+                elif not status['is_completely_offline']:
+                    current_state = "STARTING"
+                    ui_color = 'yellow'
+                else:
+                    if status['avg_dcv'] > 100:
+                        current_state = "OFFLINE_WITH_VOLTAGE"
+                        ui_color = 'orange'
+                    else:
+                        current_state = "OFFLINE_NO_VOLTAGE"
+                        ui_color = 'red'
+
+                online_last = self.last_online_cache.get(cache_key, "Unknown")
+                comm_last = status.get('last_comm_str', "Unknown")
+                
+                msg = f"Inv {inv_label}\nLast Online: {online_last}\nLast Comm: {comm_last}"
+
+                if status['is_completely_offline'] or status['is_no_comms']:
+                    inv_widget['cb'].config(bg=ui_color)
+                    inv_widget['cb_tt'].text = msg 
+                    
+                    # Conetoe specific notification logic
+                    should_notify = False
+                    
+                    if status['is_no_comms']:
+                        should_notify = True
+                    elif current_state == "OFFLINE_WITH_VOLTAGE":
+                        # Any module offline with good DC V is normal behavior
+                        if all_offline_bad_dcv and poa > 400: 
+                            should_notify = True
+                        elif all_offline and any_module_online_site_wide:
+                            should_notify = True
+                        else:
+                            should_notify = False
+                    elif current_state == "OFFLINE_NO_VOLTAGE":
+                        should_notify = True
+
+                            
+                    if should_notify and not suppress_alerts and not status['is_manually_suppressed']:
+                        if not self.text_only_var.get() or current_state != last_state:
+                            self._trigger_alert(f"{site} Device Issue", msg.replace('\n', ' | '))
+                else:
+                    self.last_online_cache.pop(cache_key, None)
+                    inv_widget['cb'].config(bg=ui_color)
+                    inv_widget['cb_tt'].text = f"Status: {current_state}\nLast Comm: {comm_last}"
+                    
+                    if last_state == "NO_COMMS" and not suppress_alerts and not status['is_manually_suppressed']:
+                        if not self.text_only_var.get() or current_state != last_state:
+                            self._trigger_alert(f"{site} Device Issue", f"Inv {inv_label} Communications Restored")
+
+                self.device_states[cache_key] = current_state
 
     def _update_snapshots(self, site, var, meter_w):
         inv_dict = self.MAP_SITES[site]['INV_DICT']
