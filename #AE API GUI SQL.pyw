@@ -422,6 +422,7 @@ class AEDataApp:
         self.last_online_cache = {}
         self.inv_online_since = {}
         self.last_closed_cache = {}
+        self.last_good_comm_cache = {}
         self.meter_last_online_cache = {}
         self.pvsyst_model_cache = {}
         self.pvsyst_results = {} # Computed in background thread
@@ -441,6 +442,19 @@ class AEDataApp:
         self.load_checkbox_states()
         self.root.after(500, self.run_data_cycle)
 
+    def _check_null_states(self, data):
+        all_null = False
+        watts_null_other_has_value = False
+        if data and len(data[0]) > 0:
+            excluded_cols = {'timestamp', 'last upload', 'hardwareid'}
+            data_cols = [i for i, col in enumerate(data[0].cursor_description) if col[0].lower() not in excluded_cols]
+            watts_col = next((i for i, col in enumerate(data[0].cursor_description) if col[0].lower() == 'watts'), -1)
+            if data_cols:
+                all_null = all(data[0][i] is None for i in data_cols)
+                if watts_col != -1:
+                    watts_null_other_has_value = (data[0][watts_col] is None and any(data[0][i] is not None for i in data_cols if i != watts_col))
+        return all_null, watts_null_other_has_value
+
     def _set_window_icon(self, window):
         """Helper to apply the program icon to a window."""
         try:
@@ -450,7 +464,7 @@ class AEDataApp:
 
     def _setup_main_window(self):
         """Builds the main grid headers and site rows dynamically."""
-        headers = ["Sites", "Breaker", "Utility V", "Opt", "Meter kW", "% Max", "% PvSyst", "W/S", "Site Overview"]
+        headers = ["Sites", "Breaker", "Utility V", "Meter kW", "% Max", "% PvSyst", "W/S", "Site Overview"]
         
         # Calculate how many column blocks are needed
         total_sites = len(self.MAP_SITES)
@@ -458,12 +472,12 @@ class AEDataApp:
         
         # Draw headers for each block
         for block in range(num_blocks):
-            col_offset = block * 9
+            col_offset = block * 8
             for i, h in enumerate(headers):
                 Label(self.root, bg=MAIN_COLOR, text=h, font=('Tk_defaultFont', 10, 'bold')).grid(row=0, column=col_offset + i, padx=5)
 
             # Tell Tkinter to let the Snapshot column absorb all extra horizontal space
-            self.root.grid_columnconfigure(col_offset + 8, weight=1)
+            self.root.grid_columnconfigure(col_offset + 7, weight=1)
 
         for i, (name, config) in enumerate(self.MAP_SITES.items(), 1):
             self._create_site_row(i, name, config)
@@ -475,8 +489,8 @@ class AEDataApp:
         # Calculate the actual grid row (1-indexed to account for headers at row 0)
         row = ((index - 1) % self.sites_per_col) + 1
         
-        # Calculate the column offset (each block is 9 columns wide)
-        col_offset = block * 9
+        # Calculate the column offset (each block is 8 columns wide)
+        col_offset = block * 8
         
         var_name = config['VAR_NAME']
         self.site_widgets[var_name] = {'inverters': {}, 'config': config}
@@ -514,29 +528,26 @@ class AEDataApp:
         self.site_widgets[var_name]['v_label'] = v_lbl
         self.site_widgets[var_name]['v_tt'] = ToolTip(v_lbl, "Pending Update...")
 
-        # Suppress Alerts Checkbox
+        # Suppress Alerts Checkbox + Meter kW (Combined)
         meter_suppress_var = IntVar()
         self.all_cbs.append(meter_suppress_var)
-        Checkbutton(self.root, bg=MAIN_COLOR, variable=meter_suppress_var, command=self.save_checkbox_states).grid(row=row, column=col_offset + 3)
+        kw_lbl = Checkbutton(self.root, bg=MAIN_COLOR, text='kW', font=('Tk_defaultFont', 10, 'bold'), variable=meter_suppress_var, command=self.save_checkbox_states, selectcolor=MAIN_COLOR)
+        kw_lbl.grid(row=row, column=col_offset + 3)
         self.site_widgets[var_name]['meter_suppress_var'] = meter_suppress_var
-
-        # Meter kW
-        kw_lbl = Label(self.root, bg=MAIN_COLOR, text='kW', font=( 'Tk_defaultFont', 10, 'bold'))
-        kw_lbl.grid(row=row, column=col_offset + 4)
         self.site_widgets[var_name]['kw_label'] = kw_lbl
         self.site_widgets[var_name]['kw_tt'] = ToolTip(kw_lbl, "Pending Update...")
 
         # % Max & % PvSyst
         self.site_widgets[var_name]['ratio_label'] = Label(self.root, bg=MAIN_COLOR, text='0%', font=('Tk_defaultFont', 10, 'bold'))
-        self.site_widgets[var_name]['ratio_label'].grid(row=row, column=col_offset + 5)
+        self.site_widgets[var_name]['ratio_label'].grid(row=row, column=col_offset + 4)
         self.site_widgets[var_name]['pvsyst_label'] = Label(self.root, bg=MAIN_COLOR, text='--', font=('Tk_defaultFont', 10, 'bold'))
-        self.site_widgets[var_name]['pvsyst_label'].grid(row=row, column=col_offset + 6)
+        self.site_widgets[var_name]['pvsyst_label'].grid(row=row, column=col_offset + 5)
 
         # POA Weather
         poa_var = IntVar()
         self.all_cbs.append(poa_var)
         poa_btn = Checkbutton(self.root, bg=MAIN_COLOR, text='0', font=( 'Tk_defaultFont', 10, 'bold'), variable=poa_var)
-        poa_btn.grid(row=row, column=col_offset + 7)
+        poa_btn.grid(row=row, column=col_offset + 6)
         self.site_widgets[var_name]['poa_btn'] = poa_btn
         self.site_widgets[var_name]['poa_var'] = poa_var
         self.site_widgets[var_name]['poa_tt'] = ToolTip(poa_btn, "Pending Update...")
@@ -544,7 +555,7 @@ class AEDataApp:
         # Snapshot Frame Setup
         snap = Frame(self.root, bg=MAIN_COLOR, bd=1, relief="solid")
         self.site_widgets[var_name]['snap_tt'] = ToolTip(snap, "INV kW  |  Meter-INVs  |  # INVs ✅\nMeter kW  |  No Comms  |  Total INVs")
-        snap.grid(row=row, column=col_offset + 8, sticky='ew')
+        snap.grid(row=row, column=col_offset + 7, sticky='ew')
         snap.columnconfigure(0, weight=1)
         snap.columnconfigure(1, weight=1)
         snap.columnconfigure(2, weight=1)
@@ -648,6 +659,13 @@ class AEDataApp:
         
         self.checkins_tree.tag_configure('even', background='#ADD8E6')
         self.checkins_tree.tag_configure('odd', background='#90EE90')
+
+    def _are_all_values_null(self, data, indices_to_check):
+        """Checks if all specified indices in the first row of data are None."""
+        if not data or not data[0]:
+            return False
+        return all(data[0][i] is None for i in indices_to_check)
+
 
     def _setup_inverter_windows(self):
         """Builds separate portfolio windows or a combined tabbed window depending on host."""
@@ -890,6 +908,17 @@ class AEDataApp:
         except Exception:
             return "Unknown"
 
+    def _get_last_non_null_timestamp_bg(self, cursor, table_name):
+        """Finds the timestamp of the last row with non-null data."""
+        try:
+            q = f"SELECT TOP 1 [Timestamp] FROM [{table_name}] WHERE [Watts] IS NOT NULL AND [dc V] IS NOT NULL ORDER BY [Timestamp] DESC"
+            cursor.execute(q)
+            data = cursor.fetchone()
+            return data[0] if data else None
+        except Exception as e:
+            print(f"Error getting last non-null timestamp for {table_name}: {e}")
+            return None
+
     def _get_meter_last_online_bg(self, cursor, site):
         try:
             q = f"SELECT TOP 1 [Timestamp] FROM (SELECT [Timestamp], [Watts], LEAD([Watts], 1) OVER(ORDER BY [Timestamp] DESC) as Watts_1, LEAD([Watts], 2) OVER(ORDER BY [Timestamp] DESC) as Watts_2 FROM [{site} Meter Data]) sub WHERE [Watts] > 2 AND Watts_1 > 2 AND Watts_2 > 2 ORDER BY [Timestamp] DESC"
@@ -1022,7 +1051,7 @@ class AEDataApp:
 
             # 4. Pre-calculate metrics that require DB (PVsyst and Offline checks)
             pvsyst_results = {}
-            fetched_offline = {'breakers': {}, 'meters': {}, 'invs': {}}
+            fetched_offline = {'breakers': {}, 'meters': {}, 'invs': {}, 'last_good_comms': {}}
 
             for name, config in self.MAP_SITES.items():
                 var_name = config['VAR_NAME']
@@ -1068,6 +1097,11 @@ class AEDataApp:
                     inv_n = inv_num if name != 'Duplin' else (inv_num if inv_num <= 3 else inv_num - 3)
                     table_name = f'{name}{duplin_except} INV {inv_n} Data'
                     data = raw_inv.get(table_name, [])
+
+                    # Check for sustained NULL data
+                    if self._are_all_values_null(data, [0, 1]):
+                        cache_key = f"{name}_{inv_num}"
+                        fetched_offline['last_good_comms'][cache_key] = self._get_last_non_null_timestamp_bg(cursor, table_name)
 
                     last_comm_ts = data[0][2] if data and len(data[0]) > 2 else None
                     is_completely_offline = all(row[1] is not None and row[1] < 1 for row in data) if data else False
@@ -1139,6 +1173,7 @@ class AEDataApp:
         self.last_closed_cache.update(bg_data['fetched_offline']['breakers'])
         self.meter_last_online_cache.update(bg_data['fetched_offline']['meters'])
         self.last_online_cache.update(bg_data['fetched_offline']['invs'])
+        self.last_good_comm_cache.update(bg_data['fetched_offline']['last_good_comms'])
 
         # 3. Apply individual frame pieces
         self._apply_timestamps(bg_data['timestamps'])
@@ -1358,6 +1393,16 @@ class AEDataApp:
             self.device_states[state_key] = current_state
 
     def _update_meters(self, site, var, poa):
+        if not hasattr(self, 'null_comms_since'):
+            self.null_comms_since = {}
+        if not hasattr(self, 'watts_null_since'):
+            self.watts_null_since = {}
+            
+        state_key = f"{site}_meter"
+        all_null = self._are_all_values_null(self.raw_meter_data.get(f"{site} Meter Data", []), [0, 1, 2, 3, 4, 5, 6])
+        if all_null:
+            if state_key not in self.null_comms_since:
+                self.null_comms_since[state_key] = datetime.now()
         time_now = datetime.now()
         lost_comm_threshold = time_now - timedelta(hours=2)   
         site_suppress = self.site_widgets[var]['site_suppress_var'].get() == 1
@@ -1368,11 +1413,11 @@ class AEDataApp:
             last_comm_ts = data[0][2] if data and len(data[0]) > 2 else None
             last_state = self.device_states.get(f"{site}_meter", "ONLINE")
 
-            if not data or not last_comm_ts or last_comm_ts < lost_comm_threshold:
+            if not data or not last_comm_ts or last_comm_ts < lost_comm_threshold or (all_null and state_key in self.null_comms_since and (datetime.now() - self.null_comms_since[state_key]).total_seconds() > 7200):
                 last_comm_str = last_comm_ts.strftime('%m/%d/%Y %H:%M') if last_comm_ts else "Unknown"
                 current_state = "NO_COMMS"
                 self.site_widgets[var]['kw_label'].config(bg='pink')
-                self.site_widgets[var]['kw_tt'].text = f"Inverter Lost Communications | Last comm: {last_comm_str}"
+                self.site_widgets[var]['kw_tt'].text = f"Inverter Lost Communications\nLast Comm: {last_comm_str}"
                 if not suppress_alerts and (not self.text_only_var.get() or current_state != last_state):
                     self._trigger_alert(f"{site} Inverter", f"Inverter Lost Communications | Last comm: {last_comm_str}")
                 self.device_states[f"{site}_meter"] = current_state
@@ -1413,7 +1458,6 @@ class AEDataApp:
             last_comm_ts = data[0][7] if data and len(data[0]) > 7 and data[0][7] else None
             last_comm_str = last_comm_ts.strftime('%m/%d/%Y %H:%M') if last_comm_ts else "Unknown"
             
-            state_key = f"{site}_meter"
             last_state = self.device_states.get(state_key, "ONLINE")
             current_state = "ONLINE"
             
@@ -1478,7 +1522,7 @@ class AEDataApp:
                 self.site_widgets[var]['v_tt'].text = f"Voltage levels operational\nLast Comm: {last_comm_str}"
 
             # Check Production / Power Loss
-            if avg_w < 2 and poa > 10:
+            if (avg_w < 2 and poa > 10):
                 current_state = "POWER_LOSS"
                 if not suppress_alerts:
                     online = self.meter_last_online_cache.get(site, "Unknown")
@@ -1524,6 +1568,11 @@ class AEDataApp:
             return avg_w
     
     def _update_inverters(self, site, var, poa):
+        if not hasattr(self, 'null_comms_since'):
+            self.null_comms_since = {}
+        if not hasattr(self, 'watts_null_since'):
+            self.watts_null_since = {}
+            
         invdict = self.MAP_SITES[site]['INV_DICT']
         suppress_alerts = self.site_widgets[var]['site_suppress_var'].get() == 1
         
@@ -1537,6 +1586,8 @@ class AEDataApp:
             duplin_except = (' Central' if inv_num <= 3 else ' String') if site == 'Duplin' else ''
             inv_n = inv_num if site != 'Duplin' else (inv_num if inv_num <= 3 else inv_num - 3)
             
+            cache_key = f"{site}_{inv_num}"
+
             table_name = f'{site}{duplin_except} INV {inv_n} Data'
             data = self.raw_inv_data.get(table_name, [])
             
@@ -1560,8 +1611,7 @@ class AEDataApp:
             # --- Track Production & DC Voltage ---
             consecutive = 0
             is_online = False
-            is_completely_offline = all(row[1] is not None and row[1] < 1 for row in data) if data else False
-            
+            is_completely_offline = all(row[1] is None or row[1] < 1 for row in data) if data else False
             # Grab average DC Voltage for the 'Orange' status check
             avg_dcv = fast_mean(row[0] for row in data) if data else 0
             
@@ -1575,11 +1625,10 @@ class AEDataApp:
                     else:
                         consecutive = 0
             
-            cache_key = f"{site}_{inv_num}"
-            
             if is_online:
                 if cache_key not in self.inv_online_since:
                     self.inv_online_since[cache_key] = datetime.now()
+                self.null_comms_since.pop(cache_key, None) # Clear null timer if it's online
             else:
                 self.inv_online_since.pop(cache_key, None) 
                 
@@ -1595,7 +1644,6 @@ class AEDataApp:
                 'is_completely_offline': is_completely_offline,
                 'is_no_comms': is_no_comms,
                 'avg_dcv': avg_dcv,
-                'last_comm_str': last_comm_ts,
                 'cache_key': cache_key,
                 'inv_label': inv_label,
                 'is_manually_suppressed': is_manually_suppressed
@@ -1611,7 +1659,9 @@ class AEDataApp:
             last_state = self.device_states.get(cache_key, "ONLINE")
             
             # Logic for color coding including the Orange Voltage check
-            if status['is_no_comms']:
+            all_null = self._are_all_values_null(self.raw_inv_data.get(f'{site}{duplin_except} INV {inv_n} Data', []), [0, 1])
+
+            if status['is_no_comms'] or (all_null and cache_key in self.null_comms_since and (datetime.now() - self.null_comms_since[cache_key]).total_seconds() > 7200):
                 current_state = "NO_COMMS"
                 ui_color = 'pink' 
             elif status['is_online']:
@@ -1629,9 +1679,15 @@ class AEDataApp:
                     current_state = "OFFLINE_NO_VOLTAGE"
                     ui_color = 'red'
 
+            if all_null:
+                last_good_comm = self.last_good_comm_cache.get(cache_key)
+                if last_good_comm and (datetime.now() - last_good_comm).total_seconds() > 7200:
+                    if current_state in {"OFFLINE_WITH_VOLTAGE", "OFFLINE_NO_VOLTAGE"}:
+                        current_state, ui_color = "NO_COMMS", 'pink'
+
             # Build tooltip and alert message
             online_last = self.last_online_cache.get(cache_key, "Unknown")
-            comm_last = status.get('last_comm_str', "Unknown")
+            comm_last = self.raw_inv_data.get(f'{site}{duplin_except} INV {inv_n} Data', [[None,None,None]])[0][2].strftime('%m/%d/%Y %H:%M:%S') if self.raw_inv_data.get(f'{site}{duplin_except} INV {inv_n} Data', [[None,None,None]])[0][2] else "Unknown"
             
             msg = f"Inv {inv_label}\nLast Online: {online_last}\nLast Comm: {comm_last}"
 
@@ -1659,6 +1715,11 @@ class AEDataApp:
             self.device_states[cache_key] = current_state
 
     def _update_conetoe_inverters(self, site, var, poa):
+        if not hasattr(self, 'null_comms_since'):
+            self.null_comms_since = {}
+        if not hasattr(self, 'watts_null_since'):
+            self.watts_null_since = {}
+            
         invdict = self.MAP_SITES[site]['INV_DICT']
         suppress_alerts = self.site_widgets[var]['site_suppress_var'].get() == 1
         
@@ -1676,6 +1737,8 @@ class AEDataApp:
         for inv_num, inv_label in invdict.items():
             table_name = f'{site} INV {inv_num} Data'
             data = self.raw_inv_data.get(table_name, [])
+
+            cache_key = f"{site}_{inv_num}"
             
             inv_widget = self.site_widgets[var]['inverters'].get(str(inv_label))
             is_manually_suppressed = inv_widget['cb_val'].get() == 1 if inv_widget else False
@@ -1693,7 +1756,7 @@ class AEDataApp:
 
             consecutive = 0
             is_online = False
-            is_completely_offline = all(row[1] is not None and row[1] < 1 for row in data) if data else False
+            is_completely_offline = all(row[1] is None or row[1] < 1 for row in data) if data else False
             avg_dcv = fast_mean(row[0] for row in data) if data else 0
             
             if not is_completely_offline and not is_no_comms:
@@ -1705,8 +1768,6 @@ class AEDataApp:
                             break
                     else:
                         consecutive = 0
-            
-            cache_key = f"{site}_{inv_num}"
             if is_online:
                 if cache_key not in self.inv_online_since:
                     self.inv_online_since[cache_key] = datetime.now()
@@ -1718,7 +1779,6 @@ class AEDataApp:
                 'is_completely_offline': is_completely_offline,
                 'is_no_comms': is_no_comms,
                 'avg_dcv': avg_dcv,
-                'last_comm_str': last_comm_ts,
                 'cache_key': cache_key,
                 'inv_label': inv_label,
                 'is_manually_suppressed': is_manually_suppressed
@@ -1743,7 +1803,9 @@ class AEDataApp:
                 cache_key = status['cache_key']
                 last_state = self.device_states.get(cache_key, "ONLINE")
                 
-                if status['is_no_comms']:
+                all_null = self._are_all_values_null(self.raw_inv_data.get(f'{site} INV {mod_id} Data', []), [0, 1])
+
+                if status['is_no_comms'] or (all_null and cache_key in self.null_comms_since and (datetime.now() - self.null_comms_since[cache_key]).total_seconds() > 7200):
                     current_state = "NO_COMMS"
                     ui_color = 'pink'
                 elif status['is_online']:
@@ -1760,8 +1822,14 @@ class AEDataApp:
                         current_state = "OFFLINE_NO_VOLTAGE"
                         ui_color = 'red'
 
+                if all_null:
+                    last_good_comm = self.last_good_comm_cache.get(cache_key)
+                    if last_good_comm and (datetime.now() - last_good_comm).total_seconds() > 7200:
+                        if current_state in {"OFFLINE_WITH_VOLTAGE", "OFFLINE_NO_VOLTAGE"}:
+                            current_state, ui_color = "NO_COMMS", 'pink'
+
                 online_last = self.last_online_cache.get(cache_key, "Unknown")
-                comm_last = status.get('last_comm_str', "Unknown")
+                comm_last = self.raw_inv_data.get(f'{site} INV {mod_id} Data', [[None,None,None]])[0][2].strftime('%m/%d/%Y %H:%M:%S') if self.raw_inv_data.get(f'{site} INV {mod_id} Data', [[None,None,None]])[0][2] else "Unknown"
                 
                 msg = f"Inv {inv_label}\nLast Online: {online_last}\nLast Comm: {comm_last}"
 
