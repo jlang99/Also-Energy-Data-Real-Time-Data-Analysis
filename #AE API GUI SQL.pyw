@@ -482,8 +482,10 @@ class AEDataApp:
         self.site_widgets[var_name] = {'inverters': {}, 'config': config}
         
         # Site Name
-        self.site_widgets[var_name]['label'] = Label(self.root, bg=MAIN_COLOR, text=name, font=('Tk_defaultFont', 12, 'bold'), anchor='w')
-        self.site_widgets[var_name]['label'].grid(row=row, column=col_offset, sticky='w')
+        site_suppress_var = IntVar()
+        self.all_cbs.append(site_suppress_var)
+        Checkbutton(self.root, bg=MAIN_COLOR, text=name, font=('Tk_defaultFont', 12, 'bold'), anchor='w', variable=site_suppress_var, command=self.save_checkbox_states).grid(row=row, column=col_offset, sticky='w')
+        self.site_widgets[var_name]['site_suppress_var'] = site_suppress_var
         
         # Breaker Status
         if config['BREAKER']:
@@ -513,10 +515,10 @@ class AEDataApp:
         self.site_widgets[var_name]['v_tt'] = ToolTip(v_lbl, "Pending Update...")
 
         # Suppress Alerts Checkbox
-        cb_var = IntVar()
-        self.all_cbs.append(cb_var)
-        Checkbutton(self.root, bg=MAIN_COLOR, variable=cb_var, command=self.save_checkbox_states).grid(row=row, column=col_offset + 3)
-        self.site_widgets[var_name]['suppress_var'] = cb_var
+        meter_suppress_var = IntVar()
+        self.all_cbs.append(meter_suppress_var)
+        Checkbutton(self.root, bg=MAIN_COLOR, variable=meter_suppress_var, command=self.save_checkbox_states).grid(row=row, column=col_offset + 3)
+        self.site_widgets[var_name]['meter_suppress_var'] = meter_suppress_var
 
         # Meter kW
         kw_lbl = Label(self.root, bg=MAIN_COLOR, text='kW', font=( 'Tk_defaultFont', 10, 'bold'))
@@ -623,7 +625,13 @@ class AEDataApp:
         self.checkins_win.title("Personnel On-Site")
         self._set_window_icon(self.checkins_win)
 
-        self.checkins_tree = ttk.Treeview(self.checkins_win, columns=("Location", "Company", "Employee"), show='headings')
+        # Create a custom ttk style for the checkins Treeview
+        style = ttk.Style()
+        style.configure("Checkin.Treeview.Heading", font=('TkDefaultFont', 11, 'bold'))
+        # Adjust rowheight, borderwidth, and relief to experiment with spacing and outer borders
+        style.configure("Checkin.Treeview", font=('TkDefaultFont', 10, 'bold'), rowheight=30, borderwidth=1, relief="solid")
+
+        self.checkins_tree = ttk.Treeview(self.checkins_win, columns=("Location", "Company", "Employee"), show='headings', style="Checkin.Treeview")
         self.checkins_tree.heading("Location", text="Location")
         self.checkins_tree.heading("Company", text="Company")
         self.checkins_tree.heading("Employee", text="Employee")
@@ -1236,11 +1244,12 @@ class AEDataApp:
         self.site_widgets[var]['poa_tt'].text = f"Source: {source}\nLast Comm: {last_comm_str}"
 
         # Notifications
+        site_suppress = self.site_widgets[var]['site_suppress_var'].get() == 1
         last_state = self.device_states.get(f"{site}_poa", "ONLINE")
-        if current_state == "NO_COMMS" and not is_suppressed:
+        if current_state == "NO_COMMS" and not is_suppressed and not site_suppress:
             if not self.text_only_var.get() or current_state != last_state:
                 self._trigger_alert(f"{site} POA", f"POA/GHI Lost Communications | Last comm: {last_comm_str}")
-        elif current_state == "ONLINE" and not is_suppressed:
+        elif current_state == "ONLINE" and not is_suppressed and not site_suppress:
             if last_state == "NO_COMMS":
                 if not self.text_only_var.get() or current_state != last_state:
                     self._trigger_alert(f"{site} POA", "POA/GHI Communications Restored")
@@ -1249,7 +1258,7 @@ class AEDataApp:
         return val
 
     def _update_breakers(self, site, var):
-        suppress_alerts = self.site_widgets[var]['suppress_var'].get() == 1
+        suppress_alerts = self.site_widgets[var]['site_suppress_var'].get() == 1
         time_now = datetime.now()
         lost_comm_threshold = time_now - timedelta(hours=2)
         
@@ -1351,7 +1360,9 @@ class AEDataApp:
     def _update_meters(self, site, var, poa):
         time_now = datetime.now()
         lost_comm_threshold = time_now - timedelta(hours=2)   
-        suppress_alerts = self.site_widgets[var]['suppress_var'].get() == 1    
+        site_suppress = self.site_widgets[var]['site_suppress_var'].get() == 1
+        meter_suppress = self.site_widgets[var]['meter_suppress_var'].get() == 1
+        suppress_alerts = site_suppress or meter_suppress
         if site == "CDIA":
             data = self.raw_inv_data.get(f"{site} INV 1 Data", [])
             last_comm_ts = data[0][2] if data and len(data[0]) > 2 else None
@@ -1399,7 +1410,6 @@ class AEDataApp:
                 return kw
         else:        
             data = self.raw_meter_data.get(f"{site} Meter Data", [])
-            suppress_alerts = self.site_widgets[var]['suppress_var'].get() == 1
             last_comm_ts = data[0][7] if data and len(data[0]) > 7 and data[0][7] else None
             last_comm_str = last_comm_ts.strftime('%m/%d/%Y %H:%M') if last_comm_ts else "Unknown"
             
@@ -1515,7 +1525,7 @@ class AEDataApp:
     
     def _update_inverters(self, site, var, poa):
         invdict = self.MAP_SITES[site]['INV_DICT']
-        suppress_alerts = self.site_widgets[var]['suppress_var'].get() == 1
+        suppress_alerts = self.site_widgets[var]['site_suppress_var'].get() == 1
         
         # --- PASS 1: Evaluate raw data and gather site-wide metrics ---
         site_statuses = {}
@@ -1650,7 +1660,7 @@ class AEDataApp:
 
     def _update_conetoe_inverters(self, site, var, poa):
         invdict = self.MAP_SITES[site]['INV_DICT']
-        suppress_alerts = self.site_widgets[var]['suppress_var'].get() == 1
+        suppress_alerts = self.site_widgets[var]['site_suppress_var'].get() == 1
         
         # Inverter groupings: Inverter 1 (1-4), Inverter 2 (5-8), Inverter 3 (9-12), Inverter 4 (13-16)
         groups = {
@@ -1835,13 +1845,68 @@ class AEDataApp:
         self.site_widgets[var]['invs_total'].config(text=f"{inv_count}", bg=color, fg=text_color)
 
     def save_checkbox_states(self):
-        with open(BUTTON_STATE_FILE, 'w') as f: json.dump([v.get() for v in self.all_cbs], f)
+        state = {
+            "GLOBAL": {
+                "text_only_var": self.text_only_var.get()
+            }
+        }
+        for name, config in self.MAP_SITES.items():
+            var_name = config['VAR_NAME']
+            if var_name not in self.site_widgets:
+                continue
+                
+            widgets = self.site_widgets[var_name]
+            site_state = {
+                "site_suppress": widgets['site_suppress_var'].get() if 'site_suppress_var' in widgets else 0,
+                "meter_suppress": widgets['meter_suppress_var'].get() if 'meter_suppress_var' in widgets else 0,
+                "poa_suppress": widgets['poa_var'].get() if 'poa_var' in widgets else 0,
+                "inverters": {}
+            }
+            
+            for inv_val, inv_widgets in widgets.get('inverters', {}).items():
+                inv_state = {}
+                if 'cb_val' in inv_widgets:
+                    inv_state['cb_val'] = inv_widgets['cb_val'].get()
+                if 'up_cb_val' in inv_widgets:
+                    inv_state['up_cb_val'] = inv_widgets['up_cb_val'].get()
+                site_state["inverters"][inv_val] = inv_state
+                
+            state[var_name] = site_state
+            
+        with open(BUTTON_STATE_FILE, 'w') as f:
+            json.dump(state, f, indent=4)
 
     def load_checkbox_states(self):
         if os.path.exists(BUTTON_STATE_FILE):
             with open(BUTTON_STATE_FILE, 'r') as f:
-                state = json.load(f)
-                for var, val in zip(self.all_cbs, state): var.set(val)
+                try:
+                    state = json.load(f)
+                        
+                    if "GLOBAL" in state:
+                        self.text_only_var.set(state["GLOBAL"].get("text_only_var", 0))
+                        
+                    for name, config in self.MAP_SITES.items():
+                        var_name = config['VAR_NAME']
+                        if var_name in state and var_name in self.site_widgets:
+                            site_state = state[var_name]
+                            widgets = self.site_widgets[var_name]
+                            
+                            if 'site_suppress_var' in widgets:
+                                widgets['site_suppress_var'].set(site_state.get('site_suppress', 0))
+                            if 'meter_suppress_var' in widgets:
+                                widgets['meter_suppress_var'].set(site_state.get('meter_suppress', 0))
+                            if 'poa_var' in widgets:
+                                widgets['poa_var'].set(site_state.get('poa_suppress', 0))
+                                
+                            for inv_val, inv_state in site_state.get('inverters', {}).items():
+                                if inv_val in widgets.get('inverters', {}):
+                                    inv_widgets = widgets['inverters'][inv_val]
+                                    if 'cb_val' in inv_widgets:
+                                        inv_widgets['cb_val'].set(inv_state.get('cb_val', 0))
+                                    if 'up_cb_val' in inv_widgets:
+                                        inv_widgets['up_cb_val'].set(inv_state.get('up_cb_val', 0))
+                except Exception as e:
+                    print(f"Error loading checkbox states: {e}")
 
     def _handle_notifications(self):
         """Prepares an email and dispatches it onto another lightweight thread to prevent freezing."""

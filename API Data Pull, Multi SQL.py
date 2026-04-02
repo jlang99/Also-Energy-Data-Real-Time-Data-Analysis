@@ -72,6 +72,7 @@ def token_management():
 
 # Make the POST request to obtain an access token
 def get_access_token():
+    global access_token
     headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
     }
@@ -81,10 +82,10 @@ def get_access_token():
         'password': password,
     }
     access_token_url = base_url + token_endpoint
-    globals()['initial_response'] = requests.post(access_token_url, headers=headers, data=data, verify=False) #I know that I shouldn't set verify to false for security reasons. But the Code worked flawlessly for over a year being set to True by Default and this was the only thing out of 10 things I tried that worked. 🤷‍♂️ Adivce is welcomed to joseph.lang@narenco.com. If you message me, please include 'Found on GitHub, looking to help', so that I know it's not spam.
+    initial_response = requests.post(access_token_url, headers=headers, data=data, verify=False) #I know that I shouldn't set verify to false for security reasons. But the Code worked flawlessly for over a year being set to True by Default and this was the only thing out of 10 things I tried that worked. 🤷‍♂️ Adivce is welcomed to joseph.lang@narenco.com. If you message me, please include 'Found on GitHub, looking to help', so that I know it's not spam.
     print("Starting response", initial_response.status_code)
     if initial_response.status_code == 200:
-        globals()['access_token'] = initial_response.json().get('access_token')
+        access_token = initial_response.json().get('access_token')
     else:
         new_value = counting_fails(auth_file)
         print(f"Failed Attempts: {new_value}")
@@ -131,7 +132,11 @@ def get_data_for_site(site, site_data, api_data, AE_HARDWARE_MAP, start, base_ur
                 volts_c_register_names = {'Volts C-N', 'Volts C', 'AC Voltage C', 'Voltage CN', 'AC Voltage C (Line-Neutral)', 'Voltage, C-N', 'AC Phase C Voltage', 'AC Voltage CN'}
                 meterkw_register_names = {'Active Power', 'Real power', 'Real Power', 'Total power'}    #Real Power is probably not used but lowercase power is.            
                 
-                weather_station_register_names = {'POA Irradiance', 'Plane of Array Irradiance',  'GHI Irradiance', 'Sun (GHI)', 'Sun (POA Temp comp)', 'GHI', 'POA', 'POA irradiance', 'Sun (POA)'}
+                poa_register_names = {'POA Irradiance', 'Plane of Array Irradiance', 'Sun (POA Temp comp)', 'POA', 'POA irradiance', 'Sun (POA)'}
+                ghi_register_names = {'GHI Irradiance', 'Sun (GHI)', 'GHI', 'Irradiance', 'Sun (GHI Temp comp)', 'Global Horizontal Irradiance', 'Sun (POA Temp comp)'}
+
+                is_ghi_device = 'ghi' in hdname.lower() and 'poa' not in hdname.lower()
+                is_poa_device = 'poa' in hdname.lower() and 'ghi' not in hdname.lower()
 
                 # Iterate over register groups for the current hardware
                 for register_group in hardware_data_response.get('registerGroups', []):
@@ -139,8 +144,16 @@ def get_data_for_site(site, site_data, api_data, AE_HARDWARE_MAP, start, base_ur
                         # Check if the register name is in the list of register names for the category
                         if register['name'] in breaker_register_names:
                             register_values['Status'] = register['value']
-                        elif register['name'] in weather_station_register_names:
-                            register_values['POA'] = register['value']
+                        elif register['name'] in poa_register_names or register['name'] in ghi_register_names:
+                            if is_ghi_device:
+                                register_values['GHI'] = register['value']
+                            elif is_poa_device:
+                                register_values['POA'] = register['value']
+                            else:
+                                if register['name'] in poa_register_names:
+                                    register_values['POA'] = register['value']
+                                elif register['name'] in ghi_register_names:
+                                    register_values['GHI'] = register['value']
                         elif register['name'] in inverterKW_register_names:
                             register_values['KW'] = register['value']
                         elif register['name'] in inverterDC_register_names:
@@ -265,19 +278,32 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
 
                 inserts = {}
 
+                def parse_float(value_str):
+                    if value_str is None or str(value_str).strip() == '': return None
+                    match = re.search(r'(-?\d+\.?\d*)', str(value_str))
+                    return float(match.group(1)) if match else None
+
                 for site, site_data in AE_HARDWARE_MAP.items():
                     for device_category, devices in site_data.items():
                         inv_num = 1
                         for hardwareid, device_name in devices.items():
                             if hardwareid in api_data_dict:
                                 data = api_data_dict[hardwareid]
+                                
+                                if len(data) <= 2:
+                                    if device_category == "inverters":
+                                        inv_num += 1
+                                    continue
+
                                 if device_category == "breakers":
+                                    if 'Status' not in data:
+                                        continue
                                     violet_Exception = " 2" if hardwareid == "390118" else " 1" if hardwareid == "390117" else ""
                                     table_name = f"[{site} Breaker Data{violet_Exception}]"
                                     sql = f"INSERT INTO {table_name} (Timestamp, [Last Upload], Status, HardwareId) VALUES (?, ?, ?, ?)"
                                     if table_name not in inserts: inserts[table_name] = {'sql': sql, 'params': []}
                                     
-                                    relay_stat = data.get('Status', '')
+                                    relay_stat = data.get('Status')
                                     openClose = True if str(relay_stat).lower().strip() in ['1', '240', 'closed'] else False
                                     params = (data['pytimestamp'], data['aetimestamp'], openClose, hardwareid)
                                     inserts[table_name]['params'].append(params)
@@ -287,15 +313,11 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
                                     sql = f"INSERT INTO {table_name} (Timestamp, [Last Upload], [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], Watts, HardwareId) VALUES (?,?,?,?,?,?,?,?,?,?)"
                                     if table_name not in inserts: inserts[table_name] = {'sql': sql, 'params': []}
 
-                                    def parse_float(value_str):
-                                        if not value_str: return 0.0
-                                        match = re.search(r'(\d+\.?\d*)', str(value_str))
-                                        return float(match.group(1)) if match else 0.0
-
-                                    meterkw_str = data.get('KW', '0')
+                                    meterkw_str = data.get('KW')
                                     meterkw = parse_float(meterkw_str)
-                                    if "kw" in str(meterkw_str).lower(): meterkw *= 1000
-                                    elif "mw" in str(meterkw_str).lower(): meterkw *= 1000000
+                                    if meterkw is not None:
+                                        if "kw" in str(meterkw_str).lower(): meterkw *= 1000
+                                        elif "mw" in str(meterkw_str).lower(): meterkw *= 1000000
 
                                     params = (data['pytimestamp'],
                                               data['aetimestamp'],
@@ -306,14 +328,37 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
                                     inserts[table_name]['params'].append(params)
 
                                 elif device_category == "weather_stations":
-                                    table_name = f"[{site} POA Data]"
-                                    sql = f"INSERT INTO {table_name} (Timestamp, [Last Upload], [W/M²], HardwareId) VALUES (?, ?, ?, ?)"
-                                    if table_name not in inserts: inserts[table_name] = {'sql': sql, 'params': []}
-                                    
-                                    poa_str = data.get('POA', '0')
-                                    poa = float(re.search(r'\d+', str(poa_str)).group()) if re.search(r'\d+', str(poa_str)) else 0
-                                    params = (data['pytimestamp'], data['aetimestamp'], poa, hardwareid)
-                                    inserts[table_name]['params'].append(params)
+                                    name_lower = str(device_name).lower()
+                                    is_ghi_only = 'ghi' in name_lower and 'poa' not in name_lower
+                                    is_poa_only = 'poa' in name_lower and 'ghi' not in name_lower
+
+                                    if is_poa_only:
+                                        should_insert_poa = True
+                                        should_insert_ghi = False
+                                    elif is_ghi_only:
+                                        should_insert_poa = False
+                                        should_insert_ghi = True
+                                    else:
+                                        should_insert_poa = 'POA' in data
+                                        should_insert_ghi = 'GHI' in data
+
+                                    if should_insert_poa and 'POA' in data:
+                                        table_name = f"[{site} POA Data]"
+                                        sql = f"INSERT INTO {table_name} (Timestamp, [Last Upload], [W/M²], HardwareId) VALUES (?, ?, ?, ?)"
+                                        if table_name not in inserts: inserts[table_name] = {'sql': sql, 'params': []}
+                                        
+                                        poa = parse_float(data.get('POA'))
+                                        params = (data['pytimestamp'], data['aetimestamp'], poa, hardwareid)
+                                        inserts[table_name]['params'].append(params)
+
+                                    if should_insert_ghi and 'GHI' in data:
+                                        table_name = f"[{site} GHI Data]"
+                                        sql = f"INSERT INTO {table_name} (Timestamp, [Last Upload], [W/M²], HardwareId) VALUES (?, ?, ?, ?)"
+                                        if table_name not in inserts: inserts[table_name] = {'sql': sql, 'params': []}
+                                        
+                                        ghi = parse_float(data.get('GHI'))
+                                        params = (data['pytimestamp'], data['aetimestamp'], ghi, hardwareid)
+                                        inserts[table_name]['params'].append(params)
 
                                 elif device_category == "inverters":
                                     duplin_exception = ""
@@ -322,22 +367,23 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
                                     elif hardwareid in ["94053", "94055", "94054"]:
                                         duplin_exception = " Central"
 
-                                    table_name = f"[{site}{duplin_exception} INV {inv_num-3 if duplin_exception == " String" else inv_num} Data]"
+                                    table_name = f"[{site}{duplin_exception} INV {inv_num-3 if duplin_exception == ' String' else inv_num} Data]"
                                     sql = f"INSERT INTO {table_name} (Timestamp, [Last Upload], Watts, [dc V], HardwareID) VALUES (?, ?, ?, ?, ?)"
                                     if table_name not in inserts: inserts[table_name] = {'sql': sql, 'params': []}
 
-                                    invkw_str = data.get('KW', '0')
-                                    invkW = 0
-                                    if not str(invkw_str).startswith('-'):
-                                        invkW = float(re.search(r'\d+', str(invkw_str)).group()) if re.search(r'\d+', str(invkw_str)) else 0
+                                    invkw_str = data.get('KW')
+                                    invkW = parse_float(invkw_str)
+                                    if invkW is not None:
                                         if "kw" in str(invkw_str).lower(): invkW *= 1000
                                         elif "mw" in str(invkw_str).lower(): invkW *= 1000000
                                     
-                                    invDCV_str = data.get('DC V', '0')
-                                    invDCV = float(re.search(r'\d+', str(invDCV_str)).group()) if re.search(r'\d+', str(invDCV_str)) else 0
+                                    invDCV = parse_float(data.get('DC V'))
 
                                     params = (data['pytimestamp'], data['aetimestamp'], invkW, invDCV, hardwareid)
                                     inserts[table_name]['params'].append(params)
+                                    inv_num += 1
+                            else:
+                                if device_category == "inverters":
                                     inv_num += 1
 
                 for table_name, insert_data in inserts.items():
