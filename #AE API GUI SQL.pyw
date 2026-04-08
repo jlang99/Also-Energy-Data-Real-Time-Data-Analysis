@@ -23,7 +23,7 @@ import pandas as pd
 # External Imports (Assumed environment setup)
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
-from PythonTools import CREDS, EMAILS, restart_pc, get_hostname, ToolTip
+from PythonTools import CREDS, EMAILS, MAP_SITES_HARDWARE_GUI, restart_pc, get_hostname, ToolTip
 
 myappid = 'AE.API.Data.GUI'
 ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
@@ -46,350 +46,6 @@ def define_inv_num(site, group, num):
     elif site in {'Bishopville II'}: return num + ((9 * group) - 9)
     elif site in {'Wellons'}: return num + ((2 * group) - 2)
     return num
-
-MAP_SITES_HARDWARE_GUI = {
-    'Bishopville II': {
-        'INV_DICT': {i: f"{(i-1)//9 + 1}.{(i-1)%9 + 1}" for i in range(1, 37)},
-        'METER_MAX': 9900000,
-        'VAR_NAME': 'bishopvilleII',
-        'PVSYST': None,
-        'BREAKER': True,
-        'CUST_ID': 'hst',
-    },
-    'Bluebird': {
-        'INV_DICT': {i: f'A{i}' if i <= 12 else f'B{i}' for i in range(1, 25)},
-        'METER_MAX': 3000000,
-        'VAR_NAME': 'bluebird',
-        'PVSYST': 'BLUEBIRD',
-        'BREAKER': False,
-        'CUST_ID': 'nar',
-    },
-    'Bulloch 1A': {
-        'INV_DICT': {i: str(i) for i in range(1, 25)},
-        'METER_MAX': 3000000,
-        'VAR_NAME': 'bulloch1a',
-        'PVSYST': 'BULLOCH1A',
-        'BREAKER': False,
-        'CUST_ID': 'solrvr',
-    },
-    'Bulloch 1B': {
-        'INV_DICT': {i: str(i) for i in range(1, 25)},
-        'METER_MAX': 3000000,
-        'VAR_NAME': 'bulloch1b',
-        'PVSYST': 'BULLOCH1B',
-        'BREAKER': False,
-        'CUST_ID': 'solrvr',
-    },
-    'Cardinal': {
-        'INV_DICT': {i: str(i) for i in range(1, 60)},
-        'METER_MAX': 7080000,
-        'VAR_NAME': 'cardinal',
-        'PVSYST': 'CARDINAL',
-        'BREAKER': True,
-        'CUST_ID': 'nar',
-    },
-    'CDIA': {
-        'INV_DICT': {1: '1'},
-        'METER_MAX': 250000,
-        'VAR_NAME': 'cdia',
-        'PVSYST': None,
-        'BREAKER': False,
-        'CUST_ID': 'nar',
-    },
-    'Cherry Blossom': {
-        'INV_DICT': {1: '1', 2: '2', 3: '3', 4: '4'},
-        'METER_MAX': 10000000,
-        'VAR_NAME': 'cherryblossom',
-        'PVSYST': 'CHERRY BLOSSOM',
-        'BREAKER': True,
-        'CUST_ID': 'nar',
-    },
-    'Cougar': {
-        'INV_DICT': {
-            1: '1-1', 2: '1-2', 3: '1-3', 4: '1-4', 5: '1-5', 6: '2-1', 7: '2-2', 8: '2-3', 9: '2-4', 10: '2-5', 11: '2-6',
-            12: '3-1', 13: '3-2', 14: '3-3', 15: '3-4', 16: '3-5', 17: '4-1', 18: '4-2', 19: '4-3', 20: '4-4', 21: '4-5',
-            22: '5-1', 23: '5-2', 24: '5-3', 25: '5-4', 26: '5-5', 27: '6-1', 28: '6-2', 29: '6-3', 30: '6-4', 31: '6-5'
-        },
-        'METER_MAX': 2670000,
-        'VAR_NAME': 'cougar',
-        'PVSYST': 'COUGAR',
-        'BREAKER': False,
-        'CUST_ID': 'nar',
-    },
-    'Conetoe': {
-        'INV_DICT': {i: f"{(i-1)//4 + 1}.{(i-1)%4 + 1}" for i in range(1, 17)},
-        'METER_MAX': 5000000,
-        'VAR_NAME': 'conetoe1',
-        'PVSYST': None,
-        'BREAKER': False,
-        'CUST_ID': 'soltage',
-    },
-    'Duplin': {
-        'INV_DICT': {i: f'C-{i}' if i <= 3 else f'S-{i-3}' for i in range(1, 22)},
-        'METER_MAX': 5040000,
-        'VAR_NAME': 'duplin',
-        'PVSYST': None,
-        'BREAKER': False,
-        'CUST_ID': 'soltage',
-    },
-    'Elk': {
-        'INV_DICT': {i: f"1-{i}" if i <= 15 else (f"2-{i-15}" if i <= 29 else f"3-{i-29}") for i in range(1, 44)},
-        'METER_MAX': 5380000,
-        'VAR_NAME': 'elk',
-        'PVSYST': 'ELK',
-        'BREAKER': True,
-        'CUST_ID': 'solrvr',
-    },
-    'Freightliner': {
-        'INV_DICT': {i: str(i) for i in range(1, 19)},
-        'METER_MAX': 2250000,
-        'VAR_NAME': 'freightliner',
-        'PVSYST': 'FREIGHTLINE',
-        'BREAKER': False,
-        'CUST_ID': 'ncemc',
-    },
-    'Gray Fox': {
-        'INV_DICT': {i: f"{(i-1)//20 + 1}.{(i-1)%20 + 1}" for i in range(1, 41)},
-        'METER_MAX': 5000000,
-        'VAR_NAME': 'grayfox',
-        'PVSYST': 'GRAYFOX',
-        'BREAKER': True,
-        'CUST_ID': 'solrvr',
-    },
-    'Harding': {
-        'INV_DICT': {i: str(i) for i in range(1, 25)},
-        'METER_MAX': 3000000,
-        'VAR_NAME': 'harding',
-        'PVSYST': 'HARDING',
-        'BREAKER': True,
-        'CUST_ID': 'solrvr',
-    },
-    'Harrison': {
-        'INV_DICT': {i: str(i) for i in range(1, 44)},
-        'METER_MAX': 5380000,
-        'VAR_NAME': 'harrison', 
-        'PVSYST': 'HARRISON',
-        'BREAKER': True,
-        'CUST_ID': 'nar',
-    },
-    'Hayes': {
-        'INV_DICT': {i: str(i) for i in range(1, 27)},
-        'METER_MAX': 3240000,
-        'VAR_NAME': 'hayes',
-        'PVSYST': 'HAYES',
-        'BREAKER': True,
-        'CUST_ID': 'nar',
-    },
-    'Hickory': {
-        'INV_DICT': {1: '1', 2: '2'}, 
-        'METER_MAX': 5000000,
-        'VAR_NAME': 'hickory',
-        'PVSYST': 'HICKORY',
-        'BREAKER': True,
-        'CUST_ID': 'nar',
-    },
-    'Hickson': {
-        'INV_DICT': {i: f"1-{i}" for i in range(1, 17)},
-        'METER_MAX': 2000000,
-        'VAR_NAME': 'hickson', 
-        'PVSYST': None,
-        'BREAKER': True,
-        'CUST_ID': 'hst',
-    },
-    'Holly Swamp': {
-        'INV_DICT': {i: str(i) for i in range(1, 17)},
-        'METER_MAX': 2000000,
-        'VAR_NAME': 'hollyswamp',
-        'PVSYST': 'HOLLYSWAMP',
-        'BREAKER': False,
-        'CUST_ID': 'ncemc',
-    },
-    'Jefferson': {
-        'INV_DICT': {i: f"{(i - 1) // 16 + 1}.{(i - 1) % 16 + 1}" for i in range(1, 65)},
-        'METER_MAX': 8000000,
-        'VAR_NAME': 'jefferson',
-        'PVSYST': None,
-        'BREAKER': False,
-        'CUST_ID': 'hst',
-    },
-    'Longleaf Pine': {
-        'INV_DICT': {i: f"A{i}" if i < 21 else f"B{i - 20}" for i in range(1, 41)},
-        'METER_MAX': 5000000,
-        'VAR_NAME': 'longleafpine',
-        'PVSYST': None,
-        'BREAKER': True,
-        'CUST_ID': 'solrvr',
-    },
-    'Marshall': {
-        'INV_DICT': {i: f"1.{i}" for i in range(1, 17)},
-        'METER_MAX': 2000000,
-        'VAR_NAME': 'marshall',
-        'PVSYST': None,
-        'BREAKER': True,
-        'CUST_ID': 'hst',
-    },
-    'McLean': {
-        'INV_DICT': {i: str(i) for i in range(1, 41)},
-        'METER_MAX': 5000000,
-        'VAR_NAME': 'mclean',
-        'PVSYST': 'MCLEAN',
-        'BREAKER': True,
-        'CUST_ID': 'solrvr',
-    },
-    'Ogburn': {
-        'INV_DICT': {i: f"1-{i}" for i in range(1, 17)},
-        'METER_MAX': 2000000,
-        'VAR_NAME': 'ogburn',
-        'PVSYST': None,
-        'BREAKER': True,
-        'CUST_ID': 'hst',
-    },
-    'PG': {
-        'INV_DICT': {i: str(i) for i in range(1, 19)},
-        'METER_MAX': 2210000,
-        'VAR_NAME': 'pg',
-        'PVSYST': 'PG',
-        'BREAKER': False,
-        'CUST_ID': 'ncemc',
-    },
-    'Richmond': {
-        'INV_DICT': {i: str(i) for i in range(1, 25)},
-        'METER_MAX': 3000000,
-        'VAR_NAME': 'richmond',
-        'PVSYST': 'RICHMOND',
-        'BREAKER': False,
-        'CUST_ID': 'solrvr',
-    },
-    'Shorthorn': {
-        'INV_DICT': {i: str(i) for i in range(1, 73)},
-        'METER_MAX': 9000000,
-        'VAR_NAME': 'shorthorn',
-        'PVSYST': 'SHORTHORN',
-        'BREAKER': True,
-        'CUST_ID': 'solrvr',
-    },
-    'Sunflower': {
-        'INV_DICT': {i: str(i) for i in range(1, 81)},
-        'METER_MAX': 10000000,
-        'VAR_NAME': 'sunflower',
-        'PVSYST': 'SUNFLOWER',
-        'BREAKER': True,
-        'CUST_ID': 'solrvr',
-    },
-    'Tedder': {
-        'INV_DICT': {i: str(i) for i in range(1, 17)},
-        'METER_MAX': 2000000,
-        'VAR_NAME': 'tedder',
-        'PVSYST': None,
-        'BREAKER': True,
-        'CUST_ID': 'hst',
-    },
-    'Thunderhead': {
-        'INV_DICT': {i: str(i) for i in range(1, 17)},
-        'METER_MAX': 2000000,
-        'VAR_NAME': 'thunderhead',
-        'PVSYST': None,
-        'BREAKER': True,
-        'CUST_ID': 'hst',
-    },
-    'Upson': {
-        'INV_DICT': {i: str(i) for i in range(1, 25)},
-        'METER_MAX': 3000000,
-        'VAR_NAME': 'upson',
-        'PVSYST': None,
-        'BREAKER': False,
-        'CUST_ID': 'solrvr2',
-    },
-    'Van Buren': {
-        'INV_DICT': {i: str(i) for i in range(1, 18)},
-        'METER_MAX': 2000000,
-        'VAR_NAME': 'vanburen',
-        'PVSYST': 'VAN BUREN',
-        'BREAKER': False,
-        'CUST_ID': 'hst',
-    },
-    'Warbler': {
-        'INV_DICT': {i: f"{'A' if i <= 16 else 'B'}{i}" for i in range(1, 33)},
-        'METER_MAX': 4000000,
-        'VAR_NAME': 'warbler',
-        'PVSYST': 'WARBLER',
-        'BREAKER': True,
-        'CUST_ID': 'solrvr2',
-    },
-    'Washington': {
-        'INV_DICT': {i: str(i) for i in range(1, 41)},
-        'METER_MAX': 5000000,
-        'VAR_NAME': 'washington',
-        'PVSYST': None,
-        'BREAKER': True,
-        'CUST_ID': 'solrvr2',
-    },
-    'Wayne 1': {
-        'INV_DICT': {1: '1', 2: '2', 3: '3', 4: '4'},
-        'METER_MAX': 5000000,
-        'VAR_NAME': 'wayne1',
-        'PVSYST': None,
-        'BREAKER': False,
-        'CUST_ID': 'soltage',
-    },
-    'Wayne 2': {
-        'INV_DICT': {1: '1', 2: '2', 3: '3', 4: '4'},
-        'METER_MAX': 5000000,
-        'VAR_NAME': 'wayne2',
-        'PVSYST': None,
-        'BREAKER': False,
-        'CUST_ID': 'soltage',
-    },
-    'Wayne 3': {
-        'INV_DICT': {1: '1', 2: '2', 3: '3', 4: '4'},
-        'METER_MAX': 5000000,
-        'VAR_NAME': 'wayne3',
-        'PVSYST': None,
-        'BREAKER': False,
-        'CUST_ID': 'soltage',
-    },
-    'Wellons': {
-        'INV_DICT': {1: '1-1', 2: '1-2', 3: '2-1', 4: '2-2', 5: '3-1', 6: '3-2'},
-        'METER_MAX': 5000000,
-        'VAR_NAME': 'wellons',
-        'PVSYST': 'WELLONS',
-        'BREAKER': False,
-        'CUST_ID': 'nar',
-    },
-    'Whitehall': {
-        'INV_DICT': {i: str(i) for i in range(1, 17)},
-        'METER_MAX': 2000000,
-        'VAR_NAME': 'whitehall',
-        'PVSYST': 'WHITEHALL',
-        'BREAKER': True,
-        'CUST_ID': 'solrvr2',
-    },
-    'Whitetail': {
-        'INV_DICT': {i: str(i) for i in range(1, 81)},
-        'METER_MAX': 10000000,
-        'VAR_NAME': 'whitetail',
-        'PVSYST': None,
-        'BREAKER': True,
-        'CUST_ID': 'solrvr2',
-    },
-    'Williams': {
-        'INV_DICT': {i: f"{'A' if i <= 20 else 'B'}{i-20 if i > 20 else i}" for i in range(1, 41)},
-        'METER_MAX': 5000000,
-        'VAR_NAME': 'williams',
-        'PVSYST': None,
-        'BREAKER': True,
-        'CUST_ID': 'solrvr2',
-    },
-    'Violet': {
-        'INV_DICT': {1: '1', 2: '2'},
-        'METER_MAX': 5000000,
-        'VAR_NAME': 'violet',
-        'PVSYST': 'VIOLET',
-        'BREAKER': True,
-        'CUST_ID': 'nar',
-    }
-}
-
 
 def fast_mean(iterable):
     valid = [x for x in iterable if x is not None]
@@ -873,39 +529,34 @@ class AEDataApp:
                         f"DATABASE=NARENCO_O&M_AE;UID={CREDS['DB_UID']};PWD={CREDS['DB_PWD']};Encrypt=no;")
         db = pyodbc.connect(conn_str)
         return db.cursor(), db
-
-    def _get_last_closed_bg(self, cursor, site):
+    
+    def _get_last_closed_bg(self, cursor, site, breaker_num=None, trigger='breaker'):
         try:
-            # 1. Universal Meter Check: Last time all phases had current
-            meter_q = f"SELECT TOP 1 [Timestamp] FROM [{site} Meter Data] WHERE [Amps A] <> 0 AND [Amps B] <> 0 AND [Amps C] <> 0 ORDER BY [Timestamp] DESC"
-            self.db_cursor.execute(meter_q)
-            meter_data = self.db_cursor.fetchone()
-            meter_ts = meter_data[0] if meter_data else None
-
-            if site == "Violet":
-                self.db_cursor.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Breaker Data 1] WHERE [Status] = 1 ORDER BY [Timestamp] DESC")
-                d1 = self.db_cursor.fetchone()
-                self.db_cursor.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Breaker Data 2] WHERE [Status] = 1 ORDER BY [Timestamp] DESC")
-                d2 = self.db_cursor.fetchone()
-                
-                t1 = min(d1[0], meter_ts) if d1 and meter_ts else (d1[0] if d1 else meter_ts)
-                t2 = min(d2[0], meter_ts) if d2 and meter_ts else (d2[0] if d2 else meter_ts)
-                return f"Brk1: {t1} | Brk2: {t2}" if t1 or t2 else "Unknown"
-            else:
-                try:
-                    self.db_cursor.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Breaker Data] WHERE [Status] = 1 ORDER BY [Timestamp] DESC")
-                    brk_data = self.db_cursor.fetchone()
+            last_online = None
+            if trigger == 'meter':
+                # Query for last time meter had production (non-zero amps)
+                meter_q = f"SELECT TOP 1 [Timestamp] FROM [{site} Meter Data] WHERE [Amps A] <> 0 AND [Amps B] <> 0 AND [Amps C] <> 0 ORDER BY [Timestamp] DESC"
+                cursor.execute(meter_q)
+                meter_data = cursor.fetchone()
+                last_online = meter_data[0] if meter_data else None
+            else:  # Default to 'breaker' trigger
+                brk_ts = None
+                if site == "Violet" and breaker_num:
+                    cursor.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Breaker Data {breaker_num}] WHERE [Status] = 1 ORDER BY [Timestamp] DESC")
+                    brk_data = cursor.fetchone()
                     brk_ts = brk_data[0] if brk_data else None
-                except Exception:
-                    brk_ts = None
-                
-                if brk_ts and meter_ts:
-                    return f"{min(brk_ts, meter_ts)}"
-                elif brk_ts or meter_ts:
-                    return f"{brk_ts or meter_ts}"
                 else:
-                    return "Unknown"
-        except Exception:
+                    try:
+                        cursor.execute(f"SELECT TOP 1 [Timestamp] FROM [{site} Breaker Data] WHERE [Status] = 1 ORDER BY [Timestamp] DESC")
+                        brk_data = cursor.fetchone()
+                        brk_ts = brk_data[0] if brk_data else None
+                    except pyodbc.ProgrammingError:
+                        pass # Table doesn't exist, which is fine.
+                last_online = brk_ts
+
+            return f"{last_online}" if last_online else "Unknown"
+        except Exception as e:
+            print(f"Error in _get_last_closed_bg for {site} (trigger: {trigger}): {e}")
             return "Unknown"
 
     def _get_last_non_null_timestamp_bg(self, cursor, table_name):
@@ -928,13 +579,14 @@ class AEDataApp:
         except Exception:
             return "Unknown"
 
-    def _get_last_online_bg(self, cursor, site, inv_num, duplin_except):
+    def _get_last_online_bg(self, cursor, site, inv_n, duplin_except):
         try:
-            q = f"SELECT TOP 1 [Timestamp] FROM (SELECT [Timestamp], [Watts], LEAD([Watts], 1) OVER(ORDER BY [Timestamp] DESC) as Watts_1, LEAD([Watts], 2) OVER(ORDER BY [Timestamp] DESC) as Watts_2 FROM [{site}{duplin_except} INV {inv_num} Data]) sub WHERE [Watts] > 2 AND Watts_1 > 2 AND Watts_2 > 2 ORDER BY [Timestamp] DESC"
+            q = f"SELECT TOP 1 [Timestamp] FROM (SELECT [Timestamp], [Watts], LEAD([Watts], 1) OVER(ORDER BY [Timestamp] DESC) as Watts_1, LEAD([Watts], 2) OVER(ORDER BY [Timestamp] DESC) as Watts_2 FROM [{site}{duplin_except} INV {inv_n} Data]) sub WHERE [Watts] > 2 AND Watts_1 > 2 AND Watts_2 > 2 ORDER BY [Timestamp] DESC"
             cursor.execute(q)
             data = cursor.fetchone()
             return f"{data[0]}" if data else "Unknown"
-        except Exception:
+        except Exception as e:
+            print(f"Error fetching last online for {site} INV {inv_n}: {e}")
             return "Unknown"
 
     def _fetch_raw_data_bg(self, cursor):
@@ -1058,7 +710,8 @@ class AEDataApp:
                 poa_btn_val = poa_states.get(name, 0)
 
                 # POA
-                poa_val = raw_poa.get(f"{name} POA Data")[0] if raw_poa.get(f"{name} POA Data") else 0
+                poa_data = raw_poa.get(f"{name} POA Data")
+                poa_val = poa_data[0] if poa_data and poa_data[0] is not None else 0
                 if poa_btn_val == 1: poa_val = 9999
 
                 # Meter Avg
@@ -1073,21 +726,40 @@ class AEDataApp:
                 # Evaluate Database requirements for device offline times
                 # Breakers
                 if config['BREAKER']:
+                    # Check for meter-indicated open state, mirroring _update_breakers logic
+                    meter_data_for_breaker = raw_meter.get(f"{name} Meter Data", [])
+                    meter_indicates_open = False
+                    if meter_data_for_breaker:
+                        # Check if at least 2 of the last 8 readings have a zero amp phase
+                        zero_amp_rows = sum(1 for row in meter_data_for_breaker[:8] if row and len(row) > 5 and any(row[i] == 0 for i in (3, 4, 5)))
+                        if zero_amp_rows >= 2:
+                            meter_indicates_open = True
+
                     if name == 'Violet':
                         for i in (1, 2):
-                            data = raw_breaker.get(f"{name} Breaker Data {i}", [])
-                            is_closed = any(row[0] for row in data) if data else False
+                            breaker_data = raw_breaker.get(f"{name} Breaker Data {i}", [])
+                            physically_closed = any(row[0] for row in breaker_data) if breaker_data else False
+                            
+                            is_open_by_breaker = not physically_closed
+                            is_open_by_meter = physically_closed and meter_indicates_open
+                            
                             cache_key = f"{name}_{i}"
-                            if not is_closed and cache_key not in self.last_closed_cache:
-                                fetched_offline['breakers'][cache_key] = self._get_last_closed_bg(cursor, name)
+                            if (is_open_by_breaker or is_open_by_meter) and cache_key not in self.last_closed_cache:
+                                trigger = 'breaker' if is_open_by_breaker else 'meter'
+                                fetched_offline['breakers'][cache_key] = self._get_last_closed_bg(cursor, name, breaker_num=i, trigger=trigger)
                     else:
-                        data = raw_breaker.get(f"{name} Breaker Data", [])
-                        is_closed = any(row[0] for row in data) if data else False
-                        if not is_closed and name not in self.last_closed_cache:
-                            fetched_offline['breakers'][name] = self._get_last_closed_bg(cursor, name)
+                        breaker_data = raw_breaker.get(f"{name} Breaker Data", [])
+                        physically_closed = any(row[0] for row in breaker_data) if breaker_data else False
+                        
+                        is_open_by_breaker = not physically_closed
+                        is_open_by_meter = physically_closed and meter_indicates_open
+
+                        if (is_open_by_breaker or is_open_by_meter) and name not in self.last_closed_cache:
+                            trigger = 'breaker' if is_open_by_breaker else 'meter'
+                            fetched_offline['breakers'][name] = self._get_last_closed_bg(cursor, name, trigger=trigger)
 
                 # Meters
-                if avg_w < 2 and poa_val > 10 and name not in self.meter_last_online_cache:
+                if avg_w < 2 and (poa_val >= 100 or (poa_val == 9999 and datetime.now().hour >= 8)) and name not in self.meter_last_online_cache:
                     fetched_offline['meters'][name] = self._get_meter_last_online_bg(cursor, name)
 
                 # Inverters
@@ -1104,14 +776,11 @@ class AEDataApp:
                         fetched_offline['last_good_comms'][cache_key] = self._get_last_non_null_timestamp_bg(cursor, table_name)
 
                     last_comm_ts = data[0][2] if data and len(data[0]) > 2 else None
-                    is_completely_offline = all(row[1] is not None and row[1] < 1 for row in data) if data else False
-                    if is_completely_offline:
+                    is_offline_or_null = all(row[1] is None or row[1] < 1 for row in data) if data else True
+                    if is_offline_or_null:
                         cache_key = f"{name}_{inv_num}"
                         if cache_key not in self.last_online_cache:
-                            fetched_offline['invs'][cache_key] = self._get_last_online_bg(cursor, name, inv_num, duplin_except)
-                        if last_comm_ts:
-                            # Store this in a new cache or pass it through bg_data
-                            fetched_offline['invs'][f"{cache_key}_comm"] = last_comm_ts.strftime('%m/%d/%Y %H:%M:%S')
+                            fetched_offline['invs'][cache_key] = self._get_last_online_bg(cursor, name, inv_n, duplin_except)
             # Package all gathered data for main thread
             bg_data = {
                 'raw_inv': raw_inv, 'raw_meter': raw_meter, 'raw_poa': raw_poa, 'raw_ghi': raw_ghi, 'raw_breaker': raw_breaker,
@@ -1522,7 +1191,7 @@ class AEDataApp:
                 self.site_widgets[var]['v_tt'].text = f"Voltage levels operational\nLast Comm: {last_comm_str}"
 
             # Check Production / Power Loss
-            if (avg_w < 2 and poa > 10):
+            if (avg_w < 2 and (poa >= 100 or (poa == 9999 and datetime.now().hour >= 8))):
                 current_state = "POWER_LOSS"
                 if not suppress_alerts:
                     online = self.meter_last_online_cache.get(site, "Unknown")
@@ -1646,7 +1315,8 @@ class AEDataApp:
                 'avg_dcv': avg_dcv,
                 'cache_key': cache_key,
                 'inv_label': inv_label,
-                'is_manually_suppressed': is_manually_suppressed
+                'is_manually_suppressed': is_manually_suppressed,
+                'last_comm_ts': last_comm_ts
             }
 
         # --- PASS 2: Update UI ---
@@ -1687,10 +1357,10 @@ class AEDataApp:
 
             # Build tooltip and alert message
             online_last = self.last_online_cache.get(cache_key, "Unknown")
-            comm_last = self.raw_inv_data.get(f'{site}{duplin_except} INV {inv_n} Data', [[None,None,None]])[0][2].strftime('%m/%d/%Y %H:%M:%S') if self.raw_inv_data.get(f'{site}{duplin_except} INV {inv_n} Data', [[None,None,None]])[0][2] else "Unknown"
+            comm_last = status['last_comm_ts']
             
             msg = f"Inv {inv_label}\nLast Online: {online_last}\nLast Comm: {comm_last}"
-
+            
             if status['is_completely_offline'] or status['is_no_comms']:
                 inv_widget['cb'].config(bg=ui_color)
                 inv_widget['cb_tt'].text = msg 
@@ -1781,7 +1451,8 @@ class AEDataApp:
                 'avg_dcv': avg_dcv,
                 'cache_key': cache_key,
                 'inv_label': inv_label,
-                'is_manually_suppressed': is_manually_suppressed
+                'is_manually_suppressed': is_manually_suppressed,
+                'last_comm_ts': last_comm_ts
             }
 
         # --- PASS 2: Apply grouping logic for notifications and UI updates ---
@@ -1829,8 +1500,8 @@ class AEDataApp:
                             current_state, ui_color = "NO_COMMS", 'pink'
 
                 online_last = self.last_online_cache.get(cache_key, "Unknown")
-                comm_last = self.raw_inv_data.get(f'{site} INV {mod_id} Data', [[None,None,None]])[0][2].strftime('%m/%d/%Y %H:%M:%S') if self.raw_inv_data.get(f'{site} INV {mod_id} Data', [[None,None,None]])[0][2] else "Unknown"
-                
+                comm_last = status['last_comm_ts']
+
                 msg = f"Inv {inv_label}\nLast Online: {online_last}\nLast Comm: {comm_last}"
 
                 if status['is_completely_offline'] or status['is_no_comms']:

@@ -54,10 +54,10 @@ def notification_period():
     is_after_weekend_hours = now.hour >= 15 or now.hour < 7
 
     # For September, October, November, December, and January
-    if now.month in {9, 10, 11, 12, 1}:
+    if now.month in {11, 12, 1}:
         weekday_hours = now.hour >= 17 or now.hour < 7
     # For February, March, and April
-    elif now.month in {2, 3, 4}:
+    elif now.month in {2, 9, 10}:
         weekday_hours = now.hour >= 18 or now.hour < 7
     # For May, June, July, and August
     else:
@@ -154,16 +154,40 @@ def connect_db():
     dbconnection = pyodbc.connect(dbconn_str)
     c = dbconnection.cursor()
 
+def check_null_columns(data_rows, col_map):
+    """
+    Helper function to identify if specific data columns are entirely NULL
+    across the pulled data rows.
+    Returns a tuple: (boolean for total loss, list of column names that are NULL)
+    """
+    if not data_rows:
+        return False, []
+    
+    null_cols = []
+    for col_idx, col_name in col_map.items():
+        # Check if every single row has a None (NULL) in this column index
+        if all(row[col_idx] is None for row in data_rows):
+            null_cols.append(col_name)
+            
+    # Total loss if the number of completely NULL columns equals the number of mapped data columns
+    is_total_loss = len(null_cols) == len(col_map)
+    return is_total_loss, null_cols
+
 
 def update_breaker_status():    
     period_check = notification_period()
-    #ic(breaker_data)
     curtime = datetime.now()
     compare_time = curtime - timedelta(hours=4)   
     h_time = curtime.hour
+    
+    # Maps of column indexes to their human-readable names for data columns (Excludes ID/Timestamps)
+    meter_col_map = {0: 'Volts A', 1: 'Volts B', 2: 'Volts C', 3: 'Amps A', 4: 'Amps B', 5: 'Amps C', 7: 'Watts'}
+    breaker_col_map = {0: 'Status'}
+
     for site, site_data_dict in site_widgets.items():
         if site == 'Violet 2':
             continue
+        
         try: #Defining POA for meter KW notification
             poa = max(poa_data[f'{site} POA Data'])[0]
         except Exception:
@@ -171,191 +195,253 @@ def update_breaker_status():
                 poa = 9999
             else:
                 poa = -1
+                
         site_meter_data = meter_data.get(f'{site} Meter Data', [])
-        metercomms = max(row[6] for row in site_meter_data) if site_meter_data else None
-        if site == "Violet":
-            #Meter Check
-            data = np.array(meter_data[f'{site} Meter Data'])
-            if data.ndim < 2:
-                continue
-            lastUpload_col = data[:, 6]
-            amps_columns = data[:, 3:6]  # Extract Amps Columns
-            if all(tim > compare_time for tim in lastUpload_col):
-                if any(np.all(amps_columns[:, j] == 0) for j in range(amps_columns.shape[1])):
-                    
-                    phases_to_check = []
-                    if not site_widgets['Violet']['amp_a_var'].get():
-                        phases_to_check.append(0)
-                    if not site_widgets['Violet']['amp_b_var'].get():
-                        phases_to_check.append(1)
-                    if not site_widgets['Violet']['amp_c_var'].get():
-                        phases_to_check.append(2)
+        # Safely get max time, ignoring any None values
+        metercomms = max((row[6] for row in site_meter_data if row[6] is not None), default=None)
+        
+        # --- Perform NULL Checks for Meter ---
+        is_total_meter_null, null_meter_cols = check_null_columns(site_meter_data, meter_col_map)
 
-                    amp_data = [amps_columns[:,j] for j in range(amps_columns.shape[1])]
-                    if not site_data_dict['meter_var'].get():
-                        if metercomms > compare_time:
-                            if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
-                                status = "currently within parameters, but may have been lost briefly"
-                                device = "Meter Amps"
-                            else:
-                                status = "Lost"
-                                device = "Meter Amps"
-                        else:
-                            status = "Unknown, Lost Comms with Meter"
-                            device = "Meter"
-                        site_data_dict['meter_cb'].select()
-                        site_data_dict['meter_cb'].config(bg='Red')
-                        if period_check:
-                            email_notification(site, status, device, poa, amp_data)
-                elif np.mean([row[7] for row in data if row[7] is not None]) < 2:
-                    if not site_data_dict['meter_var'].get():
-                        if metercomms > compare_time:
-                            if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
-                                status = "currently within parameters, but may have been lost briefly"
-                                device = "Meter kW"
-                            else:
-                                status = "Lost"
-                                device = "Meter kW"
-                        else:
-                            status = "Unknown, Lost Comms with Meter"
-                            device = "Meter kW"
-                        site_data_dict['meter_cb'].select()
-                        site_data_dict['meter_cb'].config(bg='Red')
-                        if device == "Meter kW" and status == "currently within parameters, but may have been lost briefly":
-                            if poa > 100:
-                                if period_check:
-                                    email_notification(site, status, device, poa, None)
-                        else:
-                            if period_check:
-                                email_notification(site, status, device, poa, None)
-                else:
-                    site_data_dict['meter_cb'].deselect()
-                    site_data_dict['meter_cb'].config(bg='Green')
-            else:
+        if site == "Violet":
+            # --- Violet Meter Check ---
+            if is_total_meter_null or null_meter_cols:
                 site_data_dict['meter_cb'].select()
                 site_data_dict['meter_cb'].config(bg='Red')
                 if not site_data_dict['meter_var'].get():
-                    status = "Unknown, Comms consistently reporting last good data Upload as 4+ hrs ago."
-                    device = "Meter"
+                    status = "Total Data Loss (All data columns reporting NULL)" if is_total_meter_null else f"Partial Data Loss (Column(s) stopped reporting: {', '.join(null_meter_cols)})"
                     if period_check:
-                        email_notification(site, status, device, poa, None)
+                        email_notification(site, status, "Meter", poa, None)
+            else:
+                data = np.array(site_meter_data)
+                if data.ndim >= 2:
+                    lastUpload_col = data[:, 6]
+                    amps_columns = data[:, 3:6]  # Extract Amps Columns
+                    
+                    # Filter out Nones for time comparison
+                    valid_times = [tim for tim in lastUpload_col if tim is not None]
+                    
+                    if valid_times and all(tim > compare_time for tim in valid_times):
+                        if any(np.all(amps_columns[:, j] == 0) for j in range(amps_columns.shape[1])):
+                            phases_to_check = []
+                            if not site_widgets['Violet']['amp_a_var'].get(): phases_to_check.append(0)
+                            if not site_widgets['Violet']['amp_b_var'].get(): phases_to_check.append(1)
+                            if not site_widgets['Violet']['amp_c_var'].get(): phases_to_check.append(2)
 
-            #Breaker Check
-            if all(not breaker_data['Violet Breaker Data 1'][i][0] for i in range(breaker_pulls)):
+                            amp_data = [amps_columns[:,j] for j in range(amps_columns.shape[1])]
+                            if not site_data_dict['meter_var'].get():
+                                if metercomms and metercomms > compare_time:
+                                    # Safe comparison avoiding None
+                                    if any(val > 5 for i in range(min(voltage_check, len(site_meter_data))) for j in range(3) if (val := site_meter_data[i][j]) is not None):
+                                        status = "currently within parameters, but may have been lost briefly"
+                                        device = "Meter Amps"
+                                    else:
+                                        status = "Lost"
+                                        device = "Meter Amps"
+                                else:
+                                    status = "Unknown, Lost Comms with Meter"
+                                    device = "Meter"
+                                site_data_dict['meter_cb'].select()
+                                site_data_dict['meter_cb'].config(bg='Red')
+                                if period_check:
+                                    email_notification(site, status, device, poa, amp_data)
+                        elif np.mean([row[7] for row in data if row[7] is not None] or [0]) < 2:
+                            if not site_data_dict['meter_var'].get():
+                                if metercomms and metercomms > compare_time:
+                                    if any(val > 5 for i in range(min(voltage_check, len(site_meter_data))) for j in range(3) if (val := site_meter_data[i][j]) is not None):
+                                        status = "currently within parameters, but may have been lost briefly"
+                                        device = "Meter kW"
+                                    else:
+                                        status = "Lost"
+                                        device = "Meter kW"
+                                else:
+                                    status = "Unknown, Lost Comms with Meter"
+                                    device = "Meter kW"
+                                site_data_dict['meter_cb'].select()
+                                site_data_dict['meter_cb'].config(bg='Red')
+                                if device == "Meter kW" and status == "currently within parameters, but may have been lost briefly":
+                                    if poa is not None and poa > 100:
+                                        if period_check:
+                                            email_notification(site, status, device, poa, None)
+                                else:
+                                    if period_check:
+                                        email_notification(site, status, device, poa, None)
+                        else:
+                            site_data_dict['meter_cb'].deselect()
+                            site_data_dict['meter_cb'].config(bg='Green')
+                    else:
+                        site_data_dict['meter_cb'].select()
+                        site_data_dict['meter_cb'].config(bg='Red')
+                        if not site_data_dict['meter_var'].get():
+                            status = "Unknown, Comms consistently reporting last good data Upload as 4+ hrs ago."
+                            device = "Meter"
+                            if period_check:
+                                email_notification(site, status, device, poa, None)
+
+            # --- Violet Breaker 1 Check ---
+            v1_breaker_data = breaker_data.get('Violet Breaker Data 1', [])
+            is_total_b1, _ = check_null_columns(v1_breaker_data, breaker_col_map)
+            
+            if is_total_b1:
                 if 'breaker_var' in site_widgets.get('Violet', {}) and not site_widgets['Violet']['breaker_var'].get():
-                    device = "Breaker"
                     if period_check:
-                        email_notification("Violet 1", status, device, poa, None)
+                        email_notification("Violet 1", "Total Data Loss (Status reporting NULL)", "Breaker", poa, None)
                     if 'breaker_cb' in site_widgets.get('Violet', {}):
                         site_widgets['Violet']['breaker_cb'].select()
                         site_widgets['Violet']['breaker_cb'].config(bg='Red')
             else:
-                if 'breaker_cb' in site_widgets.get('Violet', {}):
-                    site_widgets['Violet']['breaker_cb'].deselect()
-                    site_widgets['Violet']['breaker_cb'].config(bg='Green')
-            #Breaker 2 Check
-            if all(not breaker_data['Violet Breaker Data 2'][i][0] for i in range(breaker_pulls)):
+                if len(v1_breaker_data) >= breaker_pulls and all(not v1_breaker_data[i][0] for i in range(breaker_pulls)):
+                    if 'breaker_var' in site_widgets.get('Violet', {}) and not site_widgets['Violet']['breaker_var'].get():
+                        if any(val > 5 for i in range(min(voltage_check, len(site_meter_data))) for j in range(3) if (val := site_meter_data[i][j]) is not None):
+                            status = "currently within parameters, but may have been lost briefly"
+                        else:
+                            status = "Lost"
+                        device = "Breaker"
+                        if period_check:
+                            email_notification("Violet 1", status, device, poa, None)
+                        if 'breaker_cb' in site_widgets.get('Violet', {}):
+                            site_widgets['Violet']['breaker_cb'].select()
+                            site_widgets['Violet']['breaker_cb'].config(bg='Red')
+                else:
+                    if 'breaker_cb' in site_widgets.get('Violet', {}):
+                        site_widgets['Violet']['breaker_cb'].deselect()
+                        site_widgets['Violet']['breaker_cb'].config(bg='Green')
+
+            # --- Violet Breaker 2 Check ---
+            v2_breaker_data = breaker_data.get('Violet Breaker Data 2', [])
+            is_total_b2, _ = check_null_columns(v2_breaker_data, breaker_col_map)
+            
+            if is_total_b2:
                 if 'breaker_var' in site_widgets.get('Violet 2', {}) and not site_widgets['Violet 2']['breaker_var'].get():
-                    device = "Breaker"
                     if period_check:
-                        email_notification("Violet 2", status, device, poa, None)
+                        email_notification("Violet 2", "Total Data Loss (Status reporting NULL)", "Breaker", poa, None)
                     if 'breaker_cb' in site_widgets.get('Violet 2', {}):
                         site_widgets['Violet 2']['breaker_cb'].select()
                         site_widgets['Violet 2']['breaker_cb'].config(bg='Red')
-
             else:
-                if 'breaker_cb' in site_widgets.get('Violet 2', {}):
-                    site_widgets['Violet 2']['breaker_cb'].deselect()
-                    site_widgets['Violet 2']['breaker_cb'].config(bg='Green')
-
-        else: #Meter Check for all other Sites besides Violet
-            data = np.array(meter_data[f'{site} Meter Data'])
-            if data.ndim < 2:
-                continue
-            lastUpload_col = data[:, 6]
-            amps_columns = data[:, 3:6]  # Extract Amps Columns
-            if all(tim > compare_time for tim in lastUpload_col):
-                phases_to_check = []
-                if not site_data_dict['amp_a_var'].get():
-                    phases_to_check.append(0)
-                if not site_data_dict['amp_b_var'].get():
-                    phases_to_check.append(1)
-                if not site_data_dict['amp_c_var'].get():
-                    phases_to_check.append(2)
-
-                if any(np.all(amps_columns[:, j] == 0) for j in phases_to_check):
-                    amp_data = [amps_columns[:,j] for j in range(amps_columns.shape[1])]
-                    if not site_data_dict['meter_var'].get():
-                        if metercomms > compare_time:
-                            if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
-                                status = "currently within parameters, but may have been lost briefly"
-                                device = "Meter Amps"
-                            else:
-                                status = "Lost"
-                                device = "Meter Amps"
+                if len(v2_breaker_data) >= breaker_pulls and all(not v2_breaker_data[i][0] for i in range(breaker_pulls)):
+                    if 'breaker_var' in site_widgets.get('Violet 2', {}) and not site_widgets['Violet 2']['breaker_var'].get():
+                        if any(val > 5 for i in range(min(voltage_check, len(site_meter_data))) for j in range(3) if (val := site_meter_data[i][j]) is not None):
+                            status = "currently within parameters, but may have been lost briefly"
                         else:
-                            status = "Unknown, Lost Comms with Meter"
-                            device = "Meter Amps"
-                        site_data_dict['meter_cb'].select()
-                        site_data_dict['meter_cb'].config(bg='Red')
+                            status = "Lost"
+                        device = "Breaker"
                         if period_check:
-                            email_notification(site, status, device, poa, amp_data)
-                elif np.mean([row[7] for row in data if row[7] is not None]) < 2:
-                    if not site_data_dict['meter_var'].get():
-                        if metercomms > compare_time:
-                            if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
-                                status = "currently within parameters, but may have been lost briefly"
-                                device = "Meter kW"
-                            else:
-                                status = "Lost"
-                                device = "Meter kW"
-                        else:
-                            status = "Unknown, Lost Comms with Meter"
-                            device = "Meter kW"
-                        site_data_dict['meter_cb'].select()
-                        site_data_dict['meter_cb'].config(bg='Red')
-                        if device == "Meter kW" and status == "currently within parameters, but may have been lost briefly":
-                            if poa > 100:
-                                if period_check:
-                                    email_notification(site, status, device, poa, None)
-                        else:
-                            if period_check:
-                                email_notification(site, status, device, poa, None)
+                            email_notification("Violet 2", status, device, poa, None)
+                        if 'breaker_cb' in site_widgets.get('Violet 2', {}):
+                            site_widgets['Violet 2']['breaker_cb'].select()
+                            site_widgets['Violet 2']['breaker_cb'].config(bg='Red')
                 else:
-                    site_data_dict['meter_cb'].deselect()
-                    site_data_dict['meter_cb'].config(bg='Green')
-            else:
+                    if 'breaker_cb' in site_widgets.get('Violet 2', {}):
+                        site_widgets['Violet 2']['breaker_cb'].deselect()
+                        site_widgets['Violet 2']['breaker_cb'].config(bg='Green')
+
+        else: 
+            # --- Meter Check for all other Sites besides Violet ---
+            if is_total_meter_null or null_meter_cols:
                 site_data_dict['meter_cb'].select()
                 site_data_dict['meter_cb'].config(bg='Red')
                 if not site_data_dict['meter_var'].get():
-                    status = "Unknown, Comms consistently reporting last good data Upload as 4+ hrs ago."
-                    device = "Meter"
+                    status = "Total Data Loss (All data columns reporting NULL)" if is_total_meter_null else f"Partial Data Loss (Column(s) stopped reporting: {', '.join(null_meter_cols)})"
                     if period_check:
-                        email_notification(site, status, device, poa, None)
+                        email_notification(site, status, "Meter", poa, None)
+            else:
+                data = np.array(site_meter_data)
+                if data.ndim >= 2:
+                    lastUpload_col = data[:, 6]
+                    amps_columns = data[:, 3:6]  # Extract Amps Columns
+                    
+                    valid_times = [tim for tim in lastUpload_col if tim is not None]
+                    
+                    if valid_times and all(tim > compare_time for tim in valid_times):
+                        phases_to_check = []
+                        if not site_data_dict['amp_a_var'].get(): phases_to_check.append(0)
+                        if not site_data_dict['amp_b_var'].get(): phases_to_check.append(1)
+                        if not site_data_dict['amp_c_var'].get(): phases_to_check.append(2)
 
-        if site in has_breaker and site != "Violet": #Breaker Check
-            if all(not breaker_data[f'{site} Breaker Data'][i][0] for i in range(breaker_pulls)):
-                if 'breaker_var' in site_data_dict and not site_data_dict['breaker_var'].get():
-                    if metercomms > compare_time:
-                        print(meter_data[f'{site} Meter Data'][i][3] for i in range(5))
-                        if any(meter_data[f'{site} Meter Data'][i][j] > 5 for i in range(voltage_check) for j in range(3)):
-                            status = "currently within parameters, but may have been lost briefly"
-                            device = "Breaker"
+                        if any(np.all(amps_columns[:, j] == 0) for j in phases_to_check):
+                            amp_data = [amps_columns[:,j] for j in range(amps_columns.shape[1])]
+                            if not site_data_dict['meter_var'].get():
+                                if metercomms and metercomms > compare_time:
+                                    if any(val > 5 for i in range(min(voltage_check, len(site_meter_data))) for j in range(3) if (val := site_meter_data[i][j]) is not None):
+                                        status = "currently within parameters, but may have been lost briefly"
+                                        device = "Meter Amps"
+                                    else:
+                                        status = "Lost"
+                                        device = "Meter Amps"
+                                else:
+                                    status = "Unknown, Lost Comms with Meter"
+                                    device = "Meter Amps"
+                                site_data_dict['meter_cb'].select()
+                                site_data_dict['meter_cb'].config(bg='Red')
+                                if period_check:
+                                    email_notification(site, status, device, poa, amp_data)
+                        elif np.mean([row[7] for row in data if row[7] is not None] or [0]) < 2:
+                            if not site_data_dict['meter_var'].get():
+                                if metercomms and metercomms > compare_time:
+                                    if any(val > 5 for i in range(min(voltage_check, len(site_meter_data))) for j in range(3) if (val := site_meter_data[i][j]) is not None):
+                                        status = "currently within parameters, but may have been lost briefly"
+                                        device = "Meter kW"
+                                    else:
+                                        status = "Lost"
+                                        device = "Meter kW"
+                                else:
+                                    status = "Unknown, Lost Comms with Meter"
+                                    device = "Meter kW"
+                                site_data_dict['meter_cb'].select()
+                                site_data_dict['meter_cb'].config(bg='Red')
+                                if device == "Meter kW" and status == "currently within parameters, but may have been lost briefly":
+                                    if poa is not None and poa > 100:
+                                        if period_check:
+                                            email_notification(site, status, device, poa, None)
+                                else:
+                                    if period_check:
+                                        email_notification(site, status, device, poa, None)
                         else:
-                            status = "Lost"
-                            device = "Breaker"
+                            site_data_dict['meter_cb'].deselect()
+                            site_data_dict['meter_cb'].config(bg='Green')
                     else:
-                        status = "Unknown, Lost Comms with Meter"
-                        device = "Breaker"
-                    if period_check:
-                        email_notification(site, status, device, poa, None)
+                        site_data_dict['meter_cb'].select()
+                        site_data_dict['meter_cb'].config(bg='Red')
+                        if not site_data_dict['meter_var'].get():
+                            status = "Unknown, Comms consistently reporting last good data Upload as 4+ hrs ago."
+                            device = "Meter"
+                            if period_check:
+                                email_notification(site, status, device, poa, None)
+
+        # --- Breaker Check for all other Sites ---
+        if site in has_breaker and site != "Violet": 
+            site_breaker_data = breaker_data.get(f'{site} Breaker Data', [])
+            is_total_breaker, _ = check_null_columns(site_breaker_data, breaker_col_map)
+            
+            if is_total_breaker:
+                if 'breaker_var' in site_data_dict and not site_data_dict['breaker_var'].get():
                     site_data_dict['breaker_cb'].select()
                     site_data_dict['breaker_cb'].config(bg='Red')
-
+                    if period_check:
+                        email_notification(site, "Total Data Loss (Status reporting NULL)", "Breaker", poa, None)
             else:
-                if 'breaker_cb' in site_data_dict:
-                    site_data_dict['breaker_cb'].deselect()
-                    site_data_dict['breaker_cb'].config(bg='Green')
+                if len(site_breaker_data) >= breaker_pulls and all(not site_breaker_data[i][0] for i in range(breaker_pulls)):
+                    if 'breaker_var' in site_data_dict and not site_data_dict['breaker_var'].get():
+                        if metercomms and metercomms > compare_time:
+                            if any(val > 5 for i in range(min(voltage_check, len(site_meter_data))) for j in range(3) if (val := site_meter_data[i][j]) is not None):
+                                status = "currently within parameters, but may have been lost briefly"
+                                device = "Breaker"
+                            else:
+                                status = "Lost"
+                                device = "Breaker"
+                        else:
+                            status = "Unknown, Lost Comms with Meter"
+                            device = "Breaker"
+                        
+                        site_data_dict['breaker_cb'].select()
+                        site_data_dict['breaker_cb'].config(bg='Red')
+                        if period_check:
+                            email_notification(site, status, device, poa, None)
+                else:
+                    if 'breaker_cb' in site_data_dict:
+                        site_data_dict['breaker_cb'].deselect()
+                        site_data_dict['breaker_cb'].config(bg='Green')
 
     print("Finished")
     ctime = datetime.now()
@@ -389,7 +475,7 @@ def db_to_dict():
             c.execute(f"SELECT TOP {breaker_pulls} [Status] FROM [{table_name}] ORDER BY [Timestamp] DESC")
             breaker_rows = c.fetchall()
             breaker_data[table_name] = breaker_rows
-        elif "Meter" in table_name and table_name not in excluded_tables and 'Wellons' not in table_name:
+        elif "Meter" in table_name and table_name not in excluded_tables and 'Wellons' not in table_name and "CDIA" not in table_name:
             c.execute(f"SELECT TOP {meter_pulls} [Volts A], [Volts B], [Volts C], [Amps A], [Amps B], [Amps C], [Last Upload], Watts FROM [{table_name}] ORDER BY [Timestamp] DESC")
             meter_rows = c.fetchall()
             meter_data[table_name] = meter_rows

@@ -135,8 +135,10 @@ def get_data_for_site(site, site_data, api_data, AE_HARDWARE_MAP, start, base_ur
                 poa_register_names = {'POA Irradiance', 'Plane of Array Irradiance', 'Sun (POA Temp comp)', 'POA', 'POA irradiance', 'Sun (POA)'}
                 ghi_register_names = {'GHI Irradiance', 'Sun (GHI)', 'GHI', 'Irradiance', 'Sun (GHI Temp comp)', 'Global Horizontal Irradiance', 'Sun (POA Temp comp)'}
 
-                is_ghi_device = 'ghi' in hdname.lower() and 'poa' not in hdname.lower()
-                is_poa_device = 'poa' in hdname.lower() and 'ghi' not in hdname.lower()
+                low_hdname = hdname.lower()
+                is_ghi_device = category == 'weather_stations' and 'ghi' in low_hdname and 'poa' not in low_hdname
+                is_poa_device = category == 'weather_stations' and 'poa' in low_hdname and 'ghi' not in low_hdname
+                is_dual_ws = category == 'weather_stations' and len(hardware_data) == 1                
 
                 # Iterate over register groups for the current hardware
                 for register_group in hardware_data_response.get('registerGroups', []):
@@ -144,16 +146,15 @@ def get_data_for_site(site, site_data, api_data, AE_HARDWARE_MAP, start, base_ur
                         # Check if the register name is in the list of register names for the category
                         if register['name'] in breaker_register_names:
                             register_values['Status'] = register['value']
-                        elif register['name'] in poa_register_names or register['name'] in ghi_register_names:
-                            if is_ghi_device:
+                        elif is_poa_device and register['name'] in poa_register_names:
+                            register_values['POA'] = register['value']
+                        elif is_ghi_device and register['name'] in ghi_register_names:
+                            register_values['GHI'] = register['value']
+                        elif is_dual_ws:
+                            if register['name'] in ghi_register_names:
                                 register_values['GHI'] = register['value']
-                            elif is_poa_device:
+                            elif register['name'] in poa_register_names:
                                 register_values['POA'] = register['value']
-                            else:
-                                if register['name'] in poa_register_names:
-                                    register_values['POA'] = register['value']
-                                elif register['name'] in ghi_register_names:
-                                    register_values['GHI'] = register['value']
                         elif register['name'] in inverterKW_register_names:
                             register_values['KW'] = register['value']
                         elif register['name'] in inverterDC_register_names:
