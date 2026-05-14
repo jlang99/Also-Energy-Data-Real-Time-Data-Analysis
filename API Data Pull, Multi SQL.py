@@ -82,7 +82,7 @@ def get_access_token():
         'password': password,
     }
     access_token_url = base_url + token_endpoint
-    initial_response = requests.post(access_token_url, headers=headers, data=data, verify=False) #I know that I shouldn't set verify to false for security reasons. But the Code worked flawlessly for over a year being set to True by Default and this was the only thing out of 10 things I tried that worked. 🤷‍♂️ Adivce is welcomed to joseph.lang@narenco.com. If you message me, please include 'Found on GitHub, looking to help', so that I know it's not spam.
+    initial_response = requests.post(access_token_url, headers=headers, data=data, verify=True) #I know that I shouldn't set verify to false for security reasons. But the Code worked flawlessly for over a year being set to True by Default and this was the only thing out of 10 things I tried that worked. 🤷‍♂️ Adivce is welcomed to joseph.lang@narenco.com. If you message me, please include 'Found on GitHub, looking to help', so that I know it's not spam.
     print("Starting response", initial_response.status_code)
     if initial_response.status_code == 200:
         access_token = initial_response.json().get('access_token')
@@ -305,7 +305,10 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
                                     if table_name not in inserts: inserts[table_name] = {'sql': sql, 'params': []}
                                     
                                     relay_stat = data.get('Status')
-                                    openClose = True if str(relay_stat).lower().strip() in ['1', '240', 'closed'] else False
+                                    if relay_stat is None:
+                                        openClose = None
+                                    else:
+                                        openClose = True if str(relay_stat).lower().strip() in ['1', '240', 'closed'] else False
                                     params = (data['pytimestamp'], data['aetimestamp'], openClose, hardwareid)
                                     inserts[table_name]['params'].append(params)
 
@@ -402,6 +405,7 @@ if __name__ == '__main__': #This is absolutely necessary due to running the asyn
                 end = time.perf_counter()
                 dataPullTime = round((end - start)/60, 3)
                 print("Total Time:", round((end - start)/60, 3), "Minutes")
+                print(datetime.datetime.now())
                 reset_count(auth_file)
 
 

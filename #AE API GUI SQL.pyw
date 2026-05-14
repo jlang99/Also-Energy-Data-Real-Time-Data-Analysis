@@ -51,6 +51,7 @@ def fast_mean(iterable):
     valid = [x for x in iterable if x is not None]
     return sum(valid) / len(valid) if valid else 0
 
+
 class AEDataApp:
     def __init__(self, root):
         self.root = root
@@ -159,22 +160,25 @@ class AEDataApp:
         
         # Breaker Status
         if config['BREAKER']:
+            breaker_suppress_var = IntVar()
+            self.all_cbs.append(breaker_suppress_var)
+            self.site_widgets[var_name]['breaker_suppress_var'] = breaker_suppress_var
             if name == 'Violet':
                 bf = Frame(self.root, bg=MAIN_COLOR)
                 bf.grid(row=row, column=col_offset + 1, sticky='nsew')
-                self.site_widgets[var_name]['status_label_1'] = Label(bf, bg=MAIN_COLOR, text='❌', fg='black')
+                self.site_widgets[var_name]['status_label_1'] = Checkbutton(bf, bg=MAIN_COLOR, text='❌', fg='black', variable=breaker_suppress_var, command=self.save_checkbox_states, selectcolor=MAIN_COLOR)
                 self.site_widgets[var_name]['status_label_1'].grid(row=0, column=0, sticky='nsew')
-                self.site_widgets[var_name]['status_label_2'] = Label(bf, bg=MAIN_COLOR, text='❌', fg='black')
+                self.site_widgets[var_name]['status_label_2'] = Checkbutton(bf, bg=MAIN_COLOR, text='❌', fg='black', variable=breaker_suppress_var, command=self.save_checkbox_states, selectcolor=MAIN_COLOR)
                 self.site_widgets[var_name]['status_label_2'].grid(row=1, column=0, sticky='nsew')
-                
+
                 # Attach ToolTips
                 self.site_widgets[var_name]['breaker_tt_1'] = ToolTip(self.site_widgets[var_name]['status_label_1'], "Pending Update...")
                 self.site_widgets[var_name]['breaker_tt_2'] = ToolTip(self.site_widgets[var_name]['status_label_2'], "Pending Update...")
             else:
-                lbl = Label(self.root, bg=MAIN_COLOR, text='❌')
+                lbl = Checkbutton(self.root, bg=MAIN_COLOR, text='❌', variable=breaker_suppress_var, command=self.save_checkbox_states, selectcolor=MAIN_COLOR)
                 lbl.grid(row=row, column=col_offset + 1)
                 self.site_widgets[var_name]['breaker_label'] = lbl
-                
+
                 # Attach ToolTip
                 self.site_widgets[var_name]['breaker_tt'] = ToolTip(lbl, "Pending Update...")
 
@@ -202,7 +206,7 @@ class AEDataApp:
         # POA Weather
         poa_var = IntVar()
         self.all_cbs.append(poa_var)
-        poa_btn = Checkbutton(self.root, bg=MAIN_COLOR, text='0', font=( 'Tk_defaultFont', 10, 'bold'), variable=poa_var)
+        poa_btn = Checkbutton(self.root, bg=MAIN_COLOR, text='0', font=( 'Tk_defaultFont', 10, 'bold'), variable=poa_var, command=self.save_checkbox_states)
         poa_btn.grid(row=row, column=col_offset + 6)
         self.site_widgets[var_name]['poa_btn'] = poa_btn
         self.site_widgets[var_name]['poa_var'] = poa_var
@@ -640,7 +644,7 @@ class AEDataApp:
         if not pvsyst_name or poa_val == 9999 or poa_val <= 0:
             return 0
             
-        if pvsyst_name not in ["WELLONS", "FREIGHTLINE", "WARBLER", "PG", "HOLLYSWAMP"]:
+        if pvsyst_name not in ["WELLONS", "FREIGHTLINE", "WARBLER", "PG", "HOLLYSWAMP", "WHITETAIL"]:
             meterval = meterval / 1000.0
 
         if pvsyst_name not in self.pvsyst_model_cache:
@@ -738,24 +742,30 @@ class AEDataApp:
                     if name == 'Violet':
                         for i in (1, 2):
                             breaker_data = raw_breaker.get(f"{name} Breaker Data {i}", [])
-                            physically_closed = any(row[0] for row in breaker_data) if breaker_data else False
-                            
-                            is_open_by_breaker = not physically_closed
+                            bg_statuses = [row[0] for row in breaker_data] if breaker_data else []
+                            bg_all_null = bool(bg_statuses) and all(s is None for s in bg_statuses)
+                            physically_closed = any(s for s in bg_statuses) if bg_statuses else False
+
+                            is_open_by_breaker = not physically_closed and not bg_all_null
                             is_open_by_meter = physically_closed and meter_indicates_open
-                            
+
                             cache_key = f"{name}_{i}"
                             if (is_open_by_breaker or is_open_by_meter) and cache_key not in self.last_closed_cache:
-                                trigger = 'breaker' if is_open_by_breaker else 'meter'
+                                trigger = 'meter' if (is_open_by_meter and not is_open_by_breaker) else 'breaker'
                                 fetched_offline['breakers'][cache_key] = self._get_last_closed_bg(cursor, name, breaker_num=i, trigger=trigger)
                     else:
                         breaker_data = raw_breaker.get(f"{name} Breaker Data", [])
-                        physically_closed = any(row[0] for row in breaker_data) if breaker_data else False
-                        
-                        is_open_by_breaker = not physically_closed
+                        bg_statuses = [row[0] for row in breaker_data] if breaker_data else []
+                        bg_all_null = bool(bg_statuses) and all(s is None for s in bg_statuses)
+                        physically_closed = any(s for s in bg_statuses) if bg_statuses else False
+                        bg_uploads = [row[1] for row in breaker_data if row[1] is not None] if breaker_data else []
+                        bg_frozen = len(bg_uploads) >= 2 and len(set(bg_uploads)) == 1
+
+                        is_open_by_breaker = not physically_closed and not bg_all_null
                         is_open_by_meter = physically_closed and meter_indicates_open
 
-                        if (is_open_by_breaker or is_open_by_meter) and name not in self.last_closed_cache:
-                            trigger = 'breaker' if is_open_by_breaker else 'meter'
+                        if (is_open_by_breaker or is_open_by_meter or bg_frozen) and name not in self.last_closed_cache:
+                            trigger = 'meter' if (is_open_by_meter and not is_open_by_breaker and not bg_frozen) else 'breaker'
                             fetched_offline['breakers'][name] = self._get_last_closed_bg(cursor, name, trigger=trigger)
 
                 # Meters
@@ -962,17 +972,22 @@ class AEDataApp:
         return val
 
     def _update_breakers(self, site, var):
-        suppress_alerts = self.site_widgets[var]['site_suppress_var'].get() == 1
+        site_suppress = self.site_widgets[var]['site_suppress_var'].get() == 1
+        breaker_suppress = self.site_widgets[var]['breaker_suppress_var'].get() == 1
+        suppress_alerts = site_suppress or breaker_suppress
         time_now = datetime.now()
         lost_comm_threshold = time_now - timedelta(hours=2)
         
         # Universal Meter Amps Check (0 Amps = Open Breaker/Grid Loss)
         meter_data = self.raw_meter_data.get(f"{site} Meter Data", [])
         meter_indicates_open = False
+        meter_open_phases = []
         if meter_data:
-            # Indices 3, 4, 5 correspond to Amps A, B, C. Check the 8 most recent pulls.
-            zero_amp_rows = sum(1 for row in meter_data[:8] if any(row[i] == 0 for i in (3, 4, 5)))
-            if zero_amp_rows >= 2:
+            # Indices 3, 4, 5 → Amps A, B, C. Count per-phase zero readings across 8 most recent pulls.
+            for _idx, _lbl in ((3, 'A'), (4, 'B'), (5, 'C')):
+                if sum(1 for row in meter_data[:8] if row[_idx] == 0) >= 2:
+                    meter_open_phases.append(_lbl)
+            if meter_open_phases:
                 meter_indicates_open = True
         
         if site == 'Violet':
@@ -999,24 +1014,44 @@ class AEDataApp:
                             self._trigger_alert(f"{site} Breaker {i}", "Breaker Communications Restored")
                 
                 # Closed ONLY if physical telemetry says closed AND the meter is registering amps
-                physically_closed = any(row[0] for row in data) if data else True
-                is_closed = physically_closed and not meter_indicates_open
-                
+                # Frozen Last Upload check is skipped for Violet — it legitimately goes 60+ min
+                # between AE uploads, so the check produces false positives on every cycle.
+                statuses_i = [row[0] for row in data] if data else []
+                all_null_i = bool(statuses_i) and all(s is None for s in statuses_i)
+                physically_closed = any(s for s in statuses_i) if statuses_i else True
+
+                is_open_by_status_i = not physically_closed and not all_null_i
+                is_open = is_open_by_status_i or meter_indicates_open
+                is_indeterminate = all_null_i and not is_open
+                is_closed = not is_open and not is_indeterminate
+
                 cache_key = f"{site}_{i}"
-                
-                if is_closed:
+
+                if is_indeterminate:
+                    current_state = "INDETERMINATE"
+                    self.site_widgets[var][f'status_label_{i}'].config(text='?', bg='orange')
+                    self.site_widgets[var][f'breaker_tt_{i}'].text = f"Breaker Status Indeterminate\nLast Comm: {last_comm_str}"
+                elif is_closed:
                     self.last_closed_cache.pop(cache_key, None)
                     self.site_widgets[var][f'status_label_{i}'].config(text='✓✓✓', bg='green')
                     self.site_widgets[var][f'breaker_tt_{i}'].text = f"Breaker Operational\nLast Comm: {last_comm_str}"
                 else:
                     last_op = self.last_closed_cache.get(cache_key, "Unknown")
                     current_state = "OPEN"
-                    
+
+                    trip_reasons_i = []
+                    if is_open_by_status_i:
+                        trip_reasons_i.append("Breaker Status: Open")
+                    if meter_open_phases:
+                        phase_label = 'Phases' if len(meter_open_phases) > 1 else 'Phase'
+                        trip_reasons_i.append(f"Meter Amps Open: {phase_label} {', '.join(meter_open_phases)}")
+                    reason_str_i = " | ".join(trip_reasons_i) if trip_reasons_i else "Unknown"
+
                     self.site_widgets[var][f'status_label_{i}'].config(text='❌❌', bg='red')
-                    self.site_widgets[var][f'breaker_tt_{i}'].text = f"Breaker Open\nLast closed: {last_op}\nLast Comm: {last_comm_str}"
-                    
+                    self.site_widgets[var][f'breaker_tt_{i}'].text = f"Breaker Open\nLast closed: {last_op}\nLast Comm: {last_comm_str}\nReason: {reason_str_i}"
+
                     if not suppress_alerts:
-                        self._trigger_alert(f"{site} Breaker {i}", f"Breaker Tripped Open! Last closed: {last_op}")
+                        self._trigger_alert(f"{site} Breaker {i}", f"Breaker Tripped Open! Last closed: {last_op} | {reason_str_i}")
                 
                 self.device_states[state_key] = current_state
         else:
@@ -1042,22 +1077,44 @@ class AEDataApp:
                         self._trigger_alert(f"{site} Breaker", "Breaker Communications Restored")
             
             # Closed ONLY if physical telemetry says closed AND the meter is registering amps
-            physically_closed = any(row[0] for row in data) if data else True
-            is_closed = physically_closed and not meter_indicates_open
-            
-            if is_closed:
+            statuses = [row[0] for row in data] if data else []
+            upload_times = [row[1] for row in data if row[1] is not None] if data else []
+            all_null = bool(statuses) and all(s is None for s in statuses)
+            physically_closed = any(s for s in statuses) if statuses else True
+            frozen_upload = len(upload_times) >= 2 and len(set(upload_times)) == 1
+
+            is_open_by_status = not physically_closed and not all_null
+            is_open = is_open_by_status or meter_indicates_open or frozen_upload
+            is_indeterminate = all_null and not is_open
+            is_closed = not is_open and not is_indeterminate
+
+            if is_indeterminate:
+                current_state = "INDETERMINATE"
+                self.site_widgets[var]['breaker_label'].config(text='?', bg='orange')
+                self.site_widgets[var]['breaker_tt'].text = f"Breaker Status Indeterminate\nLast Comm: {last_comm_str}"
+            elif is_closed:
                 self.last_closed_cache.pop(site, None)
                 self.site_widgets[var]['breaker_label'].config(text='✓✓✓', bg='green')
                 self.site_widgets[var]['breaker_tt'].text = f"Breaker Operational\nLast Comm: {last_comm_str}"
             else:
                 last_op = self.last_closed_cache.get(site, "Unknown")
                 current_state = "OPEN"
-                    
+
+                trip_reasons = []
+                if is_open_by_status:
+                    trip_reasons.append("Breaker Status: Open")
+                if meter_open_phases:
+                    phase_label = 'Phases' if len(meter_open_phases) > 1 else 'Phase'
+                    trip_reasons.append(f"Meter Amps Open: {phase_label} {', '.join(meter_open_phases)}")
+                if frozen_upload:
+                    trip_reasons.append(f"Last Upload Frozen: {upload_times[0].strftime('%m/%d %H:%M')}")
+                reason_str = " | ".join(trip_reasons) if trip_reasons else "Unknown"
+
                 self.site_widgets[var]['breaker_label'].config(text='❌❌', bg='red')
-                self.site_widgets[var]['breaker_tt'].text = f"Breaker Open\nLast closed: {last_op}\nLast Comm: {last_comm_str}"
-                
+                self.site_widgets[var]['breaker_tt'].text = f"Breaker Open\nLast closed: {last_op}\nLast Comm: {last_comm_str}\nReason: {reason_str}"
+
                 if not suppress_alerts and (not self.text_only_var.get() or current_state != last_state):
-                    self._trigger_alert(f"{site} Breaker", f"Breaker Tripped Open! Last closed: {last_op}")
+                    self._trigger_alert(f"{site} Breaker", f"Breaker Tripped Open! Last closed: {last_op} | {reason_str}")
             
             self.device_states[state_key] = current_state
 
@@ -1147,13 +1204,43 @@ class AEDataApp:
                 if last_state == "NO_COMMS" and not suppress_alerts:
                     if not self.text_only_var.get() or current_state != last_state:
                         self._trigger_alert(f"{site} Meter", "Meter Communications Restored")
-                
+
             v_a = fast_mean(row[0] for row in data)
             v_b = fast_mean(row[1] for row in data)
             v_c = fast_mean(row[2] for row in data)
             avg_w = fast_mean(row[6] for row in data if row[6] is not None and row[6] < 760000000)
-            
+
             val_thresh = 5 if site == "Hickory" else 5000
+
+            # --- Phase Amp Null Check (Breaker Trip Detection) ---
+            # Skip a phase if its voltage is already below threshold — null amps are expected there.
+            has_breaker = bool(self.MAP_SITES[site].get('BREAKER'))
+            tripped_phases = []
+            if len(data) >= 10:
+                phase_v = {'A': v_a, 'B': v_b, 'C': v_c}
+                for phase_idx, phase_lbl in [(3, 'A'), (4, 'B'), (5, 'C')]:
+                    if phase_v[phase_lbl] < val_thresh:
+                        continue
+                    trip_key = f"{site}_meter_brk_{phase_lbl}"
+                    last_trip_state = self.device_states.get(trip_key, "ONLINE")
+                    tripped = all(row[phase_idx] is None for row in data[:10])
+                    if tripped:
+                        self.device_states[trip_key] = "TRIPPED"
+                        if not has_breaker:
+                            tripped_phases.append(phase_lbl)
+                        if not suppress_alerts and (not self.text_only_var.get() or last_trip_state != "TRIPPED"):
+                            if has_breaker:
+                                self._trigger_alert(f"{site} Breaker", f"Phase {phase_lbl} breaker may be tripped — Amps {phase_lbl} null for 10+ consecutive reads | Last Comm: {last_comm_str}")
+                            else:
+                                self._trigger_alert(f"{site} Meter", f"Phase {phase_lbl} loss of current — Amps {phase_lbl} null for 10+ consecutive reads | Last Comm: {last_comm_str}")
+                    else:
+                        if last_trip_state == "TRIPPED" and not suppress_alerts:
+                            if not self.text_only_var.get() or last_trip_state == "TRIPPED":
+                                if has_breaker:
+                                    self._trigger_alert(f"{site} Breaker", f"Phase {phase_lbl} breaker restored — Amps {phase_lbl} readings resumed")
+                                else:
+                                    self._trigger_alert(f"{site} Meter", f"Phase {phase_lbl} current restored — Amps {phase_lbl} readings resumed")
+                        self.device_states[trip_key] = "ONLINE"
             dif_thresh = 9 if site in ["Wellons", "Cherry Blossom"] else 5
 
             pct_diff_ab = ((max(v_a, v_b) - min(v_a, v_b)) / fast_mean([v_a, v_b])) * 100 if fast_mean([v_a, v_b]) else 0
@@ -1201,8 +1288,13 @@ class AEDataApp:
                         self._trigger_alert(f"{site} Power Loss", f"Meter reading ~0kW while POA is active. Last online: {online}")
             else:
                 self.meter_last_online_cache.pop(site, None)
-                self.site_widgets[var]['kw_label'].config(text=f"{round(avg_w/1000, 1)}", bg='green' if avg_w > 0 else 'gray')
-                self.site_widgets[var]['kw_tt'].text = f"Meter Online\nLast Comm: {last_comm_str}"
+                if tripped_phases:
+                    ph_str = '/'.join(tripped_phases)
+                    self.site_widgets[var]['kw_label'].config(text=f"Ph {ph_str} ❌", bg='orange')
+                    self.site_widgets[var]['kw_tt'].text = f"Phase {ph_str} loss of current\nLast Comm: {last_comm_str}"
+                else:
+                    self.site_widgets[var]['kw_label'].config(text=f"{round(avg_w/1000, 1)}", bg='green' if avg_w > 0 else 'gray')
+                    self.site_widgets[var]['kw_tt'].text = f"Meter Online\nLast Comm: {last_comm_str}"
             
             self.device_states[state_key] = current_state
 
@@ -1267,15 +1359,19 @@ class AEDataApp:
             last_comm_ts = "Unknown"
             is_no_comms = False
             
+            null_lu_key = f"nolu_{cache_key}"
             if data and len(data[0]) > 2 and data[0][2]:
                 upload_time = data[0][2]
                 # Using the full timestamp format as requested previously
-                last_comm_ts = upload_time.strftime('%m/%d/%Y %H:%M:%S') 
-                
+                last_comm_ts = upload_time.strftime('%m/%d/%Y %H:%M:%S')
+                self.null_comms_since.pop(null_lu_key, None)
                 if (datetime.now() - upload_time).total_seconds() > 7200:
                     is_no_comms = True
             else:
-                is_no_comms = True 
+                if null_lu_key not in self.null_comms_since:
+                    self.null_comms_since[null_lu_key] = datetime.now()
+                if (datetime.now() - self.null_comms_since[null_lu_key]).total_seconds() > 7200:
+                    is_no_comms = True
 
             # --- Track Production & DC Voltage ---
             consecutive = 0
@@ -1358,13 +1454,19 @@ class AEDataApp:
             # Build tooltip and alert message
             online_last = self.last_online_cache.get(cache_key, "Unknown")
             comm_last = status['last_comm_ts']
-            
-            msg = f"Inv {inv_label}\nLast Online: {online_last}\nLast Comm: {comm_last}"
-            
+            if current_state == "NO_COMMS":
+                dc_v_status = "NO COMMS"
+            elif status['avg_dcv'] > 100:
+                dc_v_status = "GOOD DC V"
+            else:
+                dc_v_status = "BAD DC V"
+
+            msg = f"Inv {inv_label}\nStatus: {dc_v_status}\nLast Online: {online_last}\nLast Comm: {comm_last}"
+
             if status['is_completely_offline'] or status['is_no_comms']:
                 inv_widget['cb'].config(bg=ui_color)
-                inv_widget['cb_tt'].text = msg 
-                
+                inv_widget['cb_tt'].text = msg
+
                 # Notification Logic
                 all_others_online = (total_expected > 1) and (total_online_expected >= total_expected - 1)
                 suppression_lifted = (poa > 400) or any_expected_inv_over_2_hours or all_others_online
@@ -1416,13 +1518,18 @@ class AEDataApp:
             last_comm_ts = "Unknown"
             is_no_comms = False
             
+            null_lu_key = f"nolu_{cache_key}"
             if data and len(data[0]) > 2 and data[0][2]:
                 upload_time = data[0][2]
-                last_comm_ts = upload_time.strftime('%m/%d/%Y %H:%M:%S') 
+                last_comm_ts = upload_time.strftime('%m/%d/%Y %H:%M:%S')
+                self.null_comms_since.pop(null_lu_key, None)
                 if (datetime.now() - upload_time).total_seconds() > 7200:
                     is_no_comms = True
             else:
-                is_no_comms = True 
+                if null_lu_key not in self.null_comms_since:
+                    self.null_comms_since[null_lu_key] = datetime.now()
+                if (datetime.now() - self.null_comms_since[null_lu_key]).total_seconds() > 7200:
+                    is_no_comms = True
 
             consecutive = 0
             is_online = False
@@ -1501,13 +1608,19 @@ class AEDataApp:
 
                 online_last = self.last_online_cache.get(cache_key, "Unknown")
                 comm_last = status['last_comm_ts']
+                if current_state == "NO_COMMS":
+                    dc_v_status = "NO COMMS"
+                elif status['avg_dcv'] > 100:
+                    dc_v_status = "GOOD DC V"
+                else:
+                    dc_v_status = "BAD DC V"
 
-                msg = f"Inv {inv_label}\nLast Online: {online_last}\nLast Comm: {comm_last}"
+                msg = f"Inv {inv_label}\nStatus: {dc_v_status}\nLast Online: {online_last}\nLast Comm: {comm_last}"
 
                 if status['is_completely_offline'] or status['is_no_comms']:
                     inv_widget['cb'].config(bg=ui_color)
-                    inv_widget['cb_tt'].text = msg 
-                    
+                    inv_widget['cb_tt'].text = msg
+
                     # Conetoe specific notification logic
                     should_notify = False
                     
